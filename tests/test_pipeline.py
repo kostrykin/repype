@@ -1,4 +1,7 @@
+import itertools
 import unittest
+
+import pypers.pipeline
 import pypers.config
 
 from . import testsuite
@@ -101,7 +104,77 @@ class Pipeline(unittest.TestCase):
         pass
 
     def test_Pipeline_process(self):
-        pass
+        x1_factor = 1
+        x2_factor = 2
+        constant  = 3
+        cfg = pypers.config.Config()
+        cfg['stage1/x1_factor'] = x1_factor
+        cfg['stage2/x2_factor'] = x2_factor
+        cfg['stage3/constant' ] = constant
+        pipeline = create_pipeline().test()
+        for input in range(5):
+            with self.subTest(input = input):
+                data, final_cfg, timings = pipeline.process(input = input, cfg = cfg, out = 'muted')
+                expected_final_cfg = cfg.copy()
+                for stage in pipeline.stages:
+                    expected_final_cfg[f'{stage.cfgns}/enabled'] = True
+                    self.assertTrue(stage.cfgns in timings)
+                self.assertEqual(final_cfg, expected_final_cfg, f'expected: {expected_final_cfg}, actual: {final_cfg}')
+                self.assertEqual(data['y'], x1_factor * input + x2_factor * input + constant)
+                self.assertEqual(len(timings), len(pipeline.stages))
+
+
+class create_pipeline(unittest.TestCase):
+
+    def test(self):
+        stages = [
+            ## stage1 takes `input` and produces `x1`
+            testsuite.DummyStage('stage1', ['input'], ['x1'], [], \
+                lambda input_data, cfg, log_root_dir = None, out = None: \
+                    dict(x1 = input_data['input'] * cfg['x1_factor'])
+            ),
+            ## stage2 consumes `input` and produces `x2`
+            testsuite.DummyStage('stage2', [], ['x2'], ['input'], \
+                lambda input_data, cfg, log_root_dir = None, out = None: \
+                    dict(x2 = input_data['input'] * cfg['x2_factor'])
+            ),
+            ## stage3 takes `x1` and `x2` and produces `y`
+            testsuite.DummyStage('stage3', ['x1', 'x2'], ['y'], [], \
+                lambda input_data, cfg, log_root_dir = None, out = None: \
+                    dict(y = input_data['x1'] + input_data['x2'] + cfg['constant'])
+            ),
+        ]
+        for permutated_stages in itertools.permutations(stages):
+            with self.subTest(permutation = permutated_stages):
+                pipeline = pypers.pipeline.create_pipeline(permutated_stages)
+                self.assertEqual(len(pipeline.stages), 3)
+                for stage1, stage2 in zip(pipeline.stages, stages):
+                    self.assertIs(stage1, stage2)
+        return pipeline
+
+    def test_unsatisfiable(self):
+        stages = [
+            testsuite.DummyStage('stage1', ['input'], ['x1'], [], None),     ## stage1 takes `input` and produces `x1`
+            testsuite.DummyStage('stage2', [], ['x2'], ['input'], None),     ## stage2 consumes `input` and produces `x2`
+            testsuite.DummyStage('stage3', ['x1', 'x2'], ['y'], [], None),   ## stage3 takes `x1` and `x2` and produces `y`
+            testsuite.DummyStage('stage4', ['input', 'y'], ['z'], [], None), ## stage4 takes `input` and `y` and produces `z`
+        ]
+        for permutated_stages in itertools.permutations(stages):
+            with self.subTest(permutation = permutated_stages):
+                self.assertRaises(RuntimeError, lambda: pypers.pipeline.create_pipeline(permutated_stages))
+
+    def test_ambiguous_namespaces(self):
+        stage1 = testsuite.DummyStage('stage1', [], [], [], None)
+        stage2 = testsuite.DummyStage('stage2', [], [], [], None)
+        stage3 = testsuite.DummyStage('stage2', [], [], [], None)
+        self.assertRaises(AssertionError, lambda: pypers.pipeline.create_pipeline([stage1, stage2, stage3]))
+        self.assertRaises(AssertionError, lambda: pypers.pipeline.create_pipeline([stage1, stage2, stage2]))
+
+    def test_ambiguous_outputs(self):
+        stage1 = testsuite.DummyStage('stage1', [], ['x1'], [], None)
+        stage2 = testsuite.DummyStage('stage2', [], ['x2'], [], None)
+        stage3 = testsuite.DummyStage('stage3', [], ['x2'], [], None)
+        self.assertRaises(AssertionError, lambda: pypers.pipeline.create_pipeline([stage1, stage2, stage3]))
 
 
 if __name__ == '__main__':

@@ -1,5 +1,7 @@
 import time
 
+from collections.abc import Iterable
+
 from .output import get_output
 
 
@@ -24,7 +26,7 @@ class Stage(object):
     Each stage must declare its required inputs and the outputs it produces. These are used by :py:meth:`~.create_pipeline` to automatically determine the stage order. The input ``g_raw`` is provided by the pipeline itself.
     """
 
-    def __init__(self, name: str, cfgns: str = None, inputs: list = [], outputs: list = [], consumes: list = [], enabled_by_default: bool = True):
+    def __init__(self, name: str, cfgns: str = None, inputs: Iterable[str] = [], outputs: Iterable[str] = [], consumes: Iterable[str] = [], enabled_by_default: bool = True):
         if cfgns is None: cfgns = name
         self.name     = name
         self.cfgns    = cfgns
@@ -56,7 +58,7 @@ class Stage(object):
             t0 = time.time()
             output_data = self.process(input_data, cfg=cfg, log_root_dir=log_root_dir, out=out)
             dt = time.time() - t0
-            assert len(set(output_data.keys()) ^ set(self.outputs)) == 0, 'stage "%s" generated unexpected output' % self.name
+            assert len(set(output_data.keys()) ^ set(self.outputs)) == 0, 'stage "%s" produced spurious or missing output' % self.name
             data.update(output_data)
             for key in self.consumes: del data[key]
             self._callback('end', data)
@@ -91,6 +93,9 @@ class Stage(object):
             Each hyperparameter ``key`` is associated with a new hyperparameter ``AF_key``. The value of the hyperparameter ``key`` will be computed as the product of ``factor`` and the value of the ``AF_key`` hyperparameter, which defaults to ``default_user_factor``. The value given for ``factor`` is usually ``scale``, ``radius``, ``diameter``, or a polynomial thereof. Another dictionary may be provided as a third component of the tuple, which can specify a ``type``, ``min``, and ``max`` values.
         """
         return dict()
+
+    def __str__(self):
+        return self.name
 
 
 class ProcessingControl:
@@ -186,13 +191,21 @@ class Pipeline:
         return cfg
 
 
-def create_pipeline(stages):
+def create_pipeline(stages: Iterable['Stage']):
     """Creates and returns a new :py:class:`.Pipeline` object configured for the given stages.
 
     The stage order is determined automatically.
     """
     available_inputs = set(['input'])
     remaining_stages = list(stages)
+
+    # Ensure that the stage namespaces are unique
+    namespaces = [stage.cfgns for stage in stages]
+    assert len(namespaces) == len(frozenset(namespaces)), 'ambiguous namespaces'
+
+    # Ensure that no output is produced more than once
+    outputs = list(available_inputs) + sum((list(stage.outputs) for stage in stages), [])
+    assert len(outputs) == len(frozenset(outputs)), 'ambiguous outputs'
 
     pipeline = Pipeline()
     while len(remaining_stages) > 0:
@@ -204,16 +217,17 @@ def create_pipeline(stages):
                 conflicted = False
 
                 # Ensure that no remaining stage requires a consumed input
-                for stage2 in remaining_stages - {stage1}:
-                    if stage1.consumes.issubset(stage2.inputs):
+                for stage2 in remaining_stages:
+                    if stage1 is stage2: continue
+                    if len(stage1.consumes) > 0 and stage1.consumes.issubset(stage2.inputs):
                         conflicted = True
 
                 if not conflicted:
-                    next_stage = stage
+                    next_stage = stage1
                     break
 
         if next_stage is None:
-            raise ValueError('failed to resolve total ordering')
+            raise RuntimeError('failed to resolve total ordering')
         remaining_stages.remove(next_stage)
         pipeline.append(next_stage)
         available_inputs |= next_stage.outputs

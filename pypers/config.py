@@ -1,6 +1,8 @@
 import json
 import hashlib
 
+from typing import Union
+
 
 def _cleanup_value(value):
     return value.entries if isinstance(value, Config) else value
@@ -20,7 +22,7 @@ class Config:
     A dictionary can be wrapped into a :py:class:`Config` object by passing it to the constructor (no copying occurs). If another :py:class:`Config` object is passed to the constructor, a deep copy is created.
     """
 
-    def __init__(self, other=None):
+    def __init__(self, other: Union[dict, 'Config'] = None):
         if other is None: other = dict()
         if isinstance(other, dict):
             self.entries = other
@@ -185,4 +187,7 @@ class Config:
         """Readable representation of this configuration.
         """
         return json.dumps(self.entries, indent=2)
+
+    def __eq__(self, other):
+        return isinstance(other, Config) and self.md5.hexdigest() == other.md5.hexdigest()
 
