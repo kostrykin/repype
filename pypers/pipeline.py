@@ -1,5 +1,6 @@
 import time
 
+from typing import Union
 from collections.abc import Iterable
 
 from .output import get_output
@@ -162,21 +163,28 @@ class Pipeline:
                 timings[stage.name] = dt
         return data, cfg, timings
 
-    def find(self, stage_name, not_found_dummy=float('inf')):
-        """Returns the position of the stage identified by ``stage_name``.
+    def find(self, cfgns, not_found_dummy=float('inf')):
+        """Returns the position of the stage identified by ``stage_cfgns``.
 
         Returns ``not_found_dummy`` if the stage is not found.
         """
         try:
-            return [stage.name for stage in self.stages].index(stage_name)
+            return [stage.cfgns for stage in self.stages].index(cfgns)
         except ValueError:
             return not_found_dummy
 
-    def append(self, stage, after=None):
-        if after is None: self.stages.append(stage)
+    def append(self, stage: 'Stage', after: Union[str, int] = None):
+        for stage2 in self.stages:
+            if stage2 is stage: raise RuntimeError(f'stage {stage.name} already added')
+            if stage2.cfgns == stage.cfgns: raise RuntimeError(f'stage with namespace {stage.cfgns} already added')
+        if after is None:
+            self.stages.append(stage)
+            return len(self.stages) - 1
         else:
             if isinstance(after, str): after = self.find(after)
+            assert -1 <= after < len(self.stages)
             self.stages.insert(after + 1, stage)
+            return after + 1
 
     def configure(self, base_cfg, *args, **kwargs):
         """Automatically configures hyperparameters based on the scale of objects in an image.

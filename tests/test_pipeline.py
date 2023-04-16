@@ -98,10 +98,54 @@ class Pipeline(unittest.TestCase):
         pass
 
     def test_Pipeline_find(self):
-        pass
+        pipeline = create_pipeline().test()
+        for expected_position, stage in enumerate(pipeline.stages):
+            with self.subTest(expected_position = expected_position):
+                actual_position = pipeline.find(stage.cfgns)
+                self.assertEqual(actual_position, expected_position)
+
+    def test_Pipeline_find_missing(self):
+        pipeline = create_pipeline().test()
+        dummy = object()
+        self.assertIs(pipeline.find('stage4', dummy), dummy)
 
     def test_Pipeline_append(self):
-        pass
+        new_stage = testsuite.DummyStage('new_stage', [], [], [], None)
+        pipeline = create_pipeline().test()
+        expected_pos = len(pipeline.stages)
+        pos = pipeline.append(new_stage)
+        self.assertEqual(pos, expected_pos)
+        self.assertEqual(len(pipeline.stages), expected_pos + 1)
+        self.assertIs(pipeline.stages[pos], new_stage)
+
+    def test_Pipeline_append_twice(self):
+        pipeline = create_pipeline().test()
+        for stage in pipeline.stages:
+            with self.subTest(stage = stage.cfgns):
+                self.assertRaises(RuntimeError, lambda: pipeline.append(stage))
+                self.assertRaises(RuntimeError, lambda: pipeline.append(testsuite.DummyStage(stage.cfgns, [], [], [], None)))
+
+    def test_Pipeline_append_after_str(self):
+        new_stage = testsuite.DummyStage('new_stage', [], [], [], None)
+        stages = create_pipeline().test().stages
+        for after in [stage.cfgns for stage in stages]:
+            pipeline = create_pipeline().test()
+            expected_pos = pipeline.find(after) + 1
+            with self.subTest(after = after):
+                pos = pipeline.append(new_stage, after = after)
+                self.assertEqual(pos, expected_pos)
+                self.assertIs(pipeline.stages[pos], new_stage)
+
+    def test_Pipeline_append_after_int(self):
+        new_stage = testsuite.DummyStage('new_stage', [], [], [], None)
+        stages = create_pipeline().test().stages
+        for after in range(-1, len(stages)):
+            pipeline = create_pipeline().test()
+            expected_pos = after + 1
+            with self.subTest(after = after):
+                pos = pipeline.append(new_stage, after = after)
+                self.assertEqual(pos, expected_pos)
+                self.assertIs(pipeline.stages[pos], new_stage)
 
     def test_Pipeline_process(self):
         x1_factor = 1
