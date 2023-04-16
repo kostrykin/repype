@@ -91,7 +91,7 @@ class Stage(object):
                    'key': (factor, default_user_factor),
                }
             
-            Each hyperparameter ``key`` is associated with a new hyperparameter ``AF_key``. The value of the hyperparameter ``key`` will be computed as the product of ``factor`` and the value of the ``AF_key`` hyperparameter, which defaults to ``default_user_factor``. The value given for ``factor`` is usually ``scale``, ``radius``, ``diameter``, or a polynomial thereof. Another dictionary may be provided as a third component of the tuple, which can specify a ``type``, ``min``, and ``max`` values.
+            Each hyperparameter ``key`` is associated with a new hyperparameter ``AF_key``. The value of the hyperparameter ``key`` will be computed as the product of ``factor`` and the value of the ``AF_key`` hyperparameter, which defaults to ``default_user_factor``. Another dictionary may be provided as a third component of the tuple, which can specify a ``type``, ``min``, and ``max`` values.
         """
         return dict()
 
@@ -194,8 +194,8 @@ class Pipeline:
             specs = stage.configure(*args, **kwargs)
             for key, spec in specs.items():
                 assert len(spec) in (2,3), f'{type(stage).__name__}.configure returned tuple of unknown length ({len(spec)})'
-                kwargs = dict() if len(spec) == 2 else spec[-1]
-                _create_config_entry(cfg, f'{stage.cfgns}/{key}', *spec[:2], **kwargs)
+                _create_config_entry_kwargs = dict() if len(spec) == 2 else spec[-1]
+                _create_config_entry(cfg, f'{stage.cfgns}/{key}', *spec[:2], **_create_config_entry_kwargs)
         return cfg
 
 

@@ -94,8 +94,34 @@ class Stage(unittest.TestCase):
 
 class Pipeline(unittest.TestCase):
 
+    def _test_Pipeline_configure(self, original_base_cfg: 'config.Config'):
+        factors = list(range(-1, +3))
+        for x1_pre_factor, x2_pre_factor in itertools.product(factors, factors):
+            for x1_default_user_factor, x2_default_user_factor in itertools.product(factors, factors):
+                with self.subTest(x1_pre_factor = x1_pre_factor, x2_pre_factor = x2_pre_factor, x1_default_user_factor = x1_default_user_factor, x2_default_user_factor = x2_default_user_factor):
+                    base_cfg = original_base_cfg.copy()
+                    cfg = create_pipeline().test(
+                            lambda x1_factor_specs, x2_factor_specs: dict(x1_factor = x1_factor_specs),
+                            lambda x1_factor_specs, x2_factor_specs: dict(x2_factor = x2_factor_specs),
+                        ).configure(base_cfg,
+                            x1_factor_specs = (x1_pre_factor, x1_default_user_factor),
+                            x2_factor_specs = (x2_pre_factor, x2_default_user_factor),
+                        )
+                    self.assertEqual(base_cfg, original_base_cfg)
+                    self.assertEqual(cfg['stage1/x1_factor'], base_cfg.get('stage1/x1_factor', x1_pre_factor * base_cfg.get('stage1/AF_x1_factor', x1_default_user_factor)))
+                    self.assertEqual(cfg['stage2/x2_factor'], base_cfg.get('stage2/x2_factor', x2_pre_factor * base_cfg.get('stage2/AF_x2_factor', x2_default_user_factor)))
+
     def test_Pipeline_configure(self):
-        pass
+        cfg = pypers.config.Config()
+        self._test_Pipeline_configure(cfg)
+
+        cfg = pypers.config.Config()
+        cfg['stage1/x1_factor'] = 1
+        self._test_Pipeline_configure(cfg)
+
+        cfg = pypers.config.Config()
+        cfg['stage1/AF_x1_factor'] = 1
+        self._test_Pipeline_configure(cfg)
 
     def test_Pipeline_find(self):
         pipeline = create_pipeline().test()
@@ -170,22 +196,25 @@ class Pipeline(unittest.TestCase):
 
 class create_pipeline(unittest.TestCase):
 
-    def test(self):
+    def test(self, configure_stage1 = None, configure_stage2 = None, configure_stage3 = None):
         stages = [
             ## stage1 takes `input` and produces `x1`
             testsuite.DummyStage('stage1', ['input'], ['x1'], [], \
                 lambda input_data, cfg, log_root_dir = None, out = None: \
-                    dict(x1 = input_data['input'] * cfg['x1_factor'])
+                    dict(x1 = input_data['input'] * cfg['x1_factor']), \
+                configure_stage1
             ),
             ## stage2 consumes `input` and produces `x2`
             testsuite.DummyStage('stage2', [], ['x2'], ['input'], \
                 lambda input_data, cfg, log_root_dir = None, out = None: \
-                    dict(x2 = input_data['input'] * cfg['x2_factor'])
+                    dict(x2 = input_data['input'] * cfg['x2_factor']),
+                configure_stage2
             ),
             ## stage3 takes `x1` and `x2` and produces `y`
             testsuite.DummyStage('stage3', ['x1', 'x2'], ['y'], [], \
                 lambda input_data, cfg, log_root_dir = None, out = None: \
-                    dict(y = input_data['x1'] + input_data['x2'] + cfg['constant'])
+                    dict(y = input_data['x1'] + input_data['x2'] + cfg['constant']),
+                configure_stage3
             ),
         ]
         for permutated_stages in itertools.permutations(stages):
