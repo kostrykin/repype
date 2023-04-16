@@ -7,7 +7,7 @@ from . import testsuite
 class Stage(unittest.TestCase):
 
     def test_no_inputs_no_outputs(self):
-        stage = testsuite.DummyStage('test', [], [], None)
+        stage = testsuite.DummyStage('test', [], [], [], None)
         data  = dict()
         cfg   = pypers.config.Config()
         dt    = stage(data, cfg, out = 'muted')
@@ -15,7 +15,7 @@ class Stage(unittest.TestCase):
         self.assertEqual(data, dict())
 
     def test(self):
-        stage = testsuite.DummyStage('test', ['x1', 'x2'], ['y'], \
+        stage = testsuite.DummyStage('test', ['x1', 'x2'], ['y'], [], \
             lambda input_data, cfg, log_root_dir = None, out = None: \
                 dict(y = \
                     input_data['x1'] * cfg.get('x1_factor', 0) + \
@@ -34,16 +34,16 @@ class Stage(unittest.TestCase):
                     self.assertIsInstance(dt, float)
 
     def test_missing_input(self):
-        stage = testsuite.DummyStage('test', [], ['y'], \
+        stage = testsuite.DummyStage('test', [], ['y'], [], \
             lambda input_data, cfg, log_root_dir = None, out = None: \
                 dict(y = input_data['x'])
            )
-        data = dict()
+        data = dict(x = 0)
         cfg  = pypers.config.Config()
         self.assertRaises(KeyError, lambda: stage(data, cfg, out = 'muted'))
 
     def test_missing_output(self):
-        stage = testsuite.DummyStage('test', [], ['y'], \
+        stage = testsuite.DummyStage('test', [], ['y'], [], \
             lambda input_data, cfg, log_root_dir = None, out = None: \
                 dict()
            )
@@ -52,13 +52,41 @@ class Stage(unittest.TestCase):
         self.assertRaises(AssertionError, lambda: stage(data, cfg, out = 'muted'))
 
     def test_spurious_output(self):
-        stage = testsuite.DummyStage('test', [], [], \
+        stage = testsuite.DummyStage('test', [], [], [], \
             lambda input_data, cfg, log_root_dir = None, out = None: \
                 dict(y = 0)
            )
         data = dict()
         cfg  = pypers.config.Config()
         self.assertRaises(AssertionError, lambda: stage(data, cfg, out = 'muted'))
+
+    def test_missing_and_spurious_output(self):
+        stage = testsuite.DummyStage('test', [], ['y'], [], \
+            lambda input_data, cfg, log_root_dir = None, out = None: \
+                dict(z = 0)
+           )
+        data = dict()
+        cfg  = pypers.config.Config()
+        self.assertRaises(AssertionError, lambda: stage(data, cfg, out = 'muted'))
+
+    def test_consumes(self):
+        stage = testsuite.DummyStage('test', [], [], ['x'], \
+            lambda input_data, cfg, log_root_dir = None, out = None: \
+                dict()
+           )
+        data = dict(x = 0, y = 1)
+        cfg  = pypers.config.Config()
+        stage(data, cfg, out = 'muted')
+        self.assertEqual(data, dict(y = 1))
+
+    def test_missing_consumes(self):
+        stage = testsuite.DummyStage('test', [], [], ['x'], \
+            lambda input_data, cfg, log_root_dir = None, out = None: \
+                dict()
+           )
+        data = dict()
+        cfg  = pypers.config.Config()
+        self.assertRaises(KeyError, lambda: stage(data, cfg, out = 'muted'))
 
 
 class Pipeline(unittest.TestCase):

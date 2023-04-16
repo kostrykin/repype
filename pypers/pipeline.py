@@ -24,12 +24,13 @@ class Stage(object):
     Each stage must declare its required inputs and the outputs it produces. These are used by :py:meth:`~.create_pipeline` to automatically determine the stage order. The input ``g_raw`` is provided by the pipeline itself.
     """
 
-    def __init__(self, name: str, cfgns: str = None, inputs: list = [], outputs: list = [], enabled_by_default: bool = True):
+    def __init__(self, name: str, cfgns: str = None, inputs: list = [], outputs: list = [], consumes: list = [], enabled_by_default: bool = True):
         if cfgns is None: cfgns = name
-        self.name    = name
-        self.cfgns   = cfgns
-        self.inputs  = dict([(key, key) for key in  inputs])
-        self.outputs = dict([(key, key) for key in outputs])
+        self.name     = name
+        self.cfgns    = cfgns
+        self.inputs   = frozenset(inputs) | frozenset(consumes)
+        self.outputs  = frozenset(outputs)
+        self.consumes = frozenset(consumes)
         self.enabled_by_default = enabled_by_default
         self._callbacks = {}
 
@@ -51,15 +52,13 @@ class Stage(object):
         if cfg.get('enabled', self.enabled_by_default):
             out.intermediate(f'Starting stage "{self.name}"')
             self._callback('start', data)
-            input_data = {}
-            for data_key, input_data_key in self.inputs.items():
-                input_data[input_data_key] = data[data_key]
+            input_data = {key: data[key] for key in self.inputs}
             t0 = time.time()
             output_data = self.process(input_data, cfg=cfg, log_root_dir=log_root_dir, out=out)
             dt = time.time() - t0
             assert len(set(output_data.keys()) ^ set(self.outputs)) == 0, 'stage "%s" generated unexpected output' % self.name
-            for output_data_key, data_key in self.outputs.items():
-                data[data_key] = output_data[output_data_key]
+            data.update(output_data)
+            for key in self.consumes: del data[key]
             self._callback('end', data)
             return dt
         else:
@@ -178,7 +177,7 @@ class Pipeline:
         """Automatically configures hyperparameters based on the scale of objects in an image.
         """
         cfg = base_cfg.copy()
-        for stage in pipeline.stages:
+        for stage in self.stages:
             specs = stage.configure(*args, **kwargs)
             for key, spec in specs.items():
                 assert len(spec) in (2,3), f'{type(stage).__name__}.configure returned tuple of unknown length ({len(spec)})'
@@ -192,21 +191,33 @@ def create_pipeline(stages):
 
     The stage order is determined automatically.
     """
-    available_inputs = set(['g_raw'])
+    available_inputs = set(['input'])
     remaining_stages = list(stages)
 
     pipeline = Pipeline()
     while len(remaining_stages) > 0:
         next_stage = None
-        for stage in remaining_stages:
-            if frozenset(stage.inputs.keys()).issubset(available_inputs):
-                next_stage = stage
-                break
+
+        # Ensure that the next stage has no missing inputs
+        for stage1 in remaining_stages:
+            if stage1.inputs.issubset(available_inputs):
+                conflicted = False
+
+                # Ensure that no remaining stage requires a consumed input
+                for stage2 in remaining_stages - {stage1}:
+                    if stage1.consumes.issubset(stage2.inputs):
+                        conflicted = True
+
+                if not conflicted:
+                    next_stage = stage
+                    break
+
         if next_stage is None:
             raise ValueError('failed to resolve total ordering')
         remaining_stages.remove(next_stage)
         pipeline.append(next_stage)
-        available_inputs |= frozenset(next_stage.outputs.keys())
+        available_inputs |= next_stage.outputs
+        available_inputs -= next_stage.consumes
 
     return pipeline
 
