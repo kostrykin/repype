@@ -1,0 +1,11 @@
+{
+    "runnable": true,
+
+    "file_ids": ["01", "02"],
+
+    "config": {
+        "stage2": {
+            "x2": 1
+        }
+    }
+}
