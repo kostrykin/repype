@@ -75,10 +75,11 @@ def __process_file(pipeline, data, input, log_filepath, cfg_filepath, cfg, first
         t0 = time.time()
         cfg = pipeline.configurator.configure(cfg, input)
         timings['configuration'] = time.time() - t0
-        with open(cfg_filepath, 'w') as fout:
-            cfg.dump_json(fout)
+        if cfg_filepath is not None:
+            with open(cfg_filepath, 'w') as fout:
+                cfg.dump_json(fout)
 
-    result_data, _, _timings = pipeline.process_image(input, data=data, cfg=cfg, first_stage=first_stage, last_stage=last_stage, log_root_dir=log_filepath, out=out)
+    result_data, _, _timings = pipeline.process(input, data=data, cfg=cfg, first_stage=first_stage, last_stage=last_stage, log_root_dir=log_filepath, out=out)
     timings.update(_timings)
 
     return result_data, timings
@@ -138,8 +139,8 @@ class Task:
             assert self.file_ids          is not None
             assert self.input_pathpattern is not None
 
-            self.  log_pathpattern = path / self.data.entries.get('log_pathpattern', 'log')
-            self.  cfg_pathpattern = path / self.data.entries.get('cfg_pathpattern', 'cfg')
+            self.  log_pathpattern = (path / self.data.entries['log_pathpattern']) if 'log_pathpattern' in self.data.entries else None
+            self.  cfg_pathpattern = (path / self.data.entries['cfg_pathpattern']) if 'cfg_pathpattern' in self.data.entries else None
             self.      result_path = path / 'data.dill.gz'
             self.     timings_path = path / 'timings.csv'
             self.timings_json_path = path / '.timings.json'
@@ -148,6 +149,24 @@ class Task:
             self.           config = self.data.get('config', {})
             self.       last_stage = self.data.entries.get('last_stage', None)
             self.          environ = self.data.entries.get('environ', {})
+
+    def reset(self):
+        if not self.runnable: return
+        self._remove_from_filesystem(self.log_pathpattern)
+        self._remove_from_filesystem(self.cfg_pathpattern)
+        self._remove_from_filesystem(self.result_path)
+        self._remove_from_filesystem(self.timings_path)
+        self._remove_from_filesystem(self.timings_json_path)
+        self._remove_from_filesystem(self.digest_path)
+        self._remove_from_filesystem(self.digest_cfg_path)
+
+    def _remove_from_filesystem(self, path):
+        if path is None: return
+        assert _is_subpath(self.path, path)
+        path = pathlib.Path(path)
+        if not path.exists(): return
+        if path.is_file(): path.unlink()
+        else: path.rmdir()
 
     def resolve_path(self, path):
         if path is None: return None
@@ -228,11 +247,11 @@ class Task:
                 progress = file_idx / len(self.file_ids)
                 if report is not None: report.update(self, progress)
                 out3.write(Text.style(f'\n[{self._fmt_path(self.path)}] ', Text.BLUE + Text.BOLD) + Text.style(f'Processing file: {input_filepath}', Text.BOLD) + f' ({100 * progress:.0f}%)')
-                kwargs = dict(input_filepath = input_filepath,
-                                log_filepath = _resolve_pathpattern(self.log_pathpattern, file_id),
-                                cfg_filepath = _resolve_pathpattern(self.cfg_pathpattern, file_id),
-                                  last_stage = self.last_stage,
-                                         cfg = self.config.copy())
+                kwargs = dict(       input = input_filepath,
+                              log_filepath = _resolve_pathpattern(self.log_pathpattern, file_id),
+                              cfg_filepath = _resolve_pathpattern(self.cfg_pathpattern, file_id),
+                                last_stage = self.last_stage,
+                                       cfg = self.config.copy())
                 if file_id not in data: data[file_id] = None
                 data[file_id], _timings = _process_file(dry, pipeline, data[file_id], first_stage=first_stage, out=out3, **kwargs)
                 processed_stages |= set(_timings.keys())
@@ -244,7 +263,7 @@ class Task:
             
             skip_writing_results_conditions = [
                 one_shot,
-                any([not self.is_stage_marginal(stage) for stage in processed_stages]) and not self.result_path.exists(),
+                all([self.is_stage_marginal(stage) for stage in processed_stages]) and not self.result_path.exists(),
             ]
             if any(skip_writing_results_conditions):
                 out2.write('Skipping writing results')
@@ -281,12 +300,12 @@ class Task:
         previous_task = self.find_parent_task_with_result()
         if previous_task is not None:
             first_stage = pipeline.configurator.first_differing_stage(self.config, previous_task.config)
-            pickup_candidates.append((previous_task, first_stage))
+            pickup_candidates.append((previous_task, first_stage.cfgns))
         if self.result_path.exists() and self.digest_cfg_path.exists():
             with self.digest_cfg_path.open('r') as fin:
                 config = json.load(fin)
             first_stage = pipeline.configurator.first_differing_stage(self.config, config)
-            pickup_candidates.append((self, first_stage))
+            pickup_candidates.append((self, first_stage.cfgns))
         return pickup_candidates
 
     def find_best_pickup_candidate(self, pipeline):
@@ -330,6 +349,9 @@ class Task:
 
     def __str__(self):
         return str(self.path)
+
+    def __repr__(self):
+        return f'<{type(self).__name__}, path: {self.path}>'
 
 
 class BatchLoader:

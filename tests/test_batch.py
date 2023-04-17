@@ -1,6 +1,7 @@
 import unittest
 import pathlib
 import re
+import json
 
 import pypers.pipeline
 import pypers.batch
@@ -49,16 +50,18 @@ class BatchLoader(unittest.TestCase):
         self.assertIsNone(batch.task(''))
 
 
-class Task(unittest.TestCase):
+class DummyTask(pypers.batch.Task):
 
-    def setUp(self):
-        self.batch = pypers.batch.BatchLoader(pypers.batch.Task)
-        self.batch.load(rootdir)
+    def create_pipeline(self, dry: bool = False):
+        assert isinstance(dry, bool)
+        def get_number_from_json_file(filepath):
+            with open(filepath) as fin:
+                return float(json.load(fin))
         stages = [
             ## stage1 takes `input` and produces `a`
             testsuite.DummyStage('stage1', ['input'], ['a'], [], \
                 lambda input_data, cfg, log_root_dir = None, out = None: \
-                    dict(a = input_data['input'] * cfg['x1'])
+                    dict(a = get_number_from_json_file(input_data['input']) * cfg['x1'])
             ),
             ## stage2 takes `a` and produces `b`
             testsuite.DummyStage('stage2', ['a'], ['b'], [], \
@@ -71,28 +74,35 @@ class Task(unittest.TestCase):
                     dict(c = input_data['b'] * cfg['x3'])
             ),
         ]
-        self.pipeline = pypers.pipeline.create_pipeline(stages)
+        return pypers.pipeline.create_pipeline(stages)
+
+
+class Task(unittest.TestCase):
+
+    def setUp(self):
+        self.batch = pypers.batch.BatchLoader(DummyTask)
+        self.batch.load(rootdir)
+
+    def tearDown(self):
+        for task in self.batch.tasks:
+            task.reset()
 
     def test_config(self):
-        expected_task1_config = pypers.config.Config({
+        expected_base_config = pypers.config.Config({
             'stage1': dict(x1 = 0),
             'stage2': dict(x2 = 0),
             'stage3': dict(x3 = 0),
         })
-        expected_task2_config = expected_task1_config
-        expected_task3_config = pypers.config.Config({
-            'stage1': dict(x1 = 0),
-        })
-        self.assertEqual(self.batch.task(rootdir / 'task1').config, expected_task1_config)
-        self.assertEqual(self.batch.task(rootdir / 'task1' / 'x1=1').config, expected_task1_config.derive({'stage1': dict(x1=1)}))
-        self.assertEqual(self.batch.task(rootdir / 'task1' / 'x2=1').config, expected_task1_config.derive({'stage2': dict(x2=1)}))
-        self.assertEqual(self.batch.task(rootdir / 'task1' / 'x3=1').config, expected_task1_config.derive({'stage3': dict(x3=1)}))
-        self.assertEqual(self.batch.task(rootdir / 'task1' / 'x3=1' / 'x2=1').config, expected_task1_config.derive({'stage3': dict(x3=1), 'stage2': dict(x2=1)}))
-        self.assertEqual(self.batch.task(rootdir / 'task1' / 'x2=1' / 'x2=0').config, expected_task1_config)
-        self.assertEqual(self.batch.task(rootdir / 'task2' / 'x2=1').config, expected_task2_config.derive({'stage2': dict(x2=1)}))
-        self.assertEqual(self.batch.task(rootdir / 'task2' / 'x2=1' / 'x2=0').config, expected_task2_config)
-        self.assertEqual(self.batch.task(rootdir / 'task3').config, expected_task3_config)
-        self.assertEqual(self.batch.task(rootdir / 'task3' / 'runnable=false' / 'runnable=true').config, expected_task3_config)
+        self.assertEqual(self.batch.task(rootdir / 'task1').config, expected_base_config)
+        self.assertEqual(self.batch.task(rootdir / 'task1' / 'x1=1').config, expected_base_config.derive({'stage1': dict(x1=1)}))
+        self.assertEqual(self.batch.task(rootdir / 'task1' / 'x2=1').config, expected_base_config.derive({'stage2': dict(x2=1)}))
+        self.assertEqual(self.batch.task(rootdir / 'task1' / 'x3=1').config, expected_base_config.derive({'stage3': dict(x3=1)}))
+        self.assertEqual(self.batch.task(rootdir / 'task1' / 'x3=1' / 'x2=1').config, expected_base_config.derive({'stage3': dict(x3=1), 'stage2': dict(x2=1)}))
+        self.assertEqual(self.batch.task(rootdir / 'task1' / 'x2=1' / 'x2=0').config, expected_base_config)
+        self.assertEqual(self.batch.task(rootdir / 'task2' / 'x2=1').config, expected_base_config.derive({'stage2': dict(x2=1)}))
+        self.assertEqual(self.batch.task(rootdir / 'task2' / 'x2=1' / 'x2=0').config, expected_base_config)
+        self.assertEqual(self.batch.task(rootdir / 'task3').config, expected_base_config)
+        self.assertEqual(self.batch.task(rootdir / 'task3' / 'runnable=false' / 'runnable=true').config, expected_base_config)
 
     def test_root_path(self):
         get_expected_root_path = lambda task: rootdir / re.match(r'.*(task[123]).*', str(task.path)).group(1)
@@ -105,15 +115,13 @@ class Task(unittest.TestCase):
                 rootdir / 'task1',
                 rootdir / 'task1' / 'x2=1' / 'x2=0',
                 rootdir / 'task2' / 'x2=1' / 'x2=0',
+                rootdir / 'task3',
+                rootdir / 'task3' / 'runnable=false' / 'runnable=true',
             ],
             [
                 rootdir / 'task1' / 'x2=1',
                 rootdir / 'task2' / 'x2=1',
             ],
-            [
-                rootdir / 'task3',
-                rootdir / 'task3' / 'runnable=false' / 'runnable=true',
-            ]
         ]
         classes += [[task.path] for task in self.batch.tasks if task.runnable and all([task.path not in cls for cls in classes])]
         for cls_idx, cls in enumerate(classes):
@@ -129,9 +137,33 @@ class Task(unittest.TestCase):
                 self.assertNotEqual(digest1, digest2, f'{task1}, {task2}')
 
     def test_pickup_previous_task(self):
-        self.assertEqual(self.batch.task(rootdir / 'task1').pickup_previous_task(self.pipeline), (None, {}))
-        self.batch.task(rootdir / 'task1').run()
-        #self.batch.task(rootdir / 'task1' / 'x2=1').pickup_previous_task()
+        data = dict()
+
+        task = self.batch.task(rootdir / 'task1')
+        self.assertEqual(task.pickup_previous_task(task.create_pipeline(), out = 'muted'), (None, {}))
+        data[task.path] = task.run(out = 'muted')
+
+        task = self.batch.task(rootdir / 'task1' / 'x2=1')
+        pickup_stage, pickup_data = task.pickup_previous_task(task.create_pipeline(), out = 'muted')
+        self.assertEqual(pickup_stage, 'stage2')
+        self.assertEqual(pickup_data, data[rootdir / 'task1'])
+        data[task.path] = task.run(out = 'muted')
+
+        task = self.batch.task(rootdir / 'task1' / 'x2=1' / 'x2=0')
+        pickup_stage, pickup_data = task.pickup_previous_task(task.create_pipeline(), out = 'muted')
+        print(task.find_pickup_candidates(task.create_pipeline()))
+        self.assertEqual(pickup_stage, 'stage2') ## TODO: pickup from stage 3 should be possible and better
+        self.assertEqual(pickup_data, data[rootdir / 'task1' / 'x2=1'])
+
+        task = self.batch.task(rootdir / 'task3')
+        self.assertEqual(task.pickup_previous_task(task.create_pipeline(), out = 'muted'), (None, {}))
+        data[task.path] = task.run(out = 'muted')
+
+        task = self.batch.task(rootdir / 'task3' / 'runnable=false' / 'runnable=true')
+        pickup_stage, pickup_data = task.pickup_previous_task(task.create_pipeline(), out = 'muted')
+        self.assertEqual(pickup_stage, 'stage3')
+        #self.assertEqual(pickup_data, data[rootdir / 'task1'])
+        #data[task.path] = task.run()
 
 
 if __name__ == '__main__':

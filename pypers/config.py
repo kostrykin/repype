@@ -188,6 +188,9 @@ class Config:
         """
         return json.dumps(self.entries, indent=2)
 
+    def __repr__(self):
+        return f'<{type(self).__name__}, {str(self.entries)}>'
+
     def __eq__(self, other):
         return isinstance(other, Config) and str(self) == str(other)
 

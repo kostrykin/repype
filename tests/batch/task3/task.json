@@ -1,11 +1,18 @@
 {
     "runnable": true,
 
-    "file_ids": ["0"],
+    "input_pathpattern": "{ROOTDIR}/../data/%s.json",
+    "file_ids": ["00", "01", "02"],
 
     "config": {
         "stage1": {
             "x1": 0
+        },
+        "stage2": {
+            "x2": 0
+        },
+        "stage3": {
+            "x3": 0
         }
     }
 }
