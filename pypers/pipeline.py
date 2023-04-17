@@ -1,8 +1,10 @@
 import time
+import weakref
 
 from typing import Union
 from collections.abc import Iterable
 
+from .config import Config
 from .output import get_output
 
 
@@ -122,14 +124,43 @@ def _create_config_entry(cfg, key, factor, default_user_factor, type=None, min=N
     if  max is not None: cfg.update(key, func=lambda value: _min((value, max)))
 
 
+class Configurator:
+    """Automatically configures hyperparameters of a pipeline.
+    """
+
+    def __init__(self, pipeline: 'Pipeline'):
+        assert pipeline is not None
+        self._pipeline = weakref.ref(pipeline)
+
+    @property
+    def pipeline(self):
+        pipeline = self._pipeline()
+        assert pipeline is not None
+        return pipeline
+    
+    def configure(self, base_cfg, input):
+        return self.pipeline.configure(base_cfg, input)
+    
+    def first_differing_stage(self, config1: 'Config', config2: 'Config'):
+        for stage in self.pipeline.stages:
+            if any([
+                stage.cfgns in config1 and stage.cfgns not in config2,
+                stage.cfgns not in config1 and stage.cfgns in config2,
+                stage.cfgns in config1 and stage.cfgns in config2 and config1[stage.cfgns] != config2[stage.cfgns],
+            ]):
+                return stage
+        return None
+
+
 class Pipeline:
     """Represents a processing pipeline.
     
     Note that hyperparameters are *not* set automatically if the :py:meth:`~.process_image` method is used directly. Hyperparameters are only set automatically, if the :py:mod:`~.configure` method or batch processing are used.
     """
     
-    def __init__(self):
+    def __init__(self, configurator: 'Configurator' = None):
         self.stages = []
+        self.configurator = configurator if configurator else Configurator(self)
 
     def process(self, input, cfg, first_stage=None, last_stage=None, data=None, log_root_dir=None, out=None):
         """Processes the input.
@@ -148,20 +179,40 @@ class Pipeline:
         The parameter ``data`` is used if and only if ``first_stage`` is not ``None``. In this case, the outputs produced by the stages of the pipeline which are being skipped must be fed in using the ``data`` parameter obtained from a previous execution of this method.
         """
         cfg = cfg.copy()
-        if log_root_dir is not None: mkdir(log_root_dir)
-        if first_stage == self.stages[0].name and data is None: first_stage = None
-        if first_stage is not None and first_stage.endswith('+'): first_stage = self.stages[1 + self.find(first_stage[:-1])].name
+        if log_root_dir is not None: os.makedirs(log_root_dir, exist_ok=True)
+        if first_stage == self.stages[0].cfgns and data is None: first_stage = None
+        if first_stage is not None and first_stage.endswith('+'): first_stage = self.stages[1 + self.find(first_stage[:-1])].cfgns
         if first_stage is not None and last_stage is not None and self.find(first_stage) > self.find(last_stage): return data, cfg, {}
-        if first_stage is not None and first_stage != self.stages[0].name and data is None: raise ValueError('data argument must be provided if first_stage is used')
+        if first_stage is not None and first_stage != self.stages[0].cfgns and data is None: raise ValueError('data argument must be provided if first_stage is used')
+        if data is None: data = dict(input=input)
+        extra_stages = self.get_extra_stages(first_stage, last_stage, data.keys())
         out  = get_output(out)
         ctrl = ProcessingControl(first_stage, last_stage)
-        if data is None: data = dict(input=input)
         timings = {}
         for stage in self.stages:
-            if ctrl.step(stage.name):
+            if ctrl.step(stage.cfgns) or stage.cfgns in extra_stages:
                 dt = stage(data, cfg, out=out, log_root_dir=log_root_dir)
-                timings[stage.name] = dt
+                timings[stage.cfgns] = dt
         return data, cfg, timings
+    
+    def get_extra_stages(self, first_stage, last_stage, available_inputs):
+        required_inputs, available_inputs = set(), set(available_inputs) | {'input'}
+        stage_by_output = dict()
+        extra_stages    = list()
+        ctrl = ProcessingControl(first_stage, last_stage)
+        for stage in self.stages:
+            stage_by_output.update({output: stage for output in stage.outputs})
+            if ctrl.step(stage.cfgns):
+                required_inputs  |= stage.inputs
+                available_inputs |= stage.outputs
+        while True:
+            missing_inputs = required_inputs - available_inputs
+            if len(missing_inputs) == 0: break
+            extra_stage = stage_by_output[list(missing_inputs)[0]]
+            required_inputs  |= extra_stage.inputs
+            available_inputs |= extra_stage.outputs
+            extra_stages.append(extra_stage.cfgns)
+        return extra_stages
 
     def find(self, cfgns, not_found_dummy=float('inf')):
         """Returns the position of the stage identified by ``stage_cfgns``.
@@ -187,7 +238,7 @@ class Pipeline:
             return after + 1
 
     def configure(self, base_cfg, *args, **kwargs):
-        """Automatically configures hyperparameters based on the scale of objects in an image.
+        """Automatically configures hyperparameters.
         """
         cfg = base_cfg.copy()
         for stage in self.stages:

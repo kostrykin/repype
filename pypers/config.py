@@ -189,5 +189,5 @@ class Config:
         return json.dumps(self.entries, indent=2)
 
     def __eq__(self, other):
-        return isinstance(other, Config) and self.md5.hexdigest() == other.md5.hexdigest()
+        return isinstance(other, Config) and str(self) == str(other)
 

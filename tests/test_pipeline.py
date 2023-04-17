@@ -193,6 +193,19 @@ class Pipeline(unittest.TestCase):
                 self.assertEqual(data['y'], x1_factor * input + x2_factor * input + constant)
                 self.assertEqual(len(timings), len(pipeline.stages))
 
+    def test_Pipeline_get_extra_stages(self):
+        stages = [
+            testsuite.DummyStage('stage1', ['input'], ['x1'], [], None),
+            testsuite.DummyStage('stage2',    ['x1'], ['x2'], [], None),
+            testsuite.DummyStage('stage3',    ['x2'], ['x3'], [], None),
+            testsuite.DummyStage('stage4',    ['x3'], ['x4'], [], None),
+        ]
+        pipeline = pypers.pipeline.create_pipeline(stages)
+        self.assertEqual(frozenset(pipeline.get_extra_stages(first_stage = 'stage4', last_stage = None, available_inputs =     [])), frozenset(['stage1', 'stage2', 'stage3']))
+        self.assertEqual(frozenset(pipeline.get_extra_stages(first_stage = 'stage4', last_stage = None, available_inputs = ['x1'])), frozenset(['stage2', 'stage3']))
+        self.assertEqual(frozenset(pipeline.get_extra_stages(first_stage = 'stage4', last_stage = None, available_inputs = ['x2'])), frozenset(['stage3']))
+        self.assertEqual(frozenset(pipeline.get_extra_stages(first_stage = 'stage3', last_stage = None, available_inputs = ['x2'])), frozenset([]))
+
 
 class create_pipeline(unittest.TestCase):
 
