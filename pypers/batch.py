@@ -353,7 +353,7 @@ class BatchLoader:
     def task_list(self):
         return [str(task.path) for task in self.tasks]
 
-    def get_task(self, path):
+    def task(self, path):
         for task in self.tasks:
             if str(path) == str(task.path):
                 return task
