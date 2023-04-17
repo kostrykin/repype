@@ -193,6 +193,22 @@ class Pipeline(unittest.TestCase):
                 self.assertEqual(data['y'], x1_factor * input + x2_factor * input + constant)
                 self.assertEqual(len(timings), len(pipeline.stages))
 
+    def test_Pipeline_process_first_stage(self):
+        cfg = pypers.config.Config()
+        cfg['stage1/x1_factor'] = 1
+        cfg['stage2/x2_factor'] = 2
+        cfg['stage3/constant' ] = 3
+        pipeline = create_pipeline().test()
+        for suffix, offset in (('', 0), ('+', 1)):
+            for input in range(3):
+                full_data, _, _ = pipeline.process(input = input, cfg = cfg, out = 'muted')
+                for first_stage_idx, first_stage in enumerate((stage.cfgns for stage in pipeline.stages[:len(pipeline.stages) - offset])):
+                    with self.subTest(suffix = suffix, offset = offset, input = input, first_stage = first_stage):
+                        remaining_stages = frozenset([stage.cfgns for stage in pipeline.stages[first_stage_idx + offset:]])
+                        data, _, timings = pipeline.process(input = input, data = full_data, first_stage = first_stage + suffix, cfg = cfg, out = 'muted')
+                        self.assertEqual(data['y'], full_data['y'])
+                        self.assertEqual(frozenset(timings.keys()), remaining_stages)
+
     def test_Pipeline_get_extra_stages(self):
         stages = [
             testsuite.DummyStage('stage1', ['input'], ['x1'], [], None),

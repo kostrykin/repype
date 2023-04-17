@@ -31,6 +31,7 @@ class Stage(object):
 
     def __init__(self, name: str, cfgns: str = None, inputs: Iterable[str] = [], outputs: Iterable[str] = [], consumes: Iterable[str] = [], enabled_by_default: bool = True):
         if cfgns is None: cfgns = name
+        assert not cfgns.endswith('+'), 'the suffix "+" is reserved as an indacation of "the stage after that stage"'
         self.name     = name
         self.cfgns    = cfgns
         self.inputs   = frozenset(inputs) | frozenset(consumes)
@@ -184,7 +185,8 @@ class Pipeline:
         if first_stage is not None and first_stage.endswith('+'): first_stage = self.stages[1 + self.find(first_stage[:-1])].cfgns
         if first_stage is not None and last_stage is not None and self.find(first_stage) > self.find(last_stage): return data, cfg, {}
         if first_stage is not None and first_stage != self.stages[0].cfgns and data is None: raise ValueError('data argument must be provided if first_stage is used')
-        if data is None: data = dict(input=input)
+        if data is None: data = dict()
+        if input is not None: data['input'] = input
         extra_stages = self.get_extra_stages(first_stage, last_stage, data.keys())
         out  = get_output(out)
         ctrl = ProcessingControl(first_stage, last_stage)
