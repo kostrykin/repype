@@ -161,9 +161,8 @@ class Task(unittest.TestCase):
 
         task = self.batch.task(rootdir / 'task3' / 'runnable=false' / 'runnable=true')
         pickup_stage, pickup_data = task.pickup_previous_task(task.create_pipeline(), out = 'muted')
-        self.assertEqual(pickup_stage, 'stage3')
-        #self.assertEqual(pickup_data, data[rootdir / 'task1'])
-        #data[task.path] = task.run()
+        self.assertEqual(pickup_stage, '')
+        self.assertEqual(pickup_data, data[rootdir / 'task3'])
 
 
 if __name__ == '__main__':

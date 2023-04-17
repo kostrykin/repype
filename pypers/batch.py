@@ -300,7 +300,7 @@ class Task:
         previous_task = self.find_parent_task_with_result()
         if previous_task is not None:
             first_stage = pipeline.configurator.first_differing_stage(self.config, previous_task.config)
-            pickup_candidates.append((previous_task, first_stage.cfgns))
+            pickup_candidates.append((previous_task, first_stage.cfgns if first_stage else ''))
         if self.result_path.exists() and self.digest_cfg_path.exists():
             with self.digest_cfg_path.open('r') as fin:
                 config = json.load(fin)
@@ -317,7 +317,7 @@ class Task:
     def pickup_previous_task(self, pipeline, dry=False, pickup=True, out=None):
         out = get_output(out)
         pickup_task, stage_name = self.find_best_pickup_candidate(pipeline) if pickup else (None, None)
-        if pickup_task is None or all([self.is_stage_marginal(stage) for stage in pipeline.stages[:pipeline.find(stage_name)]]):
+        if pickup_task is None or (len(stage_name) > 0 and all([self.is_stage_marginal(stage) for stage in pipeline.stages[:pipeline.find(stage_name)]])):
             return None, {}
         else:
             out.write(f'Picking up from: {self._fmt_path(pickup_task.result_path)} ({stage_name if stage_name != "" else "load"})')
