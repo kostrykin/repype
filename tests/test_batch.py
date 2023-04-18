@@ -2,6 +2,8 @@ import unittest
 import pathlib
 import re
 import json
+import gzip
+import dill
 
 import pypers.pipeline
 import pypers.batch
@@ -11,6 +13,15 @@ from . import testsuite
 
 
 rootdir = pathlib.Path(__file__).parent / 'batch'
+
+
+def _get_written_results_file(task):
+    if hasattr(task, 'result_path') and task.result_path.exists():
+        return task.result_path
+    elif task.parent_task is not None:
+        return _get_written_results_file(task.parent_task)
+    else:
+        return None
 
 
 class BatchLoader(unittest.TestCase):
@@ -162,6 +173,59 @@ class Task(unittest.TestCase):
         pickup_stage, pickup_data = task.pickup_previous_task(task.create_pipeline(), out = 'muted')
         self.assertEqual(pickup_stage, '')
         self.assertEqual(pickup_data, data[rootdir / 'task3'])
+
+    def test_run(self):
+        data_actual = dict()
+        for task in self.batch.tasks:
+            task.run(out = 'muted')
+            if hasattr(task, 'result_path'):
+                result_path = _get_written_results_file(task)
+                with gzip.open(result_path, 'rb') as fin:
+                    data_actual[task.path] = dill.load(fin)
+            else:
+                data_actual[task.path] = None
+        for task in self.batch.tasks:
+            task.reset()
+        for task in self.batch.tasks:
+            with self.subTest(task = task):
+                data_expected = task.run(out = 'muted')
+                if data_expected is None:
+                    self.assertIsNone(data_expected)
+                else:
+                    self.assertEqual(data_actual[task.path], data_expected)
+
+    def test_pending(self):
+        for task in self.batch.tasks:
+            if task.runnable:
+                self.assertTrue(task.is_pending)
+            task.run(out = 'muted')
+            self.assertFalse(task.is_pending)
+
+    def test_run_twice(self):
+        for task in self.batch.tasks:
+            data = task.run(out = 'muted')
+            if task.runnable:
+                self.assertIsNotNone(data)
+            self.assertIsNone(task.run(out = 'muted'))
+
+    def test_run_oneshot(self):
+        for task in self.batch.tasks:
+            check_pending = task.is_pending
+            data1 = task.run(out = 'muted', one_shot=True)
+            if check_pending:
+                self.assertTrue(task.is_pending)
+            if task.runnable:
+                self.assertIsNotNone(data1)
+                data2 = task.run(out = 'muted')
+                self.assertIsNotNone(data2)
+
+    def test_run_force(self):
+        for task in self.batch.tasks:
+            data1 = task.run(out = 'muted')
+            if task.runnable:
+                self.assertIsNotNone(data1)
+                data2 = task.run(out = 'muted', force=True)
+                self.assertIsNotNone(data2)
 
 
 if __name__ == '__main__':
