@@ -206,16 +206,19 @@ class Pipeline(unittest.TestCase):
                 return _cb
             stage.add_callback('start', _get_cb(stage))
             stage.add_callback('end'  , _get_cb(stage))
-        def expected_call_record(stages):
-            return sum(([
+            stage.add_callback('skip' , _get_cb(stage))
+        def expected_call_record(processed_stages):
+            return sum((([
                 f'{stage.name} start',
                 f'{stage.name} process',
                 f'{stage.name} end',
-            ] for stage in stages), [])
+            ] if stage.cfgns in processed_stages else [
+                f'{stage.name} skip',
+            ]) for stage in pipeline.stages), [])
         for suffix, offset in (('', 0), ('+', 1)):
             for input in range(3):
                 full_data, _, _ = pipeline.process(input = input, cfg = cfg, out = 'muted')
-                self.assertEqual(pipeline.call_record, expected_call_record(pipeline.stages))
+                self.assertEqual(pipeline.call_record, expected_call_record([stage.cfgns for stage in pipeline.stages]))
                 pipeline.call_record.clear()
                 for first_stage_idx, first_stage in enumerate((stage.cfgns for stage in pipeline.stages[:len(pipeline.stages) - offset])):
                     with self.subTest(suffix = suffix, offset = offset, input = input, first_stage = first_stage):
@@ -223,7 +226,7 @@ class Pipeline(unittest.TestCase):
                         data, _, timings = pipeline.process(input = input, data = full_data, first_stage = first_stage + suffix, cfg = cfg, out = 'muted')
                         self.assertEqual(data['y'], full_data['y'])
                         self.assertEqual(frozenset(timings.keys()), remaining_stages)
-                        self.assertEqual(pipeline.call_record, expected_call_record(pipeline.stages[first_stage_idx + offset:]))
+                        self.assertEqual(pipeline.call_record, expected_call_record(remaining_stages))
                         pipeline.call_record.clear()
 
     def test_get_extra_stages(self):

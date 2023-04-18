@@ -71,6 +71,9 @@ class Stage(object):
             out.write(f'Skipping disabled stage "{self.name}"')
             self._callback('skip', data)
             return 0
+        
+    def skip(self, data):
+            self._callback('skip', data)
 
     def process(self, input_data, cfg, log_root_dir, out):
         """Runs this pipeline stage.
@@ -198,6 +201,8 @@ class Pipeline:
             if ctrl.step(stage.cfgns) or stage.cfgns in extra_stages:
                 dt = stage(data, cfg, out=out, log_root_dir=log_root_dir)
                 timings[stage.cfgns] = dt
+            else:
+                stage.skip(data)
         return data, cfg, timings
     
     def get_extra_stages(self, first_stage, last_stage, available_inputs):
