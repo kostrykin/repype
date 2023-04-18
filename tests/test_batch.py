@@ -151,7 +151,6 @@ class Task(unittest.TestCase):
 
         task = self.batch.task(rootdir / 'task1' / 'x2=1' / 'x2=0')
         pickup_stage, pickup_data = task.pickup_previous_task(task.create_pipeline(), out = 'muted')
-        print(task.find_pickup_candidates(task.create_pipeline()))
         self.assertEqual(pickup_stage, 'stage2') ## TODO: pickup from stage 3 should be possible and better
         self.assertEqual(pickup_data, data[rootdir / 'task1' / 'x2=1'])
 
