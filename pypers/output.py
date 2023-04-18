@@ -111,6 +111,24 @@ class Output:
         :param line: Line of text to be displayed.
         """
         raise NotImplementedError()
+    
+    def progress(self, iterable, text=None, progressbar=20, permanent=True, length_hint=None):
+        n = length_hint if length_hint is not None else len(iterable)
+        progressbar_length = progressbar
+        for item_idx, item in enumerate(iterable):
+            output = f'{100 * item_idx / n:.1f}% ({item_idx} / {n})'
+            if progressbar_length is not None:
+                progressbar =  ((progressbar_length * item_idx) // n) * '='
+                progressbar =  progressbar + (progressbar_length - len(progressbar)) * ' '
+                output = f'[{progressbar}] {output}'
+            if text is not None:
+                output = f'{text}… {output}'
+            self.intermediate(output)
+            yield item
+        if permanent and text is not None:
+            self.write(f'{text}: {n} / {n}')
+        else:
+            self.intermediate('')
 
 
 class JupyterOutput(Output):
