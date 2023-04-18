@@ -25,7 +25,7 @@ def _format_runtime(seconds):
     return f'{hours:02}:{minutes:02}:{seconds:02}'
 
 
-def _resolve_pathpattern(pathpattern, fileid):
+def resolve_pathpattern(pathpattern, fileid):
     if pathpattern is None: return None
     else: return str(pathpattern) % fileid
 
@@ -63,7 +63,7 @@ def _process_file(dry, *args, out=None, **kwargs):
         return __process_file(*args, out=out, **kwargs)
 
 
-def __process_file(pipeline, data, input, log_filepath, cfg_filepath, cfg, first_stage, last_stage, out=None, **kwargs):
+def __process_file(loader, pipeline, data, input, log_filepath, cfg_filepath, cfg, first_stage, last_stage, out=None, **kwargs):
     if log_filepath is not None: _mkdir(pathlib.Path(log_filepath).parents[0])
     if cfg_filepath is not None: _mkdir(pathlib.Path(cfg_filepath).parents[0])
 
@@ -76,8 +76,7 @@ def __process_file(pipeline, data, input, log_filepath, cfg_filepath, cfg, first
         cfg = pipeline.configurator.configure(cfg, input)
         timings['configuration'] = time.time() - t0
         if cfg_filepath is not None:
-            with open(cfg_filepath, 'w') as fout:
-                cfg.dump_json(fout)
+            loader.dump(cfg_filepath, cfg.entries)
 
     result_data, _, _timings = pipeline.process(input, data=data, cfg=cfg, first_stage=first_stage, last_stage=last_stage, log_root_dir=log_filepath, out=out, **kwargs)
     timings.update(_timings)
@@ -109,6 +108,59 @@ def _compress_logs(log_dir):
     shutil.rmtree(str(log_dir))
 
 
+class TaskLoader:
+
+    suffix_hint = ''
+
+    def filepath(self, filepath):
+        convert_to_path_obj = isinstance(filepath, pathlib.Path)
+        filepath = str(filepath)
+        filepath = filepath if any([filepath.lower().endswith(f'.{suffix.lower()}') for suffix in self.suffixes]) else f'{filepath}.{self.default_suffix}'
+        return pathlib.Path(filepath) if convert_to_path_obj else filepath
+    
+    @property
+    def default_suffix(self):
+        return self.suffixes[0]
+    
+    @property
+    def suffixes(self):
+        return self.suffix_hint.split(',')
+
+    def load(self, filepath):
+        raise NotImplementedError()
+    
+    def dump(self, filepath, data):
+        raise NotImplementedError()
+    
+
+class JSONLoader(TaskLoader):
+
+    suffix_hint = 'json'
+
+    def load(self, filepath):
+        with open(self.filepath(filepath), 'r') as file:
+            return json.load(file)
+    
+    def dump(self, filepath, data):
+        with open(self.filepath(filepath), 'w') as file:
+            json.dump(data, file)
+
+
+class YAMLLoader(TaskLoader):
+
+    suffix_hint = 'yml,yaml'
+
+    def load(self, filepath):
+        import yaml
+        with open(self.filepath(filepath), 'r') as file:
+            return yaml.load(file, Loader = yaml.FullLoader)
+
+    def dump(self, filepath, data):
+        import yaml
+        with open(self.filepath(filepath), 'w') as file:
+            file.write(yaml.dump(data))
+
+
 class Task:
     """Represents a batch processing task (see :ref:`batch_task_spec`).
 
@@ -119,9 +171,10 @@ class Task:
 
     outputs = list()
 
-    def __init__(self, path, data, parent_task=None):
+    def __init__(self, loader, path, data, parent_task=None):
         self.runnable    = 'runnable' in data and bool(data['runnable']) == True
         self.parent_task = parent_task
+        self.loader      = loader
         self.path = path
         self.data = Config(data) if parent_task is None else Config(parent_task.data).derive(data)
         self.rel_path = _find_task_rel_path(self)
@@ -143,11 +196,11 @@ class Task:
 
             self.  log_pathpattern = (path / self.data.entries['log_pathpattern']) if 'log_pathpattern' in self.data.entries else None
             self.  cfg_pathpattern = (path / self.data.entries['cfg_pathpattern']) if 'cfg_pathpattern' in self.data.entries else None
-            self.      result_path = path / 'data.dill.gz'
-            self.     timings_path = path / 'timings.csv'
-            self.timings_json_path = path / '.timings.json'
-            self.      digest_path = path / '.digest'
-            self.  digest_cfg_path = path / '.digest.cfg.json'
+            self.      result_path =  path / 'data.dill.gz'
+            self.     timings_path =  path / 'timings.csv'
+            self.timings_json_path =  path / '.timings.json'
+            self.      digest_path =  path / '.digest'
+            self.  digest_cfg_path =  path / '.digest.cfg.json'
             self.           config = self.data.get('config', {})
             self.       last_stage = self.data.entries.get('last_stage', None)
             self.          environ = self.data.entries.get('environ', {})
@@ -164,10 +217,16 @@ class Task:
             if output_pathpattern is not None:
                 yield (output, output_pathpattern)
 
+    def __eq__(self, other):
+        return isinstance(other, Task) and self.data == other.data
+
     def reset(self):
         if not self.runnable: return
-        self._remove_from_filesystem(self.log_pathpattern)
-        self._remove_from_filesystem(self.cfg_pathpattern)
+        for file_id in self.file_ids:
+            if self.log_pathpattern is not None:
+                self._remove_from_filesystem(resolve_pathpattern(self.log_pathpattern, file_id))
+            if self.cfg_pathpattern is not None:
+                self._remove_from_filesystem(self.loader.filepath(resolve_pathpattern(self.cfg_pathpattern, file_id)))
         self._remove_from_filesystem(self.result_path)
         self._remove_from_filesystem(self.timings_path)
         self._remove_from_filesystem(self.timings_json_path)
@@ -175,12 +234,12 @@ class Task:
         self._remove_from_filesystem(self.digest_cfg_path)
         for _, output_pathpattern in self.available_outputs:
             for file_id in self.file_ids:
-                output_path = _resolve_pathpattern(output_pathpattern, file_id)
+                output_path = resolve_pathpattern(output_pathpattern, file_id)
                 self._remove_from_filesystem(output_path)
 
     def _remove_from_filesystem(self, path):
         if path is None: return
-        assert _is_subpath(self.path, path)
+        assert _is_subpath(self.path, path), f'{path} is not a sub-path of {self.path}'
         path = pathlib.Path(path)
         if not path.exists(): return
         if path.is_file(): path.unlink()
@@ -266,16 +325,16 @@ class Task:
                 if report is not None: report.update(self, progress)
                 out3.write(Text.style(f'\n[{self._fmt_path(self.path)}] ', Text.BLUE + Text.BOLD) + Text.style(f'Processing file: {input_filepath}', Text.BOLD) + f' ({100 * progress:.0f}%)')
                 kwargs = dict(       input = input_filepath,
-                              log_filepath = _resolve_pathpattern(self.log_pathpattern, file_id),
-                              cfg_filepath = _resolve_pathpattern(self.cfg_pathpattern, file_id),
+                              log_filepath = resolve_pathpattern(self.log_pathpattern, file_id),
+                              cfg_filepath = resolve_pathpattern(self.cfg_pathpattern, file_id),
                                 last_stage = self.last_stage,
                                        cfg = self.config.copy())
                 for output, output_pathpattern in self.available_outputs:
-                    output_path = _resolve_pathpattern(output_pathpattern, file_id)
+                    output_path = resolve_pathpattern(output_pathpattern, file_id)
                     _mkdir(pathlib.Path(output_path).parents[0])
                     kwargs[f'{output}_filepath'] = output_path
                 if file_id not in data: data[file_id] = None
-                data[file_id], _timings = _process_file(dry, pipeline, data[file_id], first_stage=first_stage, out=out3, **kwargs)
+                data[file_id], _timings = _process_file(dry, self.loader, pipeline, data[file_id], first_stage=first_stage, out=out3, **kwargs)
                 processed_stages |= set(_timings.keys())
                 if not dry: _compress_logs(kwargs['log_filepath'])
                 if file_id not in timings: timings[file_id] = {}
@@ -291,12 +350,7 @@ class Task:
                 out2.write('Skipping writing results')
             else:
                 if not dry:
-                    self._write_timings(timings)
-                    out2.intermediate(f'Writing results... {self._fmt_path(self.result_path)}')
-                    with gzip.open(self.result_path, 'wb') as fout:
-                        dill.dump(data, fout, byref=True)
-                    with self.digest_cfg_path.open('w') as fout:
-                        self.config.dump_json(fout)
+                    self.write_results(data, timings, out = out2)
                 out2.write(Text.style('Results written to: ', Text.BOLD) + self._fmt_path(self.result_path))
             if not dry and not one_shot: self.digest_path.write_text(self.config_digest)
             return locals().get('data', None)
@@ -305,6 +359,15 @@ class Task:
             raise
         finally:
             self.cleanup(dry)
+
+    def write_results(self, data, timings, out = None):
+        out = get_output(out)
+        self._write_timings(timings)
+        out.intermediate(f'Writing results... {self._fmt_path(self.result_path)}')
+        with gzip.open(self.result_path, 'wb') as fout:
+            dill.dump(data, fout, byref=True)
+        with self.digest_cfg_path.open('w') as fout:
+            self.config.dump_json(fout)
 
     def find_runnable_parent_task(self):
         if self.parent_task is None: return None
@@ -379,13 +442,16 @@ class Task:
 class BatchLoader:
     """Loads all tasks from a given directory (see :ref:`batch_task_spec`).
 
-    :param override: Dictionary of task specification settings which are to be overwritten.
+    :param inject: Dictionary of task specification settings which are to be added (before parsing)
+    :param override: Dictionary of task specification settings which are to be overwritten (after parsing).
     """
 
-    def __init__(self, task_cls: Type[Task], override: dict = {}):
-        self.tasks    = []
-        self.task_cls = task_cls
-        self.override = override
+    def __init__(self, task_cls: Type[Task], task_loader: 'TaskLoader', inject: dict = {}, override: dict = {}):
+        self.tasks       = []
+        self.task_cls    = task_cls
+        self.task_loader = task_loader
+        self.inject      = inject
+        self.override    = override
 
     def load(self, path):
         """Loads all task from the root directory ``path``.
@@ -405,7 +471,7 @@ class BatchLoader:
         return None
 
     def _process_directory(self, current_dir, parent_task=None):
-        task = self._create_from_directory(current_dir, parent_task, self.override)
+        task = self._create_from_directory(current_dir, parent_task)
         if task is not None:
             self.tasks.append(task)
             parent_task = task
@@ -414,23 +480,21 @@ class BatchLoader:
             if f.is_dir():
                 self._process_directory(f, parent_task)
 
-    def _create_from_directory(self, task_dir: PathType, parent_task: 'Task', override: dict = {}, force_runnable: bool = False):
+    def _create_from_directory(self, task_dir: PathType, parent_task: 'Task'):
         """Instantiates the task from the specification in a directory (see :ref:`batch_task_spec`).
 
-        :param task_dir: The path of the directory which contains a ``task.json`` specification file.
+        :param task_dir: The path of the directory which contains a task specification file.
         :param parent_task: The parent task (or ``None`` if this a root task).
         :param override: Dictionary of task specification settings which are to be overwritten.
-        :param force_runnable: If ``True``, the task will be treated as runnable, regardless of the task specification.
         """
         task_dir  = pathlib.Path(task_dir)
-        task_file = task_dir / 'task.json'
+        task_file = self.task_loader.filepath(task_dir / 'task')
         if task_file.exists():
             try:
-                with task_file.open('r') as task_fin:
-                    task_data = json.load(task_fin)
-                if force_runnable: task_data['runnable'] = True
-                task = self.task_cls(path = task_dir, data = task_data, parent_task = parent_task)
-                for key, value in override.items():
+                task_data = self.task_loader.load(str(task_file))
+                task_data.update(self.inject)
+                task = self.task_cls(loader = self.task_loader, path = task_dir, data = task_data, parent_task = parent_task)
+                for key, value in self.override.items():
                     setattr(task, key, value)
                 return task
             except:
@@ -490,7 +554,7 @@ class StatusReport:
                     fout.write(f'- {str(task.path)}\n')
 
 
-def run_cli(task_cls, parser = None):
+def run_cli(task_cls, task_loader = JSONLoader(), parser = None):
 
     if parser is None:
         import argparse
@@ -515,7 +579,7 @@ def run_cli(task_cls, parser = None):
     if args.last_stage is not None:
         override['last_stage'] = args.last_stage
         
-    loader = BatchLoader(task_cls = task_cls, override = override)
+    loader = BatchLoader(task_cls = task_cls, task_loader = task_loader, override = override)
     loader.load(args.path)
 
     args.task     = [_get_path(args.path,     task_path) for     task_path in args.task    ]

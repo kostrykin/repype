@@ -32,7 +32,7 @@ def get_number_from_json_file(filepath):
 class BatchLoader(unittest.TestCase):
 
     def test_load(self):
-        batch = pypers.batch.BatchLoader(pypers.batch.Task)
+        batch = pypers.batch.BatchLoader(pypers.batch.Task, pypers.batch.JSONLoader())
         batch.load(rootdir)
         expected_task_list = [
             str(rootdir / 'task1'),                     ## 0
@@ -93,7 +93,7 @@ class DummyTask(pypers.batch.Task):
 class Task(unittest.TestCase):
 
     def setUp(self):
-        self.batch = pypers.batch.BatchLoader(DummyTask)
+        self.batch = pypers.batch.BatchLoader(DummyTask, pypers.batch.JSONLoader())
         self.batch.load(rootdir)
 
     def tearDown(self):
@@ -229,6 +229,48 @@ class Task(unittest.TestCase):
                 data2 = task.run(out = 'muted', force=True)
                 self.assertIsNotNone(data2)
 
+    def test_cfg_pathpattern(self):
+        cfg_pathpattern = 'cfg/cfg-%s'
+        batch = pypers.batch.BatchLoader(DummyTask, pypers.batch.JSONLoader(), inject = dict(cfg_pathpattern = cfg_pathpattern))
+        batch.load(rootdir)
+        task = batch.task(rootdir / 'task1')
+        self.assertEqual(task.cfg_pathpattern, task.path / cfg_pathpattern)
+        try:
+            task.run(out = 'muted')
+            for file_id in task.file_ids:
+                cfg_filepath = task.path / (cfg_pathpattern % file_id + '.json')
+                self.assertTrue(cfg_filepath.exists())
+                cfg = task.loader.load(cfg_filepath)
+                self.assertEqual(cfg, task.config.entries)
+        finally:
+            task.reset()
+            for file_id in task.file_ids:
+                cfg_filepath = task.path / (cfg_pathpattern % file_id + '.json')
+                self.assertFalse(cfg_filepath.exists())
+        return task
+
+    def test_yaml(self):
+        yaml_batch = pypers.batch.BatchLoader(DummyTask, pypers.batch.YAMLLoader(), inject = dict(cfg_pathpattern = 'cfg/cfg-%s'))
+        yaml_batch.load(rootdir)
+        self.assertEqual(yaml_batch.task_list, [str(rootdir / 'yml_task1')])
+        yaml_task = yaml_batch.task(rootdir / 'yml_task1')
+        json_task = self.test_cfg_pathpattern()
+        self.assertEqual(yaml_task, json_task)
+        try:
+            data_json = json_task.run(out = 'muted')
+            data_yaml = yaml_task.run(out = 'muted')
+            self.assertEqual(data_yaml, data_json)
+            for file_id in yaml_task.file_ids:
+                cfg_filepath = pathlib.Path(pypers.batch.resolve_pathpattern(yaml_task.cfg_pathpattern, file_id) + '.yml')
+                self.assertTrue(cfg_filepath.exists())
+                cfg = yaml_task.loader.load(cfg_filepath)
+                self.assertEqual(cfg, json_task.config.entries)
+        finally:
+            json_task.reset()
+            yaml_task.reset()
+            for file_id in yaml_task.file_ids:
+                cfg_filepath = pathlib.Path(pypers.batch.resolve_pathpattern(yaml_task.cfg_pathpattern, file_id) + '.yml')
+                self.assertFalse(cfg_filepath.exists())
 
 class ExtendedTask(DummyTask):
 
@@ -258,7 +300,7 @@ class ExtendedTask(DummyTask):
 class ExtendedTaskTest(unittest.TestCase):
 
     def setUp(self):
-        self.batch = pypers.batch.BatchLoader(ExtendedTask)
+        self.batch = pypers.batch.BatchLoader(ExtendedTask, pypers.batch.JSONLoader())
         self.batch.load(rootdir)
 
     def tearDown(self):
