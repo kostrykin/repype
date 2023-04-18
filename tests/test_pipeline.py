@@ -94,7 +94,7 @@ class Stage(unittest.TestCase):
 
 class Pipeline(unittest.TestCase):
 
-    def _test_Pipeline_configure(self, original_base_cfg: 'config.Config'):
+    def _test_configure(self, original_base_cfg: 'config.Config'):
         factors = list(range(-1, +3))
         for x1_pre_factor, x2_pre_factor in itertools.product(factors, factors):
             for x1_default_user_factor, x2_default_user_factor in itertools.product(factors, factors):
@@ -111,31 +111,31 @@ class Pipeline(unittest.TestCase):
                     self.assertEqual(cfg['stage1/x1_factor'], base_cfg.get('stage1/x1_factor', x1_pre_factor * base_cfg.get('stage1/AF_x1_factor', x1_default_user_factor)))
                     self.assertEqual(cfg['stage2/x2_factor'], base_cfg.get('stage2/x2_factor', x2_pre_factor * base_cfg.get('stage2/AF_x2_factor', x2_default_user_factor)))
 
-    def test_Pipeline_configure(self):
+    def test_configure(self):
         cfg = pypers.config.Config()
-        self._test_Pipeline_configure(cfg)
+        self._test_configure(cfg)
 
         cfg = pypers.config.Config()
         cfg['stage1/x1_factor'] = 1
-        self._test_Pipeline_configure(cfg)
+        self._test_configure(cfg)
 
         cfg = pypers.config.Config()
         cfg['stage1/AF_x1_factor'] = 1
-        self._test_Pipeline_configure(cfg)
+        self._test_configure(cfg)
 
-    def test_Pipeline_find(self):
+    def test_find(self):
         pipeline = create_pipeline().test()
         for expected_position, stage in enumerate(pipeline.stages):
             with self.subTest(expected_position = expected_position):
                 actual_position = pipeline.find(stage.cfgns)
                 self.assertEqual(actual_position, expected_position)
 
-    def test_Pipeline_find_missing(self):
+    def test_find_missing(self):
         pipeline = create_pipeline().test()
         dummy = object()
         self.assertIs(pipeline.find('stage4', dummy), dummy)
 
-    def test_Pipeline_append(self):
+    def test_append(self):
         new_stage = testsuite.DummyStage('new_stage', [], [], [], None)
         pipeline = create_pipeline().test()
         expected_pos = len(pipeline.stages)
@@ -144,14 +144,14 @@ class Pipeline(unittest.TestCase):
         self.assertEqual(len(pipeline.stages), expected_pos + 1)
         self.assertIs(pipeline.stages[pos], new_stage)
 
-    def test_Pipeline_append_twice(self):
+    def test_append_twice(self):
         pipeline = create_pipeline().test()
         for stage in pipeline.stages:
             with self.subTest(stage = stage.cfgns):
                 self.assertRaises(RuntimeError, lambda: pipeline.append(stage))
                 self.assertRaises(RuntimeError, lambda: pipeline.append(testsuite.DummyStage(stage.cfgns, [], [], [], None)))
 
-    def test_Pipeline_append_after_str(self):
+    def test_append_after_str(self):
         new_stage = testsuite.DummyStage('new_stage', [], [], [], None)
         stages = create_pipeline().test().stages
         for after in [stage.cfgns for stage in stages]:
@@ -162,7 +162,7 @@ class Pipeline(unittest.TestCase):
                 self.assertEqual(pos, expected_pos)
                 self.assertIs(pipeline.stages[pos], new_stage)
 
-    def test_Pipeline_append_after_int(self):
+    def test_append_after_int(self):
         new_stage = testsuite.DummyStage('new_stage', [], [], [], None)
         stages = create_pipeline().test().stages
         for after in range(-1, len(stages)):
@@ -173,7 +173,7 @@ class Pipeline(unittest.TestCase):
                 self.assertEqual(pos, expected_pos)
                 self.assertIs(pipeline.stages[pos], new_stage)
 
-    def test_Pipeline_process(self):
+    def test_process(self):
         x1_factor = 1
         x2_factor = 2
         constant  = 3
@@ -193,23 +193,40 @@ class Pipeline(unittest.TestCase):
                 self.assertEqual(data['y'], x1_factor * input + x2_factor * input + constant)
                 self.assertEqual(len(timings), len(pipeline.stages))
 
-    def test_Pipeline_process_first_stage(self):
+    def test_process_first_stage(self):
         cfg = pypers.config.Config()
         cfg['stage1/x1_factor'] = 1
         cfg['stage2/x2_factor'] = 2
         cfg['stage3/constant' ] = 3
         pipeline = create_pipeline().test()
+        for stage in pipeline.stages:
+            def _get_cb(stage):
+                def _cb(name, data):
+                    pipeline.call_record.append(f'{stage.name} {name}')
+                return _cb
+            stage.add_callback('start', _get_cb(stage))
+            stage.add_callback('end'  , _get_cb(stage))
+        def expected_call_record(stages):
+            return sum(([
+                f'{stage.name} start',
+                f'{stage.name} process',
+                f'{stage.name} end',
+            ] for stage in stages), [])
         for suffix, offset in (('', 0), ('+', 1)):
             for input in range(3):
                 full_data, _, _ = pipeline.process(input = input, cfg = cfg, out = 'muted')
+                self.assertEqual(pipeline.call_record, expected_call_record(pipeline.stages))
+                pipeline.call_record.clear()
                 for first_stage_idx, first_stage in enumerate((stage.cfgns for stage in pipeline.stages[:len(pipeline.stages) - offset])):
                     with self.subTest(suffix = suffix, offset = offset, input = input, first_stage = first_stage):
                         remaining_stages = frozenset([stage.cfgns for stage in pipeline.stages[first_stage_idx + offset:]])
                         data, _, timings = pipeline.process(input = input, data = full_data, first_stage = first_stage + suffix, cfg = cfg, out = 'muted')
                         self.assertEqual(data['y'], full_data['y'])
                         self.assertEqual(frozenset(timings.keys()), remaining_stages)
+                        self.assertEqual(pipeline.call_record, expected_call_record(pipeline.stages[first_stage_idx + offset:]))
+                        pipeline.call_record.clear()
 
-    def test_Pipeline_get_extra_stages(self):
+    def test_get_extra_stages(self):
         stages = [
             testsuite.DummyStage('stage1', ['input'], ['x1'], [], None),
             testsuite.DummyStage('stage2',    ['x1'], ['x2'], [], None),
@@ -226,23 +243,32 @@ class Pipeline(unittest.TestCase):
 class create_pipeline(unittest.TestCase):
 
     def test(self, configure_stage1 = None, configure_stage2 = None, configure_stage3 = None):
+        call_record = list()
+        def _process_stage1(input_data, cfg, log_root_dir = None, out = None):
+            call_record.append('stage1 process')
+            return dict(x1 = input_data['input'] * cfg['x1_factor'])
+        
+        def _process_stage2(input_data, cfg, log_root_dir = None, out = None):
+            call_record.append('stage2 process')
+            return dict(x2 = input_data['input'] * cfg['x2_factor'])
+        
+        def _process_stage3(input_data, cfg, log_root_dir = None, out = None):
+            call_record.append('stage3 process')
+            return dict(y = input_data['x1'] + input_data['x2'] + cfg['constant'])
         stages = [
             ## stage1 takes `input` and produces `x1`
             testsuite.DummyStage('stage1', ['input'], ['x1'], [], \
-                lambda input_data, cfg, log_root_dir = None, out = None: \
-                    dict(x1 = input_data['input'] * cfg['x1_factor']), \
+                _process_stage1, \
                 configure_stage1
             ),
             ## stage2 consumes `input` and produces `x2`
             testsuite.DummyStage('stage2', [], ['x2'], ['input'], \
-                lambda input_data, cfg, log_root_dir = None, out = None: \
-                    dict(x2 = input_data['input'] * cfg['x2_factor']),
+                _process_stage2,
                 configure_stage2
             ),
             ## stage3 takes `x1` and `x2` and produces `y`
             testsuite.DummyStage('stage3', ['x1', 'x2'], ['y'], [], \
-                lambda input_data, cfg, log_root_dir = None, out = None: \
-                    dict(y = input_data['x1'] + input_data['x2'] + cfg['constant']),
+                _process_stage3,
                 configure_stage3
             ),
         ]
@@ -252,6 +278,7 @@ class create_pipeline(unittest.TestCase):
                 self.assertEqual(len(pipeline.stages), 3)
                 for stage1, stage2 in zip(pipeline.stages, stages):
                     self.assertIs(stage1, stage2)
+        pipeline.call_record = call_record
         return pipeline
 
     def test_unsatisfiable(self):

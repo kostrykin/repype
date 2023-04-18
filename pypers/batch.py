@@ -370,6 +370,7 @@ class BatchLoader:
         """
         root_path = pathlib.Path(path)
         self._process_directory(root_path)
+        return self
 
     @property
     def task_list(self):
