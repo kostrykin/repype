@@ -224,7 +224,7 @@ class Task:
         if not self.runnable: return
         for file_id in self.file_ids:
             if self.log_pathpattern is not None:
-                self._remove_from_filesystem(resolve_pathpattern(self.log_pathpattern, file_id))
+                self._remove_from_filesystem(resolve_pathpattern(self.log_pathpattern, file_id) + '.tgz')
             if self.cfg_pathpattern is not None:
                 self._remove_from_filesystem(self.loader.filepath(resolve_pathpattern(self.cfg_pathpattern, file_id)))
         self._remove_from_filesystem(self.result_path)

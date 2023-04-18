@@ -4,6 +4,7 @@ import re
 import json
 import gzip
 import dill
+import tarfile
 
 import pypers.pipeline
 import pypers.batch
@@ -72,22 +73,32 @@ class DummyTask(pypers.batch.Task):
         assert isinstance(dry, bool)
         stages = [
             ## stage1 takes `input` and produces `a`
-            testsuite.DummyStage('stage1', ['input'], ['a'], [], \
-                lambda input_data, cfg, log_root_dir = None, out = None: \
-                    dict(a = get_number_from_json_file(input_data['input']) * cfg['x1'])
-            ),
+            testsuite.DummyStage('stage1', ['input'], ['a'], [], self.stage1_process),
             ## stage2 takes `a` and produces `b`
-            testsuite.DummyStage('stage2', ['a'], ['b'], [], \
-                lambda input_data, cfg, log_root_dir = None, out = None: \
-                    dict(b = input_data['a'] + cfg['x2'])
-            ),
+            testsuite.DummyStage('stage2', ['a'], ['b'], [], self.stage2_process),
             ## stage3 takes `b` and produces `c`
-            testsuite.DummyStage('stage3', ['b'], ['c'], [], \
-                lambda input_data, cfg, log_root_dir = None, out = None: \
-                    dict(c = input_data['b'] * cfg['x3'])
-            ),
+            testsuite.DummyStage('stage3', ['b'], ['c'], [], self.stage3_process),
         ]
         return pypers.pipeline.create_pipeline(stages)
+    
+    def stage1_process(self, input_data, cfg, log_root_dir = None, out = None):
+        input_value = get_number_from_json_file(input_data['input'])
+        if log_root_dir is not None:
+            with open(log_root_dir + '/stage1.txt', 'w') as file:
+                file.write(f"{input_value} * {cfg['x1']}")
+        return dict(a = input_value * cfg['x1'])
+    
+    def stage2_process(self, input_data, cfg, log_root_dir = None, out = None):
+        if log_root_dir is not None:
+            with open(log_root_dir + '/stage2.txt', 'w') as file:
+                file.write(f"{input_data['a']} + {cfg['x2']}")
+        return dict(b = input_data['a'] + cfg['x2'])
+    
+    def stage3_process(self, input_data, cfg, log_root_dir = None, out = None):
+        if log_root_dir is not None:
+            with open(log_root_dir + '/stage3.txt', 'w') as file:
+                file.write(f"{input_data['b']} * {cfg['x3']}")
+        return dict(c = input_data['b'] * cfg['x3'])
 
 
 class Task(unittest.TestCase):
@@ -271,6 +282,26 @@ class Task(unittest.TestCase):
             for file_id in yaml_task.file_ids:
                 cfg_filepath = pathlib.Path(pypers.batch.resolve_pathpattern(yaml_task.cfg_pathpattern, file_id) + '.yml')
                 self.assertFalse(cfg_filepath.exists())
+
+    def test_log_pathpattern(self):
+        log_pathpattern = 'log/log-%s'
+        batch = pypers.batch.BatchLoader(DummyTask, pypers.batch.JSONLoader(), inject = dict(log_pathpattern = log_pathpattern))
+        batch.load(rootdir)
+        task = batch.task(rootdir / 'task1')
+        self.assertEqual(task.log_pathpattern, task.path / log_pathpattern)
+        try:
+            task.run(out = 'muted')
+            for file_id in task.file_ids:
+                log_filepath = task.path / (log_pathpattern % file_id + '.tgz')
+                with self.subTest(file_id = file_id):
+                    self.assertTrue(log_filepath.exists())
+                    with tarfile.open(log_filepath, 'r:gz') as file:
+                        self.assertEqual(frozenset(file.getnames()) - {''}, frozenset(['stage1.txt', 'stage2.txt', 'stage3.txt']))
+        finally:
+            task.reset()
+            for file_id in task.file_ids:
+                log_filepath = task.path / (log_pathpattern % file_id + '.tgz')
+                self.assertFalse(log_filepath.exists())
 
 class ExtendedTask(DummyTask):
 
