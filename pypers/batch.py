@@ -317,7 +317,7 @@ class Task:
     def pickup_previous_task(self, pipeline, dry=False, pickup=True, out=None):
         out = get_output(out)
         pickup_task, stage_name = self.find_best_pickup_candidate(pipeline) if pickup else (None, None)
-        if pickup_task is None or (len(stage_name) > 0 and all([self.is_stage_marginal(stage) for stage in pipeline.stages[:pipeline.find(stage_name)]])):
+        if pickup_task is None or (len(stage_name) > 0 and all([self.is_stage_marginal(stage.cfgns) for stage in pipeline.stages[:pipeline.find(stage_name)]])):
             return None, {}
         else:
             out.write(f'Picking up from: {self._fmt_path(pickup_task.result_path)} ({stage_name if stage_name != "" else "load"})')

@@ -228,5 +228,44 @@ class Task(unittest.TestCase):
                 self.assertIsNotNone(data2)
 
 
+class ExtendedTask(DummyTask):
+    
+    def is_stage_marginal(self, stage):
+        if stage == 'stage1' or stage == 'stage3':
+            return True
+        else:
+            return False
+
+    def create_pipeline(self, *args, **kwargs):
+        pipeline = super(ExtendedTask, self).create_pipeline(*args, **kwargs)
+        pipeline.stages[0].add_callback('end' , self.write_stage1_results)
+        pipeline.stages[0].add_callback('skip', self.write_stage1_results)
+        pipeline.stages[2].add_callback('end' , self.write_stage3_results)
+        pipeline.stages[2].add_callback('skip', self.write_stage3_results)
+        return pipeline
+        
+    def write_stage1_results(self, cb_name, data):
+        pass
+        
+    def write_stage3_results(self, cb_name, data):
+        pass
+
+
+class ExtendedTaskTest(unittest.TestCase):
+
+    def setUp(self):
+        self.batch = pypers.batch.BatchLoader(ExtendedTask)
+        self.batch.load(rootdir)
+
+    def tearDown(self):
+        for task in self.batch.tasks:
+            task.reset()
+
+    def test_pickup_previous_task(self):
+        self.batch.task(rootdir / 'task1').run(out = 'muted')
+        task = self.batch.task(rootdir / 'task1' / 'x2=1')
+        self.assertEqual(task.pickup_previous_task(task.create_pipeline(), out = 'muted'), (None, {}))
+
+
 if __name__ == '__main__':
     unittest.main()
