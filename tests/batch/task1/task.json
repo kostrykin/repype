@@ -4,6 +4,9 @@
     "input_pathpattern": "{ROOTDIR}/../data/%s.json",
     "file_ids": ["00", "01", "02"],
 
+    "result_a_pathpattern": "results_a/%s.json",
+    "result_c_pathpattern": "results_c/%s.json",
+
     "config": {
         "stage1": {
             "x1": 0

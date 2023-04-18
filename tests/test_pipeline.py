@@ -200,13 +200,11 @@ class Pipeline(unittest.TestCase):
         cfg['stage3/constant' ] = 3
         pipeline = create_pipeline().test()
         for stage in pipeline.stages:
-            def _get_cb(stage):
-                def _cb(name, data):
-                    pipeline.call_record.append(f'{stage.name} {name}')
-                return _cb
-            stage.add_callback('start', _get_cb(stage))
-            stage.add_callback('end'  , _get_cb(stage))
-            stage.add_callback('skip' , _get_cb(stage))
+            def _cb(stage2, name, data):
+                pipeline.call_record.append(f'{stage2.name} {name}')
+            stage.add_callback('start', _cb)
+            stage.add_callback('end'  , _cb)
+            stage.add_callback('skip' , _cb)
         def expected_call_record(processed_stages):
             return sum((([
                 f'{stage.name} start',

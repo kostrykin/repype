@@ -63,7 +63,7 @@ def _process_file(dry, *args, out=None, **kwargs):
         return __process_file(*args, out=out, **kwargs)
 
 
-def __process_file(pipeline, data, input, log_filepath, cfg_filepath, cfg, first_stage, last_stage, out=None):
+def __process_file(pipeline, data, input, log_filepath, cfg_filepath, cfg, first_stage, last_stage, out=None, **kwargs):
     if log_filepath is not None: _mkdir(pathlib.Path(log_filepath).parents[0])
     if cfg_filepath is not None: _mkdir(pathlib.Path(cfg_filepath).parents[0])
 
@@ -79,7 +79,7 @@ def __process_file(pipeline, data, input, log_filepath, cfg_filepath, cfg, first
             with open(cfg_filepath, 'w') as fout:
                 cfg.dump_json(fout)
 
-    result_data, _, _timings = pipeline.process(input, data=data, cfg=cfg, first_stage=first_stage, last_stage=last_stage, log_root_dir=log_filepath, out=out)
+    result_data, _, _timings = pipeline.process(input, data=data, cfg=cfg, first_stage=first_stage, last_stage=last_stage, log_root_dir=log_filepath, out=out, **kwargs)
     timings.update(_timings)
 
     return result_data, timings
@@ -117,6 +117,8 @@ class Task:
     :param parent_task: The parent task or ``None`` if there is no parent task.
     """
 
+    outputs = list()
+
     def __init__(self, path, data, parent_task=None):
         self.runnable    = 'runnable' in data and bool(data['runnable']) == True
         self.parent_task = parent_task
@@ -150,6 +152,18 @@ class Task:
             self.       last_stage = self.data.entries.get('last_stage', None)
             self.          environ = self.data.entries.get('environ', {})
 
+            for output in type(self).outputs:
+                output_pathpattern =  f'{output}_pathpattern'
+                setattr(self, output_pathpattern, (path / self.data.entries[output_pathpattern]) if output_pathpattern in self.data.entries else None)
+
+    @property
+    def available_outputs(self):
+        for output in type(self).outputs:
+            output_pathpattern_key =  f'{output}_pathpattern'
+            output_pathpattern = getattr(self, output_pathpattern_key, None)
+            if output_pathpattern is not None:
+                yield (output, output_pathpattern)
+
     def reset(self):
         if not self.runnable: return
         self._remove_from_filesystem(self.log_pathpattern)
@@ -159,6 +173,10 @@ class Task:
         self._remove_from_filesystem(self.timings_json_path)
         self._remove_from_filesystem(self.digest_path)
         self._remove_from_filesystem(self.digest_cfg_path)
+        for _, output_pathpattern in self.available_outputs:
+            for file_id in self.file_ids:
+                output_path = _resolve_pathpattern(output_pathpattern, file_id)
+                self._remove_from_filesystem(output_path)
 
     def _remove_from_filesystem(self, path):
         if path is None: return
@@ -252,6 +270,10 @@ class Task:
                               cfg_filepath = _resolve_pathpattern(self.cfg_pathpattern, file_id),
                                 last_stage = self.last_stage,
                                        cfg = self.config.copy())
+                for output, output_pathpattern in self.available_outputs:
+                    output_path = _resolve_pathpattern(output_pathpattern, file_id)
+                    _mkdir(pathlib.Path(output_path).parents[0])
+                    kwargs[f'{output}_filepath'] = output_path
                 if file_id not in data: data[file_id] = None
                 data[file_id], _timings = _process_file(dry, pipeline, data[file_id], first_stage=first_stage, out=out3, **kwargs)
                 processed_stages |= set(_timings.keys())

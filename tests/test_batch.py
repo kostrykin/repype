@@ -22,6 +22,11 @@ def _get_written_results_file(task):
         return _get_written_results_file(task.parent_task)
     else:
         return None
+    
+
+def get_number_from_json_file(filepath):
+    with open(filepath) as fin:
+        return float(json.load(fin))
 
 
 class BatchLoader(unittest.TestCase):
@@ -65,9 +70,6 @@ class DummyTask(pypers.batch.Task):
 
     def create_pipeline(self, dry: bool = False):
         assert isinstance(dry, bool)
-        def get_number_from_json_file(filepath):
-            with open(filepath) as fin:
-                return float(json.load(fin))
         stages = [
             ## stage1 takes `input` and produces `a`
             testsuite.DummyStage('stage1', ['input'], ['a'], [], \
@@ -229,6 +231,8 @@ class Task(unittest.TestCase):
 
 
 class ExtendedTask(DummyTask):
+
+    outputs = ['result_a', 'result_c']
     
     def is_stage_marginal(self, stage):
         if stage == 'stage1' or stage == 'stage3':
@@ -238,17 +242,17 @@ class ExtendedTask(DummyTask):
 
     def create_pipeline(self, *args, **kwargs):
         pipeline = super(ExtendedTask, self).create_pipeline(*args, **kwargs)
-        pipeline.stages[0].add_callback('end' , self.write_stage1_results)
-        pipeline.stages[0].add_callback('skip', self.write_stage1_results)
-        pipeline.stages[2].add_callback('end' , self.write_stage3_results)
-        pipeline.stages[2].add_callback('skip', self.write_stage3_results)
+        pipeline.stages[0].add_callback('after' , self.write_intermediate_results)
+        pipeline.stages[2].add_callback('after' , self.write_intermediate_results)
         return pipeline
         
-    def write_stage1_results(self, cb_name, data):
-        pass
-        
-    def write_stage3_results(self, cb_name, data):
-        pass
+    def write_intermediate_results(self, stage, cb_name, data, result_a_filepath, result_c_filepath):
+        if stage.cfgns == 'stage1':
+            with open(result_a_filepath, 'w') as fout:
+                json.dump(data['a'], fout)
+        if stage.cfgns == 'stage3':
+            with open(result_c_filepath, 'w') as fout:
+                json.dump(data['c'], fout)
 
 
 class ExtendedTaskTest(unittest.TestCase):
@@ -265,6 +269,24 @@ class ExtendedTaskTest(unittest.TestCase):
         self.batch.task(rootdir / 'task1').run(out = 'muted')
         task = self.batch.task(rootdir / 'task1' / 'x2=1')
         self.assertEqual(task.pickup_previous_task(task.create_pipeline(), out = 'muted'), (None, {}))
+
+    def test_intermediate_results(self):
+        self.batch.task(rootdir / 'task1').run(out = 'muted')
+        task = self.batch.task(rootdir / 'task1' / 'x2=1')
+        expected_data = task.run(out = 'muted')
+        for file_id in task.file_ids:
+            with self.subTest(file_id = file_id):
+                self.assertEqual(get_number_from_json_file(task.path / 'results_a' / f'{file_id}.json'), expected_data[file_id]['a'])
+                self.assertEqual(get_number_from_json_file(task.path / 'results_c' / f'{file_id}.json'), expected_data[file_id]['c'])
+        return task
+
+    def test_reset(self):
+        task = self.test_intermediate_results()
+        task.reset()
+        for file_id in task.file_ids:
+            with self.subTest(file_id = file_id):
+                self.assertFalse((task.path / 'results_a' / f'{file_id}.json').exists())
+                self.assertFalse((task.path / 'results_c' / f'{file_id}.json').exists())
 
 
 if __name__ == '__main__':

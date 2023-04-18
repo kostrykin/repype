@@ -43,21 +43,29 @@ class Stage(object):
     def _callback(self, name, *args, **kwargs):
         if name in self._callbacks:
             for cb in self._callbacks[name]:
-                cb(name, *args, **kwargs)
+                cb(self, name, *args, **kwargs)
 
     def add_callback(self, name, cb):
-        if name not in self._callbacks: self._callbacks[name] = []
-        self._callbacks[name].append(cb)
+        if name == 'after':
+            self.add_callback( 'end', cb)
+            self.add_callback('skip', cb)
+        else:
+            if name not in self._callbacks: self._callbacks[name] = []
+            self._callbacks[name].append(cb)
 
     def remove_callback(self, name, cb):
-        if name in self._callbacks: self._callbacks[name].remove(cb)
+        if name == 'after':
+            self.remove_callback( 'end', cb)
+            self.remove_callback('skip', cb)
+        else:
+            if name in self._callbacks: self._callbacks[name].remove(cb)
 
-    def __call__(self, data, cfg, out=None, log_root_dir=None):
+    def __call__(self, data, cfg, out=None, log_root_dir=None, **kwargs):
         out = get_output(out)
         cfg = cfg.get(self.cfgns, {})
         if cfg.get('enabled', self.enabled_by_default):
             out.intermediate(f'Starting stage "{self.name}"')
-            self._callback('start', data)
+            self._callback('start', data, **kwargs)
             input_data = {key: data[key] for key in self.inputs}
             t0 = time.time()
             output_data = self.process(input_data, cfg=cfg, log_root_dir=log_root_dir, out=out)
@@ -65,15 +73,15 @@ class Stage(object):
             assert len(set(output_data.keys()) ^ set(self.outputs)) == 0, 'stage "%s" produced spurious or missing output' % self.name
             data.update(output_data)
             for key in self.consumes: del data[key]
-            self._callback('end', data)
+            self._callback('end', data, **kwargs)
             return dt
         else:
             out.write(f'Skipping disabled stage "{self.name}"')
-            self._callback('skip', data)
+            self._callback('skip', data, **kwargs)
             return 0
         
-    def skip(self, data):
-            self._callback('skip', data)
+    def skip(self, data, **kwargs):
+            self._callback('skip', data, **kwargs)
 
     def process(self, input_data, cfg, log_root_dir, out):
         """Runs this pipeline stage.
@@ -169,7 +177,7 @@ class Pipeline:
         self.stages = []
         self.configurator = configurator if configurator else Configurator(self)
 
-    def process(self, input, cfg, first_stage=None, last_stage=None, data=None, log_root_dir=None, out=None):
+    def process(self, input, cfg, first_stage=None, last_stage=None, data=None, log_root_dir=None, out=None, **kwargs):
         """Processes the input.
 
         The :py:meth:`~.Stage.process` methods of the stages of the pipeline are executed successively.
@@ -199,10 +207,10 @@ class Pipeline:
         timings = {}
         for stage in self.stages:
             if ctrl.step(stage.cfgns) or stage.cfgns in extra_stages:
-                dt = stage(data, cfg, out=out, log_root_dir=log_root_dir)
+                dt = stage(data, cfg, out=out, log_root_dir=log_root_dir, **kwargs)
                 timings[stage.cfgns] = dt
             else:
-                stage.skip(data)
+                stage.skip(data, **kwargs)
         return data, cfg, timings
     
     def get_extra_stages(self, first_stage, last_stage, available_inputs):
