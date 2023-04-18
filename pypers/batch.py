@@ -242,7 +242,10 @@ class Task:
         assert _is_subpath(self.path, path), f'{path} is not a sub-path of {self.path}'
         path = pathlib.Path(path)
         if not path.exists(): return
-        if path.is_file(): path.unlink()
+        if path.is_file():
+            path.unlink()
+            if not any(path.parent.iterdir()):
+                self._remove_from_filesystem(path.parent)
         else: path.rmdir()
 
     def resolve_path(self, path):
