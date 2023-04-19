@@ -240,6 +240,10 @@ class Pipeline(unittest.TestCase):
         self.assertEqual(frozenset(pipeline.get_extra_stages(first_stage = 'stage4', last_stage = None, available_inputs = ['x2'])), frozenset(['stage3']))
         self.assertEqual(frozenset(pipeline.get_extra_stages(first_stage = 'stage3', last_stage = None, available_inputs = ['x2'])), frozenset([]))
 
+    def test_fields(self):
+        expected_fields = set(['input', 'x1', 'x2', 'y'])
+        self.assertEqual(create_pipeline().test().fields, expected_fields)
+
 
 class create_pipeline(unittest.TestCase):
 

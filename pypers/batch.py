@@ -71,7 +71,7 @@ def __process_file(loader, pipeline, data, input, log_filepath, cfg_filepath, cf
 
     timings = {}
     if first_stage != '':
-        out.intermediate('Creating configuration...')
+        out.intermediate('Creating configuration…')
         t0 = time.time()
         cfg = pipeline.configurator.configure(cfg, input)
         timings['configuration'] = time.time() - t0
@@ -302,6 +302,13 @@ class Task:
     
     def is_stage_marginal(self, stage):
         return False
+    
+    def get_marginal_fields(self, pipeline):
+        marginal_fields = set()
+        for stage in pipeline.stages[:-1]: ## outputs of the last stage never count as marginal (they are always saved because otherwise there is no point in producing them)
+            if self.is_stage_marginal(stage.cfgns):
+                marginal_fields |= stage.outputs
+        return marginal_fields
 
     def run(self, task_info=None, dry=False, verbosity=0, force=False, one_shot=False, report=None, pickup=True, out=None):
         out = get_output(out)
@@ -353,7 +360,7 @@ class Task:
                 out2.write('Skipping writing results')
             else:
                 if not dry:
-                    self.write_results(data, timings, out = out2)
+                    self.write_results(pipeline, data, timings, out = out2)
                 out2.write(Text.style('Results written to: ', Text.BOLD) + self._fmt_path(self.result_path))
             if not dry and not one_shot: self.digest_path.write_text(self.config_digest)
             return locals().get('data', None)
@@ -363,12 +370,16 @@ class Task:
         finally:
             self.cleanup(dry)
 
-    def write_results(self, data, timings, out = None):
+    def write_results(self, pipeline, data, timings, out = None):
         out = get_output(out)
         self._write_timings(timings)
-        out.intermediate(f'Writing results... {self._fmt_path(self.result_path)}')
+        out.intermediate(f'Writing results… {self._fmt_path(self.result_path)}')
+        marginal_fields = self.get_marginal_fields(pipeline)
+        data_without_marginals = {file_id: {
+            field: data[file_id][field] for field in data[file_id].keys() if field not in marginal_fields
+        } for file_id in data.keys()}
         with gzip.open(self.result_path, 'wb') as fout:
-            dill.dump(data, fout, byref=True)
+            dill.dump(data_without_marginals, fout, byref=True)
         with self.digest_cfg_path.open('w') as fout:
             self.config.dump_json(fout)
 

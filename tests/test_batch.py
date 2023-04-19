@@ -303,6 +303,11 @@ class Task(unittest.TestCase):
                 log_filepath = task.path / (log_pathpattern % file_id + '.tgz')
                 self.assertFalse(log_filepath.exists())
 
+    def test_get_marginal_fields(self):
+        for task in self.batch.tasks:
+            pipeline = task.create_pipeline()
+            self.assertEqual(task.get_marginal_fields(pipeline), set())
+
 class ExtendedTask(DummyTask):
 
     outputs = ['result_a', 'result_c']
@@ -337,6 +342,23 @@ class ExtendedTaskTest(unittest.TestCase):
     def tearDown(self):
         for task in self.batch.tasks:
             task.reset()
+
+    def test_get_marginal_fields(self):
+        for task in self.batch.tasks:
+            pipeline = task.create_pipeline()
+            self.assertEqual(task.get_marginal_fields(pipeline), set(['a']))
+
+    def test_run(self):
+        for task in self.batch.tasks:
+            pipeline = task.create_pipeline()
+            task.run(out = 'muted')
+            if hasattr(task, 'result_path'):
+                result_path = _get_written_results_file(task)
+                with gzip.open(result_path, 'rb') as fin:
+                    data = dill.load(fin)
+                for field in task.get_marginal_fields(pipeline):
+                    with self.subTest(task = task, field = field):
+                        self.assertFalse(field in data.keys())
 
     def test_pickup_previous_task(self):
         self.batch.task(rootdir / 'task1').run(out = 'muted')

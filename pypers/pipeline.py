@@ -267,6 +267,13 @@ class Pipeline:
                 _create_config_entry_kwargs = dict() if len(spec) == 2 else spec[-1]
                 _create_config_entry(cfg, f'{stage.cfgns}/{key}', *spec[:2], **_create_config_entry_kwargs)
         return cfg
+    
+    @property
+    def fields(self):
+        fields = set(['input'])
+        for stage in self.stages:
+            fields |= stage.outputs
+        return fields
 
 
 def create_pipeline(stages: Iterable['Stage']):
