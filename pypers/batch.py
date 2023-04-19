@@ -305,7 +305,7 @@ class Task:
     
     def get_marginal_fields(self, pipeline):
         marginal_fields = set()
-        for stage in pipeline.stages[:-1]: ## outputs of the last stage never count as marginal (they are always saved because otherwise there is no point in producing them)
+        for stage in pipeline.stages:
             if self.is_stage_marginal(stage.cfgns):
                 marginal_fields |= stage.outputs
         return marginal_fields

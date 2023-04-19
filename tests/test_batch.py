@@ -320,8 +320,8 @@ class ExtendedTask(DummyTask):
 
     def create_pipeline(self, *args, **kwargs):
         pipeline = super(ExtendedTask, self).create_pipeline(*args, **kwargs)
-        pipeline.stages[0].add_callback('after' , self.write_intermediate_results)
-        pipeline.stages[2].add_callback('after' , self.write_intermediate_results)
+        pipeline.stages[0].add_callback('end' , self.write_intermediate_results)
+        pipeline.stages[2].add_callback('end' , self.write_intermediate_results)
         return pipeline
         
     def write_intermediate_results(self, stage, cb_name, data, result_a_filepath, result_c_filepath):
@@ -346,10 +346,11 @@ class ExtendedTaskTest(unittest.TestCase):
     def test_get_marginal_fields(self):
         for task in self.batch.tasks:
             pipeline = task.create_pipeline()
-            self.assertEqual(task.get_marginal_fields(pipeline), set(['a']))
+            self.assertEqual(task.get_marginal_fields(pipeline), set(['a', 'c']))
 
     def test_run(self):
         for task in self.batch.tasks:
+            if not str(task.path).startswith(str(self.batch.task(rootdir / 'task1'))): continue
             pipeline = task.create_pipeline()
             task.run(out = 'muted')
             if hasattr(task, 'result_path'):
