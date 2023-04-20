@@ -30,7 +30,7 @@ class Stage(object):
     Each stage must declare its required inputs and the outputs it produces. These are used by :py:meth:`~.create_pipeline` to automatically determine the stage order. The input ``g_raw`` is provided by the pipeline itself.
     """
 
-    def __init__(self, name: str, cfgns: str = None, inputs: Sequence[str] = [], outputs: Sequence[str] = [], consumes: Sequence[str] = [], enabled_by_default: bool = True):
+    def __init__(self, name: str, cfgns: str = None, inputs: Sequence = [], outputs: Sequence = [], consumes: Sequence = [], enabled_by_default: bool = True):
         if cfgns is None: cfgns = name
         assert not cfgns.endswith('+'), 'the suffix "+" is reserved as an indacation of "the stage after that stage"'
         self.name     = name
@@ -280,7 +280,7 @@ class Pipeline:
         return fields
 
 
-def create_pipeline(stages: Sequence['Stage']):
+def create_pipeline(stages: Sequence):
     """Creates and returns a new :py:class:`.Pipeline` object configured for the given stages.
 
     The stage order is determined automatically.
