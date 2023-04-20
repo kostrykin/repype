@@ -124,10 +124,12 @@ class Output:
         progressbar_length = progressbar
         t0 = time.time()
         for item_idx, item in enumerate(iterable):
-            if item_idx > 0:
+            if item_idx == 0:
+                eta = ''
+            else:
                 speed = (t1 - t0) / item_idx
-                eta = format_hms(speed * (n - item_idx))
-            output = f'{100 * item_idx / n:.1f}% ({item_idx} / {n}, ETA: {eta})'
+                eta = ', ETA: ' + format_hms(speed * (n - item_idx))
+            output = f'{100 * item_idx / n:.1f}% ({item_idx} / {n}{eta})'
             if progressbar_length is not None:
                 progressbar =  ((progressbar_length * item_idx) // n) * '='
                 progressbar =  progressbar + (progressbar_length - len(progressbar)) * ' '
