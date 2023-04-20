@@ -3,7 +3,7 @@ import weakref
 import os
 
 from typing import Union
-from collections.abc import Iterable
+from collections.abc import Sequence
 
 from .config import Config
 from .output import get_output
@@ -30,7 +30,7 @@ class Stage(object):
     Each stage must declare its required inputs and the outputs it produces. These are used by :py:meth:`~.create_pipeline` to automatically determine the stage order. The input ``g_raw`` is provided by the pipeline itself.
     """
 
-    def __init__(self, name: str, cfgns: str = None, inputs: Iterable[str] = [], outputs: Iterable[str] = [], consumes: Iterable[str] = [], enabled_by_default: bool = True):
+    def __init__(self, name: str, cfgns: str = None, inputs: Sequence[str] = [], outputs: Sequence[str] = [], consumes: Sequence[str] = [], enabled_by_default: bool = True):
         if cfgns is None: cfgns = name
         assert not cfgns.endswith('+'), 'the suffix "+" is reserved as an indacation of "the stage after that stage"'
         self.name     = name
@@ -242,6 +242,10 @@ class Pipeline:
             return [stage.cfgns for stage in self.stages].index(cfgns)
         except ValueError:
             return not_found_dummy
+        
+    def stage(self, cfgns):
+        idx = self.find(cfgns, None)
+        return self.stages[idx] if idx is not None else None
 
     def append(self, stage: 'Stage', after: Union[str, int] = None):
         for stage2 in self.stages:
@@ -276,7 +280,7 @@ class Pipeline:
         return fields
 
 
-def create_pipeline(stages: Iterable['Stage']):
+def create_pipeline(stages: Sequence['Stage']):
     """Creates and returns a new :py:class:`.Pipeline` object configured for the given stages.
 
     The stage order is determined automatically.
