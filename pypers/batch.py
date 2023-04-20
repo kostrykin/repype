@@ -624,7 +624,7 @@ def run_cli(task_cls, task_loader = JSONLoader(), parser = None):
         newpid = os.fork()
         if newpid == 0:
             try:
-                task.run(task_info, dry, args.verbosity, args.force, args.oneshot, args.debug, report, not args.no_pickup, out)
+                task.run(task_info, dry, args.verbosity, args.force, args.oneshot, report, not args.no_pickup, out)
             except:
                 report.update(task, 'error')
                 raise
