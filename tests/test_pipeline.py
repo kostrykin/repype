@@ -7,10 +7,30 @@ import pypers.config
 from . import testsuite
 
 
+class suggest_cfgns(unittest.TestCase):
+
+    def test(self):
+        self.assertEqual(pypers.pipeline.suggest_cfgns('TheGreatPCMapper'     ), 'the-great-pc-mapper'    )
+        self.assertEqual(pypers.pipeline.suggest_cfgns('TheGreat_PCMapper'    ), 'the-great-pc-mapper'    )
+        self.assertEqual(pypers.pipeline.suggest_cfgns('TheGreat__PCMapper'   ), 'the-great-pc-mapper'    )
+        self.assertEqual(pypers.pipeline.suggest_cfgns('TheGreat_123_PCMapper'), 'the-great-123-pc-mapper')
+        self.assertEqual(pypers.pipeline.suggest_cfgns('TheGreat123_PCMapper' ), 'the-great-123-pc-mapper')
+        self.assertEqual(pypers.pipeline.suggest_cfgns('TheGreat123PCMapper'  ), 'the-great-123-pc-mapper')
+        self.assertEqual(pypers.pipeline.suggest_cfgns('TheGreatMapperStage'  ), 'the-great-mapper'       )
+
+    def test_illegal(self):
+        self.assertRaises(AssertionError, lambda: pypers.pipeline.suggest_cfgns(''))
+        self.assertRaises(AssertionError, lambda: pypers.pipeline.suggest_cfgns('_'))
+        self.assertRaises(AssertionError, lambda: pypers.pipeline.suggest_cfgns('_1'))
+        self.assertRaises(AssertionError, lambda: pypers.pipeline.suggest_cfgns('TheGreat PCMapper'))
+        self.assertRaises(AssertionError, lambda: pypers.pipeline.suggest_cfgns('TheGreat-PCMapper'))
+        self.assertRaises(AssertionError, lambda: pypers.pipeline.suggest_cfgns('1TheGreatPCMapper'))
+
+
 class Stage(unittest.TestCase):
 
     def test_no_inputs_no_outputs(self):
-        stage = testsuite.DummyStage('test', [], [], [], None)
+        stage = testsuite.create_stage(cfgns = 'test')
         data  = dict()
         cfg   = pypers.config.Config()
         dt    = stage(data, cfg, out = 'muted')
@@ -18,8 +38,8 @@ class Stage(unittest.TestCase):
         self.assertEqual(data, dict())
 
     def test(self):
-        stage = testsuite.DummyStage('test', ['x1', 'x2'], ['y'], [], \
-            lambda input_data, cfg, log_root_dir = None, out = None: \
+        stage = testsuite.create_stage(cfgns = 'test', inputs = ['x1', 'x2'], outputs = ['y'], \
+            process = lambda input_data, cfg, log_root_dir = None, out = None: \
                 dict(y = \
                     input_data['x1'] * cfg.get('x1_factor', 0) + \
                     input_data['x2'] * cfg.get('x2_factor', 0))
@@ -37,8 +57,8 @@ class Stage(unittest.TestCase):
                     self.assertIsInstance(dt, float)
 
     def test_missing_input(self):
-        stage = testsuite.DummyStage('test', [], ['y'], [], \
-            lambda input_data, cfg, log_root_dir = None, out = None: \
+        stage = testsuite.create_stage(cfgns = 'test', outputs = ['y'], \
+            process = lambda input_data, cfg, log_root_dir = None, out = None: \
                 dict(y = input_data['x'])
            )
         data = dict(x = 0)
@@ -46,8 +66,8 @@ class Stage(unittest.TestCase):
         self.assertRaises(KeyError, lambda: stage(data, cfg, out = 'muted'))
 
     def test_missing_output(self):
-        stage = testsuite.DummyStage('test', [], ['y'], [], \
-            lambda input_data, cfg, log_root_dir = None, out = None: \
+        stage = testsuite.create_stage(cfgns = 'test', outputs = ['y'], \
+            process = lambda input_data, cfg, log_root_dir = None, out = None: \
                 dict()
            )
         data = dict()
@@ -55,8 +75,8 @@ class Stage(unittest.TestCase):
         self.assertRaises(AssertionError, lambda: stage(data, cfg, out = 'muted'))
 
     def test_spurious_output(self):
-        stage = testsuite.DummyStage('test', [], [], [], \
-            lambda input_data, cfg, log_root_dir = None, out = None: \
+        stage = testsuite.create_stage( cfgns = 'test', \
+            process = lambda input_data, cfg, log_root_dir = None, out = None: \
                 dict(y = 0)
            )
         data = dict()
@@ -64,8 +84,8 @@ class Stage(unittest.TestCase):
         self.assertRaises(AssertionError, lambda: stage(data, cfg, out = 'muted'))
 
     def test_missing_and_spurious_output(self):
-        stage = testsuite.DummyStage('test', [], ['y'], [], \
-            lambda input_data, cfg, log_root_dir = None, out = None: \
+        stage = testsuite.create_stage(cfgns = 'test', outputs = ['y'], \
+            process = lambda input_data, cfg, log_root_dir = None, out = None: \
                 dict(z = 0)
            )
         data = dict()
@@ -73,8 +93,8 @@ class Stage(unittest.TestCase):
         self.assertRaises(AssertionError, lambda: stage(data, cfg, out = 'muted'))
 
     def test_consumes(self):
-        stage = testsuite.DummyStage('test', [], [], ['x'], \
-            lambda input_data, cfg, log_root_dir = None, out = None: \
+        stage = testsuite.create_stage(cfgns = 'test', consumes = ['x'], \
+            process = lambda input_data, cfg, log_root_dir = None, out = None: \
                 dict()
            )
         data = dict(x = 0, y = 1)
@@ -83,8 +103,8 @@ class Stage(unittest.TestCase):
         self.assertEqual(data, dict(y = 1))
 
     def test_missing_consumes(self):
-        stage = testsuite.DummyStage('test', [], [], ['x'], \
-            lambda input_data, cfg, log_root_dir = None, out = None: \
+        stage = testsuite.create_stage(cfgns = 'test', consumes = ['x'], \
+            process = lambda input_data, cfg, log_root_dir = None, out = None: \
                 dict()
            )
         data = dict()
@@ -136,7 +156,7 @@ class Pipeline(unittest.TestCase):
         self.assertIs(pipeline.find('stage4', dummy), dummy)
 
     def test_append(self):
-        new_stage = testsuite.DummyStage('new_stage', [], [], [], None)
+        new_stage = testsuite.create_stage(cfgns = 'new_stage')
         pipeline = create_pipeline().test()
         expected_pos = len(pipeline.stages)
         pos = pipeline.append(new_stage)
@@ -149,10 +169,10 @@ class Pipeline(unittest.TestCase):
         for stage in pipeline.stages:
             with self.subTest(stage = stage.cfgns):
                 self.assertRaises(RuntimeError, lambda: pipeline.append(stage))
-                self.assertRaises(RuntimeError, lambda: pipeline.append(testsuite.DummyStage(stage.cfgns, [], [], [], None)))
+                self.assertRaises(RuntimeError, lambda: pipeline.append(testsuite.create_stage(cfgns = stage.cfgns)))
 
     def test_append_after_str(self):
-        new_stage = testsuite.DummyStage('new_stage', [], [], [], None)
+        new_stage = testsuite.create_stage(cfgns = 'new_stage')
         stages = create_pipeline().test().stages
         for after in [stage.cfgns for stage in stages]:
             pipeline = create_pipeline().test()
@@ -163,7 +183,7 @@ class Pipeline(unittest.TestCase):
                 self.assertIs(pipeline.stages[pos], new_stage)
 
     def test_append_after_int(self):
-        new_stage = testsuite.DummyStage('new_stage', [], [], [], None)
+        new_stage = testsuite.create_stage(cfgns = 'new_stage')
         stages = create_pipeline().test().stages
         for after in range(-1, len(stages)):
             pipeline = create_pipeline().test()
@@ -201,17 +221,17 @@ class Pipeline(unittest.TestCase):
         pipeline = create_pipeline().test()
         for stage in pipeline.stages:
             def _cb(stage2, name, data):
-                pipeline.call_record.append(f'{stage2.name} {name}')
+                pipeline.call_record.append(f'{stage2.cfgns} {name}')
             stage.add_callback('start', _cb)
             stage.add_callback('end'  , _cb)
             stage.add_callback('skip' , _cb)
         def expected_call_record(processed_stages):
             return sum((([
-                f'{stage.name} start',
-                f'{stage.name} process',
-                f'{stage.name} end',
+                f'{stage.cfgns} start',
+                f'{stage.cfgns} process',
+                f'{stage.cfgns} end',
             ] if stage.cfgns in processed_stages else [
-                f'{stage.name} skip',
+                f'{stage.cfgns} skip',
             ]) for stage in pipeline.stages), [])
         for suffix, offset in (('', 0), ('+', 1)):
             for input in range(3):
@@ -229,10 +249,10 @@ class Pipeline(unittest.TestCase):
 
     def test_get_extra_stages(self):
         stages = [
-            testsuite.DummyStage('stage1', ['input'], ['x1'], [], None),
-            testsuite.DummyStage('stage2',    ['x1'], ['x2'], [], None),
-            testsuite.DummyStage('stage3',    ['x2'], ['x3'], [], None),
-            testsuite.DummyStage('stage4',    ['x3'], ['x4'], [], None),
+            testsuite.create_stage(cfgns = 'stage1', inputs = ['input'], outputs = ['x1']),
+            testsuite.create_stage(cfgns = 'stage2', inputs =    ['x1'], outputs = ['x2']),
+            testsuite.create_stage(cfgns = 'stage3', inputs =    ['x2'], outputs = ['x3']),
+            testsuite.create_stage(cfgns = 'stage4', inputs =    ['x3'], outputs = ['x4']),
         ]
         pipeline = pypers.pipeline.create_pipeline(stages)
         self.assertEqual(frozenset(pipeline.get_extra_stages(first_stage = 'stage4', last_stage = None, available_inputs =     [])), frozenset(['stage1', 'stage2', 'stage3']))
@@ -262,19 +282,19 @@ class create_pipeline(unittest.TestCase):
             return dict(y = input_data['x1'] + input_data['x2'] + cfg['constant'])
         stages = [
             ## stage1 takes `input` and produces `x1`
-            testsuite.DummyStage('stage1', ['input'], ['x1'], [], \
-                _process_stage1, \
-                configure_stage1
+            testsuite.create_stage(cfgns = 'stage1', inputs = ['input'], outputs = ['x1'], \
+                process = _process_stage1, \
+                configure = configure_stage1
             ),
             ## stage2 consumes `input` and produces `x2`
-            testsuite.DummyStage('stage2', [], ['x2'], ['input'], \
-                _process_stage2,
-                configure_stage2
+            testsuite.create_stage(cfgns = 'stage2', outputs = ['x2'], consumes = ['input'], \
+                process = _process_stage2,
+                configure = configure_stage2
             ),
             ## stage3 takes `x1` and `x2` and produces `y`
-            testsuite.DummyStage('stage3', ['x1', 'x2'], ['y'], [], \
-                _process_stage3,
-                configure_stage3
+            testsuite.create_stage(cfgns = 'stage3', inputs = ['x1', 'x2'], outputs = ['y'], \
+                process = _process_stage3,
+                configure = configure_stage3
             ),
         ]
         for permutated_stages in itertools.permutations(stages):
@@ -288,26 +308,26 @@ class create_pipeline(unittest.TestCase):
 
     def test_unsatisfiable(self):
         stages = [
-            testsuite.DummyStage('stage1', ['input'], ['x1'], [], None),     ## stage1 takes `input` and produces `x1`
-            testsuite.DummyStage('stage2', [], ['x2'], ['input'], None),     ## stage2 consumes `input` and produces `x2`
-            testsuite.DummyStage('stage3', ['x1', 'x2'], ['y'], [], None),   ## stage3 takes `x1` and `x2` and produces `y`
-            testsuite.DummyStage('stage4', ['input', 'y'], ['z'], [], None), ## stage4 takes `input` and `y` and produces `z`
+            testsuite.create_stage(cfgns = 'stage1', inputs = ['input'], outputs = ['x1']),     ## stage1 takes `input` and produces `x1`
+            testsuite.create_stage(cfgns = 'stage2', outputs = ['x2'], consumes = ['input']),   ## stage2 consumes `input` and produces `x2`
+            testsuite.create_stage(cfgns = 'stage3', inputs = ['x1', 'x2'], outputs = ['y']),   ## stage3 takes `x1` and `x2` and produces `y`
+            testsuite.create_stage(cfgns = 'stage4', inputs = ['input', 'y'], outputs = ['z']), ## stage4 takes `input` and `y` and produces `z`
         ]
         for permutated_stages in itertools.permutations(stages):
             with self.subTest(permutation = permutated_stages):
                 self.assertRaises(RuntimeError, lambda: pypers.pipeline.create_pipeline(permutated_stages))
 
     def test_ambiguous_namespaces(self):
-        stage1 = testsuite.DummyStage('stage1', [], [], [], None)
-        stage2 = testsuite.DummyStage('stage2', [], [], [], None)
-        stage3 = testsuite.DummyStage('stage2', [], [], [], None)
+        stage1 = testsuite.create_stage(cfgns = 'stage1')
+        stage2 = testsuite.create_stage(cfgns = 'stage2')
+        stage3 = testsuite.create_stage(cfgns = 'stage2')
         self.assertRaises(AssertionError, lambda: pypers.pipeline.create_pipeline([stage1, stage2, stage3]))
         self.assertRaises(AssertionError, lambda: pypers.pipeline.create_pipeline([stage1, stage2, stage2]))
 
     def test_ambiguous_outputs(self):
-        stage1 = testsuite.DummyStage('stage1', [], ['x1'], [], None)
-        stage2 = testsuite.DummyStage('stage2', [], ['x2'], [], None)
-        stage3 = testsuite.DummyStage('stage3', [], ['x2'], [], None)
+        stage1 = testsuite.create_stage(cfgns = 'stage1', outputs = ['x1'])
+        stage2 = testsuite.create_stage(cfgns = 'stage2', outputs = ['x2'])
+        stage3 = testsuite.create_stage(cfgns = 'stage3', outputs = ['x2'])
         self.assertRaises(AssertionError, lambda: pypers.pipeline.create_pipeline([stage1, stage2, stage3]))
 
 

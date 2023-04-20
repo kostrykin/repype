@@ -1,12 +1,33 @@
 import time
 import weakref
 import os
+import re
 
 from typing import Union
 from collections.abc import Sequence
 
 from .config import Config
 from .output import get_output
+
+
+def suggest_cfgns(class_name):
+    assert class_name != '_' and re.match('[a-zA-Z]', class_name) and re.match('^[a-zA-Z_](?:[a-zA-Z0-9_])*$', class_name), f'not a valid class name: "{class_name}"'
+    tokens1 = re.findall('[A-Z0-9][^A-Z0-9_]*', class_name)
+    tokens2 = list()
+    i1 = 0
+    while i1 < len(tokens1):
+        token = tokens1[i1]
+        i1 += 1
+        if len(token) == 1:
+            for t in tokens1[i1:]:
+                if len(t) == 1 and (token.isnumeric() == t.isnumeric() or token.isalpha() == t.isalpha()):
+                    token += t
+                    i1 += 1
+                else:
+                    break
+        tokens2.append(token.lower().replace('_', ''))
+    if tokens2[-1] == 'stage': tokens2 = tokens2[:-1]
+    return '-'.join(tokens2)
 
 
 class Stage(object):
@@ -30,15 +51,18 @@ class Stage(object):
     Each stage must declare its required inputs and the outputs it produces. These are used by :py:meth:`~.create_pipeline` to automatically determine the stage order. The input ``g_raw`` is provided by the pipeline itself.
     """
 
-    def __init__(self, name: str, cfgns: str = None, inputs: Sequence = [], outputs: Sequence = [], consumes: Sequence = [], enabled_by_default: bool = True):
-        if cfgns is None: cfgns = name
-        assert not cfgns.endswith('+'), 'the suffix "+" is reserved as an indacation of "the stage after that stage"'
-        self.name     = name
-        self.cfgns    = cfgns
-        self.inputs   = frozenset(inputs) | frozenset(consumes)
-        self.outputs  = frozenset(outputs)
-        self.consumes = frozenset(consumes)
-        self.enabled_by_default = enabled_by_default
+    inputs   = []
+    outputs  = []
+    consumes = []
+    enabled_by_default = True
+
+    def __init__(self):
+        self.cfgns    = type(self).cfgns if hasattr(type(self), 'cfgns') else suggest_cfgns(type(self).__name__)
+        self.inputs   = frozenset(type(self).inputs) | frozenset(type(self).consumes)
+        self.outputs  = frozenset(type(self).outputs)
+        self.consumes = frozenset(type(self).consumes)
+        self.enabled_by_default = type(self).enabled_by_default
+        assert not self.cfgns.endswith('+'), 'the suffix "+" is reserved as an indication of "the stage after that stage"'
         self._callbacks = {}
 
     def _callback(self, name, *args, **kwargs):
@@ -65,19 +89,19 @@ class Stage(object):
         out = get_output(out)
         cfg = cfg.get(self.cfgns, {})
         if cfg.get('enabled', self.enabled_by_default):
-            out.intermediate(f'Starting stage "{self.name}"')
+            out.intermediate(f'Starting stage "{self.cfgns}"')
             self._callback('start', data, **kwargs)
             input_data = {key: data[key] for key in self.inputs}
             t0 = time.time()
             output_data = self.process(input_data, cfg=cfg, log_root_dir=log_root_dir, out=out)
             dt = time.time() - t0
-            assert len(set(output_data.keys()) ^ set(self.outputs)) == 0, 'stage "%s" produced spurious or missing output' % self.name
+            assert len(set(output_data.keys()) ^ set(self.outputs)) == 0, 'stage "%s" produced spurious or missing output' % self.cfgns
             data.update(output_data)
             for key in self.consumes: del data[key]
             self._callback('end', data, **kwargs)
             return dt
         else:
-            out.write(f'Skipping disabled stage "{self.name}"')
+            out.write(f'Skipping disabled stage "{self.cfgns}"')
             self._callback('skip', data, **kwargs)
             return 0
         
@@ -111,7 +135,7 @@ class Stage(object):
         return dict()
 
     def __str__(self):
-        return self.name
+        return self.cfgns
 
     def __repr__(self):
         return f'<{type(self).__name__}, cfgns: {self.cfgns}>'
@@ -249,7 +273,7 @@ class Pipeline:
 
     def append(self, stage: 'Stage', after: Union[str, int] = None):
         for stage2 in self.stages:
-            if stage2 is stage: raise RuntimeError(f'stage {stage.name} already added')
+            if stage2 is stage: raise RuntimeError(f'stage {stage.cfgns} already added')
             if stage2.cfgns == stage.cfgns: raise RuntimeError(f'stage with namespace {stage.cfgns} already added')
         if after is None:
             self.stages.append(stage)
