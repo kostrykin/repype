@@ -8,6 +8,7 @@ import csv
 import tarfile
 import shutil
 import time
+import re
 
 from typing import Union, Type
 
@@ -108,6 +109,17 @@ def _compress_logs(log_dir):
     shutil.rmtree(str(log_dir))
 
 
+def _decode_file_ids(spec):
+    if isinstance(spec, str):
+        m = re.match(r'^([0-9]+)-([0-9]+)$', spec.replace(' ', ''))
+        if m is None or len(m.groups()) != 2:
+            raise ValueError(f'cannot decode file_ids: "{spec}"')
+        else:
+            return list(range(int(m.group(1)), int(m.group(2)) + 1))
+    else:
+        return sorted(frozenset(spec))
+
+
 class TaskLoader:
 
     suffix_hint = ''
@@ -178,7 +190,7 @@ class Task:
         self.path = path
         self.data = Config(data) if parent_task is None else Config(parent_task.data).derive(data)
         self.rel_path = _find_task_rel_path(self)
-        self.file_ids = sorted(frozenset(self.data.entries['file_ids'])) if 'file_ids' in self.data else None
+        self.file_ids = _decode_file_ids(self.data.entries['file_ids']) if 'file_ids' in self.data else None
         self.input_pathpattern = self.data.update('input_pathpattern', lambda pathpattern: str(self.resolve_path(pathpattern)))
 
         if 'base_config_path' in self.data:
