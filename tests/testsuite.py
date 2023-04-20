@@ -1,11 +1,11 @@
 import pypers.pipeline
 
-from collections.abc import Iterable
+from collections.abc import Sequence
 
 
 class DummyStage(pypers.pipeline.Stage):
 
-    def __init__(self, name: str, inputs: Iterable[str], outputs: Iterable[str], consumes: Iterable[str], process: callable, configure: callable = None):
+    def __init__(self, name: str, inputs: Sequence, outputs: Sequence, consumes: Sequence, process: callable, configure: callable = None):
         super(DummyStage, self).__init__(
             name     = name,
             inputs   = inputs,
