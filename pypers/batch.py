@@ -322,7 +322,7 @@ class Task:
                 marginal_fields |= stage.outputs
         return marginal_fields
 
-    def run(self, task_info=None, dry=False, verbosity=0, force=False, one_shot=False, report=None, pickup=True, out=None):
+    def run(self, task_info=None, dry=False, verbosity=0, force=False, one_shot=False, report=None, pickup=True, return_full_data=True, out=None):
         out = get_output(out)
         if not self.runnable: return
         if not force and not self.is_pending:
@@ -356,7 +356,8 @@ class Task:
                     _mkdir(pathlib.Path(output_path).parents[0])
                     kwargs[f'{output}_filepath'] = output_path
                 if file_id not in data: data[file_id] = None
-                data[file_id], _timings = _process_file(dry, self.loader, pipeline, data[file_id], first_stage=first_stage, out=out3, **kwargs)
+                data_chunk, _timings = _process_file(dry, self.loader, pipeline, data[file_id], first_stage=first_stage, out=out3, **kwargs)
+                data[file_id] = data_chunk if return_full_data else self._strip_marginal_fields(pipeline, data_chunk, is_chunk=True)
                 processed_stages |= set(_timings.keys())
                 if not dry: _compress_logs(kwargs['log_filepath'])
                 if file_id not in timings: timings[file_id] = {}
@@ -382,14 +383,18 @@ class Task:
         finally:
             self.cleanup(dry)
 
+    def _strip_marginal_fields(self, pipeline, data, is_chunk):
+        marginal_fields = self.get_marginal_fields(pipeline)
+        if is_chunk:
+            return {field: data[field] for field in data.keys() if field not in marginal_fields}
+        else:
+            return {file_id: self._strip_marginal_fields(pipeline, data[file_id], is_chunk=True) for file_id in data.keys()}
+
     def write_results(self, pipeline, data, timings, out = None):
         out = get_output(out)
         self._write_timings(timings)
         out.intermediate(f'Writing results… {self._fmt_path(self.result_path)}')
-        marginal_fields = self.get_marginal_fields(pipeline)
-        data_without_marginals = {file_id: {
-            field: data[file_id][field] for field in data[file_id].keys() if field not in marginal_fields
-        } for file_id in data.keys()}
+        data_without_marginals = self._strip_marginal_fields(pipeline, data, is_chunk=False)
         with gzip.open(self.result_path, 'wb') as fout:
             dill.dump(data_without_marginals, fout, byref=True)
         with self.digest_cfg_path.open('w') as fout:
@@ -636,7 +641,7 @@ def run_cli(task_cls, task_loader = JSONLoader(), parser = None):
         newpid = os.fork()
         if newpid == 0:
             try:
-                task.run(task_info, dry, args.verbosity, args.force, args.oneshot, report, not args.no_pickup, out)
+                task.run(task_info, dry, args.verbosity, args.force, args.oneshot, report, not args.no_pickup, False, out)
             except:
                 report.update(task, 'error')
                 raise
