@@ -93,7 +93,7 @@ class Stage(object):
             self._callback('start', data, **kwargs)
             input_data = {key: data[key] for key in self.inputs}
             t0 = time.time()
-            output_data = self.process(input_data, cfg=cfg, log_root_dir=log_root_dir, out=out)
+            output_data = self.process(cfg=cfg, log_root_dir=log_root_dir, out=out, **input_data)
             dt = time.time() - t0
             assert len(set(output_data.keys()) ^ set(self.outputs)) == 0, 'stage "%s" produced spurious or missing output' % self.cfgns
             data.update(output_data)
@@ -108,7 +108,7 @@ class Stage(object):
     def skip(self, data, **kwargs):
             self._callback('skip', data, **kwargs)
 
-    def process(self, input_data, cfg, log_root_dir, out):
+    def process(self, cfg, log_root_dir, out, **inputs):
         """Runs this pipeline stage.
 
         :param input_data: Dictionary of the inputs declared by this stage.

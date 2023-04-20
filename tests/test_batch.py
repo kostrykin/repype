@@ -81,24 +81,24 @@ class DummyTask(pypers.batch.Task):
         ]
         return pypers.pipeline.create_pipeline(stages)
     
-    def stage1_process(self, input_data, cfg, log_root_dir = None, out = None):
-        input_value = get_number_from_json_file(input_data['input'])
+    def stage1_process(self, input, cfg, log_root_dir = None, out = None):
+        input_value = get_number_from_json_file(input)
         if log_root_dir is not None:
             with open(log_root_dir + '/stage1.txt', 'w') as file:
                 file.write(f"{input_value} * {cfg['x1']}")
         return dict(a = input_value * cfg['x1'])
     
-    def stage2_process(self, input_data, cfg, log_root_dir = None, out = None):
+    def stage2_process(self, a, cfg, log_root_dir = None, out = None):
         if log_root_dir is not None:
             with open(log_root_dir + '/stage2.txt', 'w') as file:
-                file.write(f"{input_data['a']} + {cfg['x2']}")
-        return dict(b = input_data['a'] + cfg['x2'])
+                file.write(f"{a} + {cfg['x2']}")
+        return dict(b = a + cfg['x2'])
     
-    def stage3_process(self, input_data, cfg, log_root_dir = None, out = None):
+    def stage3_process(self, b, cfg, log_root_dir = None, out = None):
         if log_root_dir is not None:
             with open(log_root_dir + '/stage3.txt', 'w') as file:
-                file.write(f"{input_data['b']} * {cfg['x3']}")
-        return dict(c = input_data['b'] * cfg['x3'])
+                file.write(f"{b} * {cfg['x3']}")
+        return dict(c = b * cfg['x3'])
 
 
 class Task(unittest.TestCase):

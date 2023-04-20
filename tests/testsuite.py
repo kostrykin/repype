@@ -22,10 +22,10 @@ def create_stage(**kwargs):
         outputs  = kwargs['outputs']
         consumes = kwargs['consumes']
 
-        def process(self, input_data, *args, **kwargs):
-            assert frozenset(input_data.keys()) == frozenset(self.inputs)
+        def process(self, *args, **kwargs):
+            assert frozenset(self.inputs).issubset(frozenset(kwargs.keys()))
             if _process is None: return dict()
-            else: return _process(input_data, *args, **kwargs)
+            else: return _process(*args, **kwargs)
 
         def configure(self, *args, **kwargs):
             if _configure is None: return dict()

@@ -45,10 +45,10 @@ class Stage(unittest.TestCase):
 
     def test(self):
         stage = testsuite.create_stage(cfgns = 'test', inputs = ['x1', 'x2'], outputs = ['y'], \
-            process = lambda input_data, cfg, log_root_dir = None, out = None: \
+            process = lambda x1, x2, cfg, log_root_dir = None, out = None: \
                 dict(y = \
-                    input_data['x1'] * cfg.get('x1_factor', 0) + \
-                    input_data['x2'] * cfg.get('x2_factor', 0))
+                    x1 * cfg.get('x1_factor', 0) + \
+                    x2 * cfg.get('x2_factor', 0))
             )
         cfg = pypers.config.Config()
         for x1_factor in [0, 1]:
@@ -64,45 +64,45 @@ class Stage(unittest.TestCase):
 
     def test_missing_input(self):
         stage = testsuite.create_stage(cfgns = 'test', outputs = ['y'], \
-            process = lambda input_data, cfg, log_root_dir = None, out = None: \
-                dict(y = input_data['x'])
-           )
+            process = lambda x, cfg, log_root_dir = None, out = None: \
+                dict(y = x)
+            )
         data = dict(x = 0)
         cfg  = pypers.config.Config()
-        self.assertRaises(KeyError, lambda: stage(data, cfg, out = 'muted'))
+        self.assertRaises(TypeError, lambda: stage(data, cfg, out = 'muted'))
 
     def test_missing_output(self):
         stage = testsuite.create_stage(cfgns = 'test', outputs = ['y'], \
-            process = lambda input_data, cfg, log_root_dir = None, out = None: \
+            process = lambda cfg, log_root_dir = None, out = None: \
                 dict()
-           )
+            )
         data = dict()
         cfg  = pypers.config.Config()
         self.assertRaises(AssertionError, lambda: stage(data, cfg, out = 'muted'))
 
     def test_spurious_output(self):
         stage = testsuite.create_stage( cfgns = 'test', \
-            process = lambda input_data, cfg, log_root_dir = None, out = None: \
+            process = lambda cfg, log_root_dir = None, out = None: \
                 dict(y = 0)
-           )
+            )
         data = dict()
         cfg  = pypers.config.Config()
         self.assertRaises(AssertionError, lambda: stage(data, cfg, out = 'muted'))
 
     def test_missing_and_spurious_output(self):
         stage = testsuite.create_stage(cfgns = 'test', outputs = ['y'], \
-            process = lambda input_data, cfg, log_root_dir = None, out = None: \
+            process = lambda cfg, log_root_dir = None, out = None: \
                 dict(z = 0)
-           )
+            )
         data = dict()
         cfg  = pypers.config.Config()
         self.assertRaises(AssertionError, lambda: stage(data, cfg, out = 'muted'))
 
     def test_consumes(self):
         stage = testsuite.create_stage(cfgns = 'test', consumes = ['x'], \
-            process = lambda input_data, cfg, log_root_dir = None, out = None: \
+            process = lambda x, cfg, log_root_dir = None, out = None: \
                 dict()
-           )
+            )
         data = dict(x = 0, y = 1)
         cfg  = pypers.config.Config()
         stage(data, cfg, out = 'muted')
@@ -110,9 +110,9 @@ class Stage(unittest.TestCase):
 
     def test_missing_consumes(self):
         stage = testsuite.create_stage(cfgns = 'test', consumes = ['x'], \
-            process = lambda input_data, cfg, log_root_dir = None, out = None: \
+            process = lambda x, cfg, log_root_dir = None, out = None: \
                 dict()
-           )
+            )
         data = dict()
         cfg  = pypers.config.Config()
         self.assertRaises(KeyError, lambda: stage(data, cfg, out = 'muted'))
@@ -275,17 +275,17 @@ class create_pipeline(unittest.TestCase):
 
     def test(self, configure_stage1 = None, configure_stage2 = None, configure_stage3 = None):
         call_record = list()
-        def _process_stage1(input_data, cfg, log_root_dir = None, out = None):
+        def _process_stage1(input, cfg, log_root_dir = None, out = None):
             call_record.append('stage1 process')
-            return dict(x1 = input_data['input'] * cfg['x1_factor'])
+            return dict(x1 = input * cfg['x1_factor'])
         
-        def _process_stage2(input_data, cfg, log_root_dir = None, out = None):
+        def _process_stage2(input, cfg, log_root_dir = None, out = None):
             call_record.append('stage2 process')
-            return dict(x2 = input_data['input'] * cfg['x2_factor'])
+            return dict(x2 = input * cfg['x2_factor'])
         
-        def _process_stage3(input_data, cfg, log_root_dir = None, out = None):
+        def _process_stage3(x1, x2, cfg, log_root_dir = None, out = None):
             call_record.append('stage3 process')
-            return dict(y = input_data['x1'] + input_data['x2'] + cfg['constant'])
+            return dict(y = x1 + x2 + cfg['constant'])
         stages = [
             ## stage1 takes `input` and produces `x1`
             testsuite.create_stage(cfgns = 'stage1', inputs = ['input'], outputs = ['x1'], \
