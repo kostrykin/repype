@@ -138,7 +138,7 @@ class Output:
                 output = f'{text}… {output}'
             self.intermediate(output)
             yield item
-            t1 = time.time() - t0
+            t1 = time.time()
         if permanent and text is not None:
             self.write(f'{text}: {n} / {n}, {format_hms(t1 - t0)}')
         else:
