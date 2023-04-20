@@ -92,8 +92,10 @@ class Stage(object):
             out.intermediate(f'Starting stage "{self.cfgns}"')
             self._callback('start', data, **kwargs)
             input_data = {key: data[key] for key in self.inputs}
+            clean_cfg = cfg.copy()
+            clean_cfg.pop('enabled', None)
             t0 = time.time()
-            output_data = self.process(cfg=cfg, log_root_dir=log_root_dir, out=out, **input_data)
+            output_data = self.process(cfg=clean_cfg, log_root_dir=log_root_dir, out=out, **input_data)
             dt = time.time() - t0
             assert len(set(output_data.keys()) ^ set(self.outputs)) == 0, 'stage "%s" produced spurious or missing output' % self.cfgns
             data.update(output_data)
