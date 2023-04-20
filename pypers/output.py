@@ -48,7 +48,8 @@ def get_output(out=None):
 def format_hms(seconds):
     seconds = round(seconds)
     h, m, s = seconds // 3600, (seconds % 3600) // 60, (seconds % 60)
-    return f'{h:d}:{m:02d}:{s:02d}'
+    ms = f'{m:02d}:{s:02d}'
+    return ms if h == 0 else f'{h:d}:{ms}'
 
 
 class Text:
