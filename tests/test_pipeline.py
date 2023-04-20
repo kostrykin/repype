@@ -17,6 +17,7 @@ class suggest_cfgns(unittest.TestCase):
         self.assertEqual(pypers.pipeline.suggest_cfgns('TheGreat123_PCMapper' ), 'the-great-123-pc-mapper')
         self.assertEqual(pypers.pipeline.suggest_cfgns('TheGreat123PCMapper'  ), 'the-great-123-pc-mapper')
         self.assertEqual(pypers.pipeline.suggest_cfgns('TheGreatMapperStage'  ), 'the-great-mapper'       )
+        self.assertEqual(pypers.pipeline.suggest_cfgns('Stage'                ), 'stage'                  )
 
     def test_illegal(self):
         self.assertRaises(AssertionError, lambda: pypers.pipeline.suggest_cfgns(''))
@@ -36,6 +37,11 @@ class Stage(unittest.TestCase):
         dt    = stage(data, cfg, out = 'muted')
         self.assertIsInstance(dt, float)
         self.assertEqual(data, dict())
+
+    def test_init(self):
+        class Stage(pypers.pipeline.Stage):
+            pass
+        self.assertEqual(Stage().cfgns, 'stage')
 
     def test(self):
         stage = testsuite.create_stage(cfgns = 'test', inputs = ['x1', 'x2'], outputs = ['y'], \

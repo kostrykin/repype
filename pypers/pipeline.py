@@ -26,7 +26,7 @@ def suggest_cfgns(class_name):
                 else:
                     break
         tokens2.append(token.lower().replace('_', ''))
-    if tokens2[-1] == 'stage': tokens2 = tokens2[:-1]
+    if len(tokens2) >= 2 and tokens2[-1] == 'stage': tokens2 = tokens2[:-1]
     return '-'.join(tokens2)
 
 
