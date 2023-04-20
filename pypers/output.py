@@ -1,4 +1,5 @@
 import sys
+import time
 
 from IPython.display import clear_output
 
@@ -42,6 +43,12 @@ def get_output(out=None):
         return JupyterOutput(**kwargs)
     else:
         return ConsoleOutput(**kwargs)
+    
+
+def format_hms(seconds):
+    seconds = round(seconds)
+    h, m, s = seconds // 3600, (seconds % 3600) // 60, (seconds % 60)
+    return f'{h:d}:{m:02d}:{s:02d}'
 
 
 class Text:
@@ -115,8 +122,12 @@ class Output:
     def progress(self, iterable, text=None, progressbar=20, permanent=True, length_hint=None):
         n = length_hint if length_hint is not None else len(iterable)
         progressbar_length = progressbar
+        t0 = time.time()
         for item_idx, item in enumerate(iterable):
-            output = f'{100 * item_idx / n:.1f}% ({item_idx} / {n})'
+            if item_idx > 0:
+                speed = (t1 - t0) / item_idx
+                eta = format_hms(speed * (n - item_idx))
+            output = f'{100 * item_idx / n:.1f}% ({item_idx} / {n}, ETA: {eta})'
             if progressbar_length is not None:
                 progressbar =  ((progressbar_length * item_idx) // n) * '='
                 progressbar =  progressbar + (progressbar_length - len(progressbar)) * ' '
@@ -125,8 +136,9 @@ class Output:
                 output = f'{text}… {output}'
             self.intermediate(output)
             yield item
+            t1 = time.time() - t0
         if permanent and text is not None:
-            self.write(f'{text}: {n} / {n}')
+            self.write(f'{text}: {n} / {n}, {format_hms(t1 - t0)}')
         else:
             self.intermediate('')
 
