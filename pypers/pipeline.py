@@ -340,7 +340,7 @@ def create_pipeline(stages: Sequence):
                     break
 
         if next_stage is None:
-            raise RuntimeError('failed to resolve total ordering (pipeline so far: {pipeline.stages}, available inputs: {available_inputs}, remaining stages: {remaining_stages})')
+            raise RuntimeError(f'failed to resolve total ordering (pipeline so far: {pipeline.stages}, available inputs: {available_inputs}, remaining stages: {remaining_stages})')
         remaining_stages.remove(next_stage)
         pipeline.append(next_stage)
         available_inputs |= next_stage.outputs
