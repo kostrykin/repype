@@ -357,7 +357,8 @@ class Task:
                     kwargs[f'{output}_filepath'] = output_path
                 if file_id not in data: data[file_id] = None
                 data_chunk, _timings = _process_file(dry, self.loader, pipeline, data[file_id], first_stage=first_stage, out=out3, **kwargs)
-                data[file_id] = data_chunk if return_full_data else self._strip_marginal_fields(pipeline, data_chunk, is_chunk=True)
+                if not dry:
+                    data[file_id] = data_chunk if return_full_data else self._strip_marginal_fields(pipeline, data_chunk, is_chunk=True)
                 processed_stages |= set(_timings.keys())
                 if not dry: _compress_logs(kwargs['log_filepath'])
                 if file_id not in timings: timings[file_id] = {}
