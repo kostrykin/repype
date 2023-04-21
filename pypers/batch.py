@@ -127,7 +127,7 @@ def _estimate_processed_stages(pipeline, first_stage, last_stage):
     for stage in pipeline.stages:
         if ctrl.step(stage.cfgns):
             stages.append(stage.cfgns)
-    return stages
+    return frozenset(stages)
 
 
 class TaskLoader:
