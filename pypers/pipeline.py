@@ -234,7 +234,11 @@ class Pipeline:
         timings = {}
         for stage in self.stages:
             if ctrl.step(stage.cfgns) or stage.cfgns in extra_stages:
-                dt = stage(data, cfg, out=out, log_root_dir=log_root_dir, **kwargs)
+                try:
+                    dt = stage(data, cfg, out=out, log_root_dir=log_root_dir, **kwargs)
+                except:
+                    print(f'An error occured while executing the stage: {str(stage)}')
+                    raise
                 timings[stage.cfgns] = dt
             else:
                 stage.skip(data, **kwargs)
