@@ -12,6 +12,7 @@ import re
 
 from typing import Union, Type
 
+from .pipeline import ProcessingControl
 from .output import get_output, Text
 from .config import Config
 
@@ -118,6 +119,15 @@ def _decode_file_ids(spec):
             return list(range(int(m.group(1)), int(m.group(2)) + 1))
     else:
         return sorted(frozenset(spec))
+    
+
+def _estimate_processed_stages(pipeline, first_stage, last_stage):
+    stages = []
+    ctrl = ProcessingControl(first_stage, last_stage)
+    for stage in pipeline.stages:
+        if ctrl.step(stage.cfgns):
+            stages.append(stage.cfgns)
+    return stages
 
 
 class TaskLoader:
@@ -359,7 +369,7 @@ class Task:
                 data_chunk, _timings = _process_file(dry, self.loader, pipeline, data[file_id], first_stage=first_stage, out=out3, **kwargs)
                 if not dry:
                     data[file_id] = data_chunk if return_full_data else self._strip_marginal_fields(pipeline, data_chunk, is_chunk=True)
-                processed_stages |= set(_timings.keys())
+                processed_stages |= _estimate_processed_stages(pipeline, first_stage, self.last_stage) if dry else set(_timings.keys())
                 if not dry: _compress_logs(kwargs['log_filepath'])
                 if file_id not in timings: timings[file_id] = {}
                 timings[file_id].update(_timings)
