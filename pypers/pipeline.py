@@ -43,12 +43,12 @@ class Stage(object):
     Automation
     ^^^^^^^^^^
 
-    Hyperparameters can be set automatically using the :py:meth:`~.configure` method based on the scale :math:`\sigma` of objects in an image. Hyperparameters are only set automatically based on the scale of objects, if the :py:mod:`~pypers.automation` module (as in :ref:`this <usage_example_interactive>` example) or batch processing are used (as in :ref:`this <usage_example_batch>` example). Hyperparameters are *not* set automatically if the :py:meth:`~pypers.pipeline.Pipeline.process_image` method of the :py:class:`~pypers.pipeline.Pipeline` class is used directly.
+    Hyperparameters can be set automatically using the :py:meth:`~.configure` method.
 
     Inputs and outputs
     ^^^^^^^^^^^^^^^^^^
 
-    Each stage must declare its required inputs and the outputs it produces. These are used by :py:meth:`~.create_pipeline` to automatically determine the stage order. The input ``g_raw`` is provided by the pipeline itself.
+    Each stage must declare its required inputs and the outputs it produces. These are used by :py:meth:`~.create_pipeline` to automatically determine the stage order. The input ``input`` is provided by the pipeline itself.
     """
 
     inputs   = []
