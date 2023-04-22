@@ -226,7 +226,7 @@ class Task:
             self.           config = self.data.get('config', {})
             self.       last_stage = self.data.entries.get('last_stage', None)
             self.          environ = self.data.entries.get('environ', {})
-            self.    compress_logs = self.data.entries.get('compress-logs', True)
+            self.    compress_logs = self.data.entries.get('compress_logs', True)
 
             for output in type(self).outputs:
                 output_pathpattern =  f'{output}_pathpattern'
