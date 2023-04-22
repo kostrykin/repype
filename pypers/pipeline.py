@@ -90,7 +90,7 @@ class Stage(object):
         cfg = cfg.get(self.cfgns, {})
         if cfg.get('enabled', self.enabled_by_default):
             out.intermediate(f'Starting stage "{self.cfgns}"')
-            self._callback('start', data, **kwargs)
+            self._callback('start', data, out = out, **kwargs)
             input_data = {key: data[key] for key in self.inputs}
             clean_cfg = cfg.copy()
             clean_cfg.pop('enabled', None)
@@ -100,15 +100,15 @@ class Stage(object):
             assert len(set(output_data.keys()) ^ set(self.outputs)) == 0, 'stage "%s" produced spurious or missing output' % self.cfgns
             data.update(output_data)
             for key in self.consumes: del data[key]
-            self._callback('end', data, **kwargs)
+            self._callback('end', data, out = out, **kwargs)
             return dt
         else:
             out.write(f'Skipping disabled stage "{self.cfgns}"')
-            self._callback('skip', data, **kwargs)
+            self._callback('skip', data, out = out, **kwargs)
             return 0
         
-    def skip(self, data, **kwargs):
-            self._callback('skip', data, **kwargs)
+    def skip(self, data, out = None, **kwargs):
+            self._callback('skip', data, out = out, **kwargs)
 
     def process(self, cfg, log_root_dir, out, **inputs):
         """Runs this pipeline stage.
@@ -241,7 +241,7 @@ class Pipeline:
                     raise
                 timings[stage.cfgns] = dt
             else:
-                stage.skip(data, **kwargs)
+                stage.skip(data, out = out, **kwargs)
         return data, cfg, timings
     
     def get_extra_stages(self, first_stage, last_stage, available_inputs):
