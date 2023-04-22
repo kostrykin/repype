@@ -10,11 +10,6 @@ Contents
    :maxdepth: 3
 
    usage
-   
-.. toctree::
-   :maxdepth: 2
-   
-   pipeline
 
 .. toctree::
    :maxdepth: 2
