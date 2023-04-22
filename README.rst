@@ -3,6 +3,8 @@ pypers
 
 Powerful batch processing using pipelines.
 
+The documentation is available here: https://pypers-batch.readthedocs.io
+
 Use ``python -m unittest`` in the root directory of the repository to run the test suite.
 
 ----

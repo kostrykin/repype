@@ -10,7 +10,7 @@ To use pypers, first install it using conda:
 
 .. code-block:: console
 
-   conda install -c bioconda superdsm
+   conda install -c bioconda pypers
 
 Usage
 -----
@@ -41,7 +41,7 @@ and then run from command line:
 
 .. code-block:: console
 
-   python -m superdsm.batch --help
+   python -m batch --help
 
 For details, see :ref:`batch_system`.
 
