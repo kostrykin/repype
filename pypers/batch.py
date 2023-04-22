@@ -226,6 +226,7 @@ class Task:
             self.           config = self.data.get('config', {})
             self.       last_stage = self.data.entries.get('last_stage', None)
             self.          environ = self.data.entries.get('environ', {})
+            self.    compress_logs = self.data.entries.get('compress-logs', True)
 
             for output in type(self).outputs:
                 output_pathpattern =  f'{output}_pathpattern'
@@ -370,7 +371,7 @@ class Task:
                 if not dry:
                     data[file_id] = data_chunk if return_full_data else self._strip_marginal_fields(pipeline, data_chunk, is_chunk=True)
                 processed_stages |= _estimate_processed_stages(pipeline, first_stage, self.last_stage) if dry else set(_timings.keys())
-                if not dry: _compress_logs(kwargs['log_filepath'])
+                if not dry and self.compress_logs: _compress_logs(kwargs['log_filepath'])
                 if file_id not in timings: timings[file_id] = {}
                 timings[file_id].update(_timings)
             out2.write('')
