@@ -357,11 +357,13 @@ class Task:
                 progress = file_idx / len(self.file_ids)
                 if report is not None: report.update(self, progress)
                 out3.write(Text.style(f'\n[{self._fmt_path(self.path)}] ', Text.BLUE + Text.BOLD) + Text.style(f'Processing file: {input_filepath}', Text.BOLD) + f' ({100 * progress:.0f}%)')
-                kwargs = dict(       input = input_filepath,
-                              log_filepath = resolve_pathpattern(self.log_pathpattern, file_id),
-                              cfg_filepath = resolve_pathpattern(self.cfg_pathpattern, file_id),
-                                last_stage = self.last_stage,
-                                       cfg = self.config.copy())
+                kwargs = dict(
+                    input        = input_filepath,
+                    log_filepath = resolve_pathpattern(self.log_pathpattern, file_id),
+                    cfg_filepath = resolve_pathpattern(self.cfg_pathpattern, file_id),
+                    last_stage   = self.last_stage,
+                    cfg          = self.config.copy()
+                )
                 for output, output_pathpattern in self.available_outputs:
                     output_path = resolve_pathpattern(output_pathpattern, file_id)
                     _mkdir(pathlib.Path(output_path).parents[0])
