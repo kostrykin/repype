@@ -283,7 +283,7 @@ class Task:
     
     @property
     def root_path(self):
-        """The root path of the task (see :ref:`_usage_example_batch`)."""
+        """The root path of the task (see :ref:`batch_system`)."""
         if self.parent_task is not None: return self.parent_task.root_path
         else: return self.path
 

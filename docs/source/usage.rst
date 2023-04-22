@@ -15,10 +15,10 @@ To use pypers, first install it using conda:
 Usage
 -----
 
-.. _usage_example_batch:
+.. _usage_example:
 
-Batch processing
-****************
+Example
+*******
 
 Pipeline stages require different inputs and produce different outputs. These are like intermediate results, which are shared or passed between the stages. The pipeline maintains their state, which is kept inside the *pipeline data object*.
 
@@ -46,6 +46,11 @@ and then run from command line:
    python -m batch --help
 
 For details, see below.
+
+.. _batch_system:
+
+Batch processing
+****************
 
 .. _batch_task_spec:
 
