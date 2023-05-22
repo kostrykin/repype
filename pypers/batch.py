@@ -226,6 +226,7 @@ class Task:
             self.           config = self.data.get('config', {})
             self.       last_stage = self.data.entries.get('last_stage', None)
             self.          environ = self.data.entries.get('environ', {})
+            self.    compress_logs = self.data.entries.get('compress_logs', True)
 
             for output in type(self).outputs:
                 output_pathpattern =  f'{output}_pathpattern'
@@ -356,11 +357,13 @@ class Task:
                 progress = file_idx / len(self.file_ids)
                 if report is not None: report.update(self, progress)
                 out3.write(Text.style(f'\n[{self._fmt_path(self.path)}] ', Text.BLUE + Text.BOLD) + Text.style(f'Processing file: {input_filepath}', Text.BOLD) + f' ({100 * progress:.0f}%)')
-                kwargs = dict(       input = input_filepath,
-                              log_filepath = resolve_pathpattern(self.log_pathpattern, file_id),
-                              cfg_filepath = resolve_pathpattern(self.cfg_pathpattern, file_id),
-                                last_stage = self.last_stage,
-                                       cfg = self.config.copy())
+                kwargs = dict(
+                    input        = input_filepath,
+                    log_filepath = resolve_pathpattern(self.log_pathpattern, file_id),
+                    cfg_filepath = resolve_pathpattern(self.cfg_pathpattern, file_id),
+                    last_stage   = self.last_stage,
+                    cfg          = self.config.copy()
+                )
                 for output, output_pathpattern in self.available_outputs:
                     output_path = resolve_pathpattern(output_pathpattern, file_id)
                     _mkdir(pathlib.Path(output_path).parents[0])
@@ -370,7 +373,7 @@ class Task:
                 if not dry:
                     data[file_id] = data_chunk if return_full_data else self._strip_marginal_fields(pipeline, data_chunk, is_chunk=True)
                 processed_stages |= _estimate_processed_stages(pipeline, first_stage, self.last_stage) if dry else set(_timings.keys())
-                if not dry: _compress_logs(kwargs['log_filepath'])
+                if not dry and self.compress_logs: _compress_logs(kwargs['log_filepath'])
                 if file_id not in timings: timings[file_id] = {}
                 timings[file_id].update(_timings)
             out2.write('')

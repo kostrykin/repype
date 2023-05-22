@@ -324,7 +324,7 @@ class ExtendedTask(DummyTask):
         pipeline.stages[2].add_callback('end' , self.write_intermediate_results)
         return pipeline
         
-    def write_intermediate_results(self, stage, cb_name, data, result_a_filepath, result_c_filepath):
+    def write_intermediate_results(self, stage, cb_name, data, result_a_filepath, result_c_filepath, out):
         if stage.cfgns == 'stage1':
             with open(result_a_filepath, 'w') as fout:
                 json.dump(data['a'], fout)

@@ -43,12 +43,12 @@ class Stage(object):
     Automation
     ^^^^^^^^^^
 
-    Hyperparameters can be set automatically using the :py:meth:`~.configure` method based on the scale :math:`\sigma` of objects in an image. Hyperparameters are only set automatically based on the scale of objects, if the :py:mod:`~superdsm.automation` module (as in :ref:`this <usage_example_interactive>` example) or batch processing are used (as in :ref:`this <usage_example_batch>` example). Hyperparameters are *not* set automatically if the :py:meth:`~superdsm.pipeline.Pipeline.process_image` method of the :py:class:`~superdsm.pipeline.Pipeline` class is used directly.
+    Hyperparameters can be set automatically using the :py:meth:`~.configure` method.
 
     Inputs and outputs
     ^^^^^^^^^^^^^^^^^^
 
-    Each stage must declare its required inputs and the outputs it produces. These are used by :py:meth:`~.create_pipeline` to automatically determine the stage order. The input ``g_raw`` is provided by the pipeline itself.
+    Each stage must declare its required inputs and the outputs it produces. These are used by :py:meth:`~.create_pipeline` to automatically determine the stage order. The input ``input`` is provided by the pipeline itself.
     """
 
     inputs   = []
@@ -90,7 +90,7 @@ class Stage(object):
         cfg = cfg.get(self.cfgns, {})
         if cfg.get('enabled', self.enabled_by_default):
             out.intermediate(f'Starting stage "{self.cfgns}"')
-            self._callback('start', data, **kwargs)
+            self._callback('start', data, out = out, **kwargs)
             input_data = {key: data[key] for key in self.inputs}
             clean_cfg = cfg.copy()
             clean_cfg.pop('enabled', None)
@@ -100,15 +100,15 @@ class Stage(object):
             assert len(set(output_data.keys()) ^ set(self.outputs)) == 0, 'stage "%s" produced spurious or missing output' % self.cfgns
             data.update(output_data)
             for key in self.consumes: del data[key]
-            self._callback('end', data, **kwargs)
+            self._callback('end', data, out = out, **kwargs)
             return dt
         else:
             out.write(f'Skipping disabled stage "{self.cfgns}"')
-            self._callback('skip', data, **kwargs)
+            self._callback('skip', data, out = out, **kwargs)
             return 0
         
-    def skip(self, data, **kwargs):
-            self._callback('skip', data, **kwargs)
+    def skip(self, data, out = None, **kwargs):
+            self._callback('skip', data, out = out, **kwargs)
 
     def process(self, cfg, log_root_dir, out, **inputs):
         """Runs this pipeline stage.
@@ -116,7 +116,7 @@ class Stage(object):
         :param input_data: Dictionary of the inputs declared by this stage.
         :param cfg: The hyperparameters to be used by this stage.
         :param log_root_dir: Path of directory where log files will be written, or ``None`` if no log files should be written.
-        :param out: An instance of an :py:class:`~superdsm.output.Output` sub-class, ``'muted'`` if no output should be produced, or ``None`` if the default output should be used.
+        :param out: An instance of an :py:class:`~pypers.output.Output` sub-class, ``'muted'`` if no output should be produced, or ``None`` if the default output should be used.
         :return: Dictionary of the outputs declared by this stage.
         """
         raise NotImplementedError()
@@ -210,12 +210,12 @@ class Pipeline:
         The :py:meth:`~.Stage.process` methods of the stages of the pipeline are executed successively.
 
         :param input: The input to be processed (can be ``None`` if and only if ``data`` is not ``None``).
-        :param cfg: A :py:class:`~superdsm.config.Config` object which represents the hyperparameters.
+        :param cfg: A :py:class:`~pypers.config.Config` object which represents the hyperparameters.
         :param first_stage: The name of the first stage to be executed.
         :param last_stage: The name of the last stage to be executed.
         :param data: The results of a previous execution.
         :param log_root_dir: Path to a directory where log files should be written to.
-        :param out: An instance of an :py:class:`~superdsm.output.Output` sub-class, ``'muted'`` if no output should be produced, or ``None`` if the default output should be used.
+        :param out: An instance of an :py:class:`~pypers.output.Output` sub-class, ``'muted'`` if no output should be produced, or ``None`` if the default output should be used.
         :return: Tuple ``(data, cfg, timings)``, where ``data`` is the *pipeline data object* comprising all final and intermediate results, ``cfg`` are the finally used hyperparameters, and ``timings`` is a dictionary containing the execution time of each individual pipeline stage (in seconds).
 
         The parameter ``data`` is used if and only if ``first_stage`` is not ``None``. In this case, the outputs produced by the stages of the pipeline which are being skipped must be fed in using the ``data`` parameter obtained from a previous execution of this method.
@@ -241,7 +241,7 @@ class Pipeline:
                     raise
                 timings[stage.cfgns] = dt
             else:
-                stage.skip(data, **kwargs)
+                stage.skip(data, out = out, **kwargs)
         return data, cfg, timings
     
     def get_extra_stages(self, first_stage, last_stage, available_inputs):

@@ -226,7 +226,7 @@ class Pipeline(unittest.TestCase):
         cfg['stage3/constant' ] = 3
         pipeline = create_pipeline().test()
         for stage in pipeline.stages:
-            def _cb(stage2, name, data):
+            def _cb(stage2, name, data, out):
                 pipeline.call_record.append(f'{stage2.cfgns} {name}')
             stage.add_callback('start', _cb)
             stage.add_callback('end'  , _cb)
