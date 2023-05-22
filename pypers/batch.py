@@ -32,11 +32,11 @@ def resolve_pathpattern(pathpattern, fileid):
     else: return str(pathpattern) % fileid
 
 
-def copy_dict(d):
+def _copy_dict(d):
     """Returns a deep copy of a dictionary.
     """
     assert isinstance(d, dict), 'not a "dict" object'
-    return {item[0]: copy_dict(item[1]) if isinstance(item[1], dict) else item[1] for item in d.items()}
+    return {item[0]: _copy_dict(item[1]) if isinstance(item[1], dict) else item[1] for item in d.items()}
 
 
 def _is_subpath(path, subpath):
@@ -56,7 +56,7 @@ def _mkdir(dir_path):
 def _process_file(dry, *args, out=None, **kwargs):
     if dry:
         out = get_output(out)
-        kwargs_serializable = copy_dict(kwargs)
+        kwargs_serializable = _copy_dict(kwargs)
         if 'cfg' in kwargs_serializable:
             kwargs_serializable['cfg'] = kwargs_serializable['cfg'].entries
         out.write(f'{_process_file.__name__}: {json.dumps(kwargs_serializable)}')
