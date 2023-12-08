@@ -10,7 +10,11 @@ import shutil
 import time
 import re
 
-from typing import Union, Type
+from typing import (
+    Union,
+    Type,
+    Any,
+)
 
 from .pipeline import ProcessingControl
 from .output import get_output, Text
@@ -20,14 +24,34 @@ from .config import Config
 PathType = Union[pathlib.Path, str]
 
 
-def _format_runtime(seconds):
+def _format_runtime(seconds: Union[int, float]) -> str:
+    """
+    Formats the given time duration in seconds into a string in the format 'HH:MM:SS'.
+
+    :param seconds: The time duration in seconds.
+    :type seconds: int or float
+    :return: The formatted time duration.
+    :rtype: str
+    """
     seconds = int(round(seconds))
     hours, remainder = divmod(seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
     return f'{hours:02}:{minutes:02}:{seconds:02}'
 
 
-def resolve_pathpattern(pathpattern, fileid):
+def resolve_pathpattern(pathpattern: PathType, fileid: Any) -> str:
+    """
+    Resolves a path pattern into a string by substituting a file ID into the pattern.
+
+    If the path pattern is None, the function returns None. Otherwise, the function converts the path pattern to a string and substitutes the file ID into the pattern using the '%' operator.
+
+    :param pathpattern: The path pattern to resolve. This should be a string containing one '%s' placeholder where the file ID should be substituted.
+    :type pathpattern: PathType
+    :param fileid: The file ID to substitute into the path pattern.
+    :type fileid: Any
+    :return: The resolved path pattern, or None if the input path pattern was None.
+    :rtype: str
+    """
     if pathpattern is None: return None
     else: return str(pathpattern) % fileid
 
@@ -39,7 +63,19 @@ def _copy_dict(d):
     return {item[0]: _copy_dict(item[1]) if isinstance(item[1], dict) else item[1] for item in d.items()}
 
 
-def _is_subpath(path, subpath):
+def _is_subpath(path: PathType, subpath: PathType) -> bool:
+    """
+    Checks if a given path is a subpath of another path.
+
+    This function converts both input paths to pathlib.Path objects if they are not already, and then checks if the second path is a subpath of the first path.
+
+    :param path: The base path to check. This can be a string or a pathlib.Path object.
+    :type path: str or pathlib.Path
+    :param subpath: The potential subpath to check. This can be a string or a pathlib.Path object.
+    :type subpath: str or pathlib.Path
+    :return: True if subpath is a subpath of path, False otherwise.
+    :rtype: bool
+    """
     if isinstance(   path, str):    path = pathlib.Path(   path)
     if isinstance(subpath, str): subpath = pathlib.Path(subpath)
     try:
