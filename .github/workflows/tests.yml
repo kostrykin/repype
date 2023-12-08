@@ -1,4 +1,4 @@
-name: Run tests
+name: Tests
 
 on:
   push:
@@ -9,13 +9,16 @@ on:
 permissions:
   contents: read
 
+env:
+  PYTHON_VERSIONS: pypy3.9|pypy3.10|3.9|3.10|3.11|3.12
+
 jobs:
   build:
 
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["pypy3.9", "pypy3.10", "3.9", "3.10", "3.11", "3.12"]
+        python-version: ${{fromJSON($(echo "[\"$PYTHON_VERSIONS\"]" | sed 's/|/", "/g'))}}
 
     steps:
     - uses: actions/checkout@v3
