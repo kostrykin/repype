@@ -3,14 +3,33 @@ import weakref
 import os
 import re
 
-from typing import Union
+from typing import (
+    Union,
+    Optional
+)
 from collections.abc import Sequence
 
 from .config import Config
-from .output import get_output
+from .output import (
+    Output,
+    get_output
+)
 
 
-def suggest_cfgns(class_name):
+def suggest_cfgns(class_name: str) -> str:
+    """
+    Suggest configuration namespace based on a class name.
+
+    This function validates the class name, then finds and groups tokens in the class name.
+    Tokens are grouped if they are consecutive and alphanumeric, but do not start with numbers.
+    The function then converts the tokens to lowercase, removes underscores, and joins them with hyphens.
+
+    :param class_name: The name of the class to suggest a configuration namespace for.
+    :type class_name: str
+    :return: A string of hyphen-separated tokens from the class name.
+    :rtype: str
+    :raises AssertionError: If the class name is not valid.
+    """
     assert class_name != '_' and re.match('[a-zA-Z]', class_name) and re.match('^[a-zA-Z_](?:[a-zA-Z0-9_])*$', class_name), f'not a valid class name: "{class_name}"'
     tokens1 = re.findall('[A-Z0-9][^A-Z0-9_]*', class_name)
     tokens2 = list()
@@ -108,32 +127,28 @@ class Stage(object):
             return 0
         
     def skip(self, data, out = None, **kwargs):
-            self._callback('skip', data, out = out, **kwargs)
+        self._callback('skip', data, out = out, **kwargs)
 
-    def process(self, cfg, log_root_dir, out, **inputs):
-        """Runs this pipeline stage.
+    def process(self, cfg: Optional[Config]=None, log_root_dir: Optional[str]=None, out :Optional[Output]=None, **inputs):
+        """
+        Executes the current pipeline stage.
 
-        :param input_data: Dictionary of the inputs declared by this stage.
-        :param cfg: The hyperparameters to be used by this stage.
-        :param log_root_dir: Path of directory where log files will be written, or ``None`` if no log files should be written.
-        :param out: An instance of an :py:class:`~pypers.output.Output` sub-class, ``'muted'`` if no output should be produced, or ``None`` if the default output should be used.
-        :return: Dictionary of the outputs declared by this stage.
+        This method runs the current stage of the pipeline with the provided inputs, configuration parameters, and logging settings. It then returns the outputs produced by this stage.
+
+        :param input_data: A dictionary containing the inputs required by this stage. Each key-value pair in the dictionary represents an input name and its corresponding value.
+        :type input_data: dict
+        :param cfg: A dictionary containing the hyperparameters to be used by this stage. Each key-value pair in the dictionary represents a hyperparameter name and its corresponding value.
+        :type cfg: dict
+        :param log_root_dir: The path to the directory where log files will be written. If this parameter is ``None``, no log files will be written.
+        :type log_root_dir: str, optional
+        :param out: An instance of a subclass of :py:class:`~pypers.output.Output` to handle the output of this stage. If this parameter is ``'muted'``, no output will be produced. If this parameter is ``None``, the default output handler will be used.
+        :type out: :py:class:`~pypers.output.Output`, 'muted', or None, optional
+        :return: A dictionary containing the outputs produced by this stage. Each key-value pair in the dictionary represents an output name and its corresponding value.
+        :rtype: dict
         """
         raise NotImplementedError()
 
     def configure(self, *args, **kwargs):
-        """Automatically computes the default configuration entries which are dependent on the scale of the objects in an image.
-
-        :return: Dictionary of configuration entries of the form:
-
-            .. code-block:: python
-
-               {
-                   'key': (factor, default_user_factor),
-               }
-            
-            Each hyperparameter ``key`` is associated with a new hyperparameter ``AF_key``. The value of the hyperparameter ``key`` will be computed as the product of ``factor`` and the value of the ``AF_key`` hyperparameter, which defaults to ``default_user_factor``. Another dictionary may be provided as a third component of the tuple, which can specify a ``type``, ``min``, and ``max`` values.
-        """
         return dict()
 
     def __str__(self):
@@ -144,13 +159,33 @@ class Stage(object):
 
 
 class ProcessingControl:
+    """
+    A class used to control the processing of stages in a pipeline.
 
-    def __init__(self, first_stage=None, last_stage=None):
+    This class keeps track of the first and last stages of a pipeline, and determines whether a given stage should be processed based on its position in the pipeline.
+
+    :param first_stage: The first stage of the pipeline. Processing starts from this stage. If None, processing starts from the beginning.
+    :type first_stage: str, optional
+    :param last_stage: The last stage of the pipeline. Processing stops after this stage. If None, processing goes until the end.
+    :type last_stage: str, optional
+    """
+
+    def __init__(self, first_stage: Optional[str]=None, last_stage: Optional[str]=None):
         self.started     = True if first_stage is None else False
         self.first_stage = first_stage
         self.last_stage  =  last_stage
     
     def step(self, stage):
+        """
+        Determines whether the given stage should be processed.
+
+        If the stage is the first stage of the pipeline, processing starts. If the stage is the last stage of the pipeline, processing stops after this stage.
+
+        :param stage: The stage to check.
+        :type stage: str
+        :return: True if the stage should be processed, False otherwise.
+        :rtype: bool
+        """
         if not self.started and stage == self.first_stage: self.started = True
         do_step = self.started
         if stage == self.last_stage: self.started = False
