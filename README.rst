@@ -1,3 +1,6 @@
+.. image: https://github.com/kostrykin/pypers/actions/workflows/tests.yml/badge.svg
+   :target: https://github.com/kostrykin/pypers/actions/workflows/tests.yml
+
 pypers
 ======
 
