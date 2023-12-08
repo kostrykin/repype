@@ -1,10 +1,10 @@
-.. image: https://github.com/kostrykin/pypers/actions/workflows/tests.yml/badge.svg
+.. image:: https://github.com/kostrykin/pypers/actions/workflows/tests.yml/badge.svg
    :target: https://github.com/kostrykin/pypers/actions/workflows/tests.yml
 
 pypers
 ======
 
-Powerful batch processing using pipelines.
+Powerful batch processing using pipelines for orchestration of experiments.
 
 The documentation is available here: https://pypers-batch.readthedocs.io
 
