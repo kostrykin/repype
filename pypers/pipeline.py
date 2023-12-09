@@ -16,9 +16,9 @@ from .output import (
 )
 
 
-def suggest_cfgns(class_name: str) -> str:
+def suggest_stage_id(class_name: str) -> str:
     """
-    Suggest configuration namespace based on a class name.
+    Suggest stage ID based on a class name.
 
     This function validates the class name, then finds and groups tokens in the class name.
     Tokens are grouped if they are consecutive and alphanumeric, but do not start with numbers.
@@ -56,7 +56,7 @@ class Stage(object):
     Each stage can be controlled by a separate set of hyperparameters. Refer to the documentation of the respective pipeline stages for details. Most hyperparameters reside in namespaces, which are uniquely associated with the corresponding pipeline stages.
 
     :param name: Readable identifier of this stage.
-    :param cfgns: Hyperparameter namespace of this stage. Defaults to ``name`` if not specified.
+    :param id: The stage ID, used as the hyperparameter namespace. Defaults to the result of the :py:meth:`~.suggest_stage_id` function if not specified.
     :param inputs: List of inputs required by this stage.
     :param outputs: List of outputs produced by this stage.
 
@@ -77,12 +77,12 @@ class Stage(object):
     enabled_by_default = True
 
     def __init__(self):
-        self.cfgns    = type(self).cfgns if hasattr(type(self), 'cfgns') else suggest_cfgns(type(self).__name__)
+        self.id       = type(self).id if hasattr(type(self), 'id') else suggest_stage_id(type(self).__name__)
         self.inputs   = frozenset(type(self).inputs) | frozenset(type(self).consumes)
         self.outputs  = frozenset(type(self).outputs)
         self.consumes = frozenset(type(self).consumes)
         self.enabled_by_default = type(self).enabled_by_default
-        assert not self.cfgns.endswith('+'), 'the suffix "+" is reserved as an indication of "the stage after that stage"'
+        assert not self.id.endswith('+'), 'the suffix "+" is reserved as an indication of "the stage after that stage"'
         self._callbacks = {}
 
     def _callback(self, name, *args, **kwargs):
@@ -107,9 +107,9 @@ class Stage(object):
 
     def __call__(self, data, cfg, out=None, log_root_dir=None, **kwargs):
         out = get_output(out)
-        cfg = cfg.get(self.cfgns, {})
+        cfg = cfg.get(self.id, {})
         if cfg.get('enabled', self.enabled_by_default):
-            out.intermediate(f'Starting stage "{self.cfgns}"')
+            out.intermediate(f'Starting stage "{self.id}"')
             self._callback('start', data, out = out, **kwargs)
             input_data = {key: data[key] for key in self.inputs}
             clean_cfg = cfg.copy()
@@ -117,13 +117,13 @@ class Stage(object):
             t0 = time.time()
             output_data = self.process(cfg=clean_cfg, log_root_dir=log_root_dir, out=out, **input_data)
             dt = time.time() - t0
-            assert len(set(output_data.keys()) ^ set(self.outputs)) == 0, 'stage "%s" produced spurious or missing output' % self.cfgns
+            assert len(set(output_data.keys()) ^ set(self.outputs)) == 0, 'stage "%s" produced spurious or missing output' % self.id
             data.update(output_data)
             for key in self.consumes: del data[key]
             self._callback('end', data, out = out, **kwargs)
             return dt
         else:
-            out.write(f'Skipping disabled stage "{self.cfgns}"')
+            out.write(f'Skipping disabled stage "{self.id}"')
             self._callback('skip', data, out = out, **kwargs)
             return 0
         
@@ -154,10 +154,10 @@ class Stage(object):
         return dict()
 
     def __str__(self):
-        return self.cfgns
+        return self.id
 
     def __repr__(self):
-        return f'<{type(self).__name__}, cfgns: {self.cfgns}>'
+        return f'<{type(self).__name__}, id: {self.id}>'
 
 
 class ProcessingControl:
@@ -253,9 +253,9 @@ class Configurator:
         """
         for stage in self.pipeline.stages:
             if any([
-                stage.cfgns in config1 and stage.cfgns not in config2,
-                stage.cfgns not in config1 and stage.cfgns in config2,
-                stage.cfgns in config1 and stage.cfgns in config2 and config1[stage.cfgns] != config2[stage.cfgns],
+                stage.id in config1 and stage.id not in config2,
+                stage.id not in config1 and stage.id in config2,
+                stage.id in config1 and stage.id in config2 and config1[stage.id] != config2[stage.id],
             ]):
                 return stage
         return None
@@ -296,10 +296,10 @@ class Pipeline:
         """
         cfg = cfg.copy()
         if log_root_dir is not None: os.makedirs(log_root_dir, exist_ok=True)
-        if first_stage == self.stages[0].cfgns and data is None: first_stage = None
-        if first_stage is not None and first_stage.endswith('+'): first_stage = self.stages[1 + self.find(first_stage[:-1])].cfgns
+        if first_stage == self.stages[0].id and data is None: first_stage = None
+        if first_stage is not None and first_stage.endswith('+'): first_stage = self.stages[1 + self.find(first_stage[:-1])].id
         if first_stage is not None and last_stage is not None and self.find(first_stage) > self.find(last_stage): return data, cfg, {}
-        if first_stage is not None and first_stage != self.stages[0].cfgns and data is None: raise ValueError('data argument must be provided if first_stage is used')
+        if first_stage is not None and first_stage != self.stages[0].id and data is None: raise ValueError('data argument must be provided if first_stage is used')
         if data is None: data = dict()
         if input is not None: data['input'] = input
         extra_stages = self.get_extra_stages(first_stage, last_stage, data.keys())
@@ -307,13 +307,13 @@ class Pipeline:
         ctrl = ProcessingControl(first_stage, last_stage)
         timings = {}
         for stage in self.stages:
-            if ctrl.step(stage.cfgns) or stage.cfgns in extra_stages:
+            if ctrl.step(stage.id) or stage.id in extra_stages:
                 try:
                     dt = stage(data, cfg, out=out, log_root_dir=log_root_dir, **kwargs)
                 except:
                     print(f'An error occured while executing the stage: {str(stage)}')
                     raise
-                timings[stage.cfgns] = dt
+                timings[stage.id] = dt
             else:
                 stage.skip(data, out = out, **kwargs)
         return data, cfg, timings
@@ -325,7 +325,7 @@ class Pipeline:
         ctrl = ProcessingControl(first_stage, last_stage)
         for stage in self.stages:
             stage_by_output.update({output: stage for output in stage.outputs})
-            if ctrl.step(stage.cfgns):
+            if ctrl.step(stage.id):
                 required_inputs  |= stage.inputs
                 available_inputs |= stage.outputs
         while True:
@@ -334,28 +334,28 @@ class Pipeline:
             extra_stage = stage_by_output[list(missing_inputs)[0]]
             required_inputs  |= extra_stage.inputs
             available_inputs |= extra_stage.outputs
-            extra_stages.append(extra_stage.cfgns)
+            extra_stages.append(extra_stage.id)
         return extra_stages
 
-    def find(self, cfgns, not_found_dummy=float('inf')):
+    def find(self, stage_id, not_found_dummy=float('inf')):
         """
-        Returns the position of the stage identified by ``stage_cfgns``.
+        Returns the position of the stage identified by ``stage_id``.
 
         Returns ``not_found_dummy`` if the stage is not found.
         """
         try:
-            return [stage.cfgns for stage in self.stages].index(cfgns)
+            return [stage.id for stage in self.stages].index(stage_id)
         except ValueError:
             return not_found_dummy
         
-    def stage(self, cfgns):
-        idx = self.find(cfgns, None)
+    def stage(self, stage_id):
+        idx = self.find(stage_id, None)
         return self.stages[idx] if idx is not None else None
 
     def append(self, stage: 'Stage', after: Union[str, int] = None):
         for stage2 in self.stages:
-            if stage2 is stage: raise RuntimeError(f'stage {stage.cfgns} already added')
-            if stage2.cfgns == stage.cfgns: raise RuntimeError(f'stage with namespace {stage.cfgns} already added')
+            if stage2 is stage: raise RuntimeError(f'stage {stage.id} already added')
+            if stage2.id == stage.id: raise RuntimeError(f'stage with ID {stage.id} already added')
         if after is None:
             self.stages.append(stage)
             return len(self.stages) - 1
@@ -375,7 +375,7 @@ class Pipeline:
             for key, spec in specs.items():
                 assert len(spec) in (2,3), f'{type(stage).__name__}.configure returned tuple of unknown length ({len(spec)})'
                 _create_config_entry_kwargs = dict() if len(spec) == 2 else spec[-1]
-                _create_config_entry(cfg, f'{stage.cfgns}/{key}', *spec[:2], **_create_config_entry_kwargs)
+                _create_config_entry(cfg, f'{stage.id}/{key}', *spec[:2], **_create_config_entry_kwargs)
         return cfg
     
     @property
@@ -395,9 +395,9 @@ def create_pipeline(stages: Sequence):
     available_inputs = set(['input'])
     remaining_stages = list(stages)
 
-    # Ensure that the stage namespaces are unique
-    namespaces = [stage.cfgns for stage in stages]
-    assert len(namespaces) == len(frozenset(namespaces)), 'ambiguous namespaces'
+    # Ensure that the stage identifiers are unique
+    ids = [stage.id for stage in stages]
+    assert len(ids) == len(frozenset(ids)), 'ambiguous stage identifiers'
 
     # Ensure that no output is produced more than once
     outputs = list(available_inputs) + sum((list(stage.outputs) for stage in stages), [])

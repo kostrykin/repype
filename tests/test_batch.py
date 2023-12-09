@@ -73,11 +73,11 @@ class DummyTask(pypers.batch.Task):
         assert isinstance(dry, bool)
         stages = [
             ## stage1 takes `input` and produces `a`
-            testsuite.create_stage(cfgns = 'stage1', inputs = ['input'], outputs = ['a'], process = self.stage1_process),
+            testsuite.create_stage(id = 'stage1', inputs = ['input'], outputs = ['a'], process = self.stage1_process),
             ## stage2 takes `a` and produces `b`
-            testsuite.create_stage(cfgns = 'stage2', inputs = ['a'], outputs = ['b'], process = self.stage2_process),
+            testsuite.create_stage(id = 'stage2', inputs = ['a'], outputs = ['b'], process = self.stage2_process),
             ## stage3 takes `b` and produces `c`
-            testsuite.create_stage(cfgns = 'stage3', inputs = ['b'], outputs = ['c'], process = self.stage3_process),
+            testsuite.create_stage(id = 'stage3', inputs = ['b'], outputs = ['c'], process = self.stage3_process),
         ]
         return pypers.pipeline.create_pipeline(stages)
     
@@ -325,10 +325,10 @@ class ExtendedTask(DummyTask):
         return pipeline
         
     def write_intermediate_results(self, stage, cb_name, data, result_a_filepath, result_c_filepath, out):
-        if stage.cfgns == 'stage1':
+        if stage.id == 'stage1':
             with open(result_a_filepath, 'w') as fout:
                 json.dump(data['a'], fout)
-        if stage.cfgns == 'stage3':
+        if stage.id == 'stage3':
             with open(result_c_filepath, 'w') as fout:
                 json.dump(data['c'], fout)
 

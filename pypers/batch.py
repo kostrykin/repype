@@ -161,8 +161,8 @@ def _estimate_processed_stages(pipeline, first_stage, last_stage):
     stages = []
     ctrl = ProcessingControl(first_stage, last_stage)
     for stage in pipeline.stages:
-        if ctrl.step(stage.cfgns):
-            stages.append(stage.cfgns)
+        if ctrl.step(stage.id):
+            stages.append(stage.id)
     return frozenset(stages)
 
 
@@ -365,7 +365,7 @@ class Task:
     def get_marginal_fields(self, pipeline):
         marginal_fields = set()
         for stage in pipeline.stages:
-            if self.is_stage_marginal(stage.cfgns):
+            if self.is_stage_marginal(stage.id):
                 marginal_fields |= stage.outputs
         return marginal_fields
 
@@ -466,12 +466,12 @@ class Task:
         previous_task = self.find_parent_task_with_result()
         if previous_task is not None:
             first_stage = pipeline.configurator.first_differing_stage(self.config, previous_task.config)
-            pickup_candidates.append((previous_task, first_stage.cfgns if first_stage else ''))
+            pickup_candidates.append((previous_task, first_stage.id if first_stage else ''))
         if self.result_path.exists() and self.digest_cfg_path.exists():
             with self.digest_cfg_path.open('r') as fin:
                 config = json.load(fin)
             first_stage = pipeline.configurator.first_differing_stage(self.config, config)
-            pickup_candidates.append((self, first_stage.cfgns))
+            pickup_candidates.append((self, first_stage.id))
         return pickup_candidates
 
     def find_best_pickup_candidate(self, pipeline):
@@ -483,7 +483,7 @@ class Task:
     def pickup_previous_task(self, pipeline, dry=False, pickup=True, out=None):
         out = get_output(out)
         pickup_task, stage_name = self.find_best_pickup_candidate(pipeline) if pickup else (None, None)
-        if pickup_task is None or (len(stage_name) > 0 and all([self.is_stage_marginal(stage.cfgns) for stage in pipeline.stages[:pipeline.find(stage_name)]])):
+        if pickup_task is None or (len(stage_name) > 0 and all([self.is_stage_marginal(stage.id) for stage in pipeline.stages[:pipeline.find(stage_name)]])):
             return None, {}
         else:
             out.write(f'Picking up from: {self._fmt_path(pickup_task.result_path)} ({stage_name if stage_name != "" else "load"})')

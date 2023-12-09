@@ -17,7 +17,7 @@ def create_stage(**kwargs):
 
     class DummyStage(pypers.pipeline.Stage):
 
-        cfgns    = kwargs['cfgns']
+        id       = kwargs['id']
         inputs   = kwargs['inputs']
         outputs  = kwargs['outputs']
         consumes = kwargs['consumes']
@@ -36,7 +36,7 @@ def create_stage(**kwargs):
 
 # Test create_stage:
 
-_stage = create_stage(cfgns = 'dummy', inputs = ['x1', 'x2'], outputs = ['y'])
+_stage = create_stage(id = 'dummy', inputs = ['x1', 'x2'], outputs = ['y'])
 assert isinstance(_stage, pypers.pipeline.Stage)
 assert isinstance(_stage.inputs , frozenset)
 assert isinstance(_stage.outputs, frozenset)
