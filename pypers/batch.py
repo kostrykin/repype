@@ -360,9 +360,30 @@ class Task:
         return self.runnable and not (self.digest_path.exists() and self.digest_path.read_text() == self.config_digest)
     
     def is_stage_marginal(self, stage):
+        """
+        Check if a given stage is marginal.
+
+        Args:
+            stage: The stage to check.
+
+        Returns:
+            True if the stage is marginal, False otherwise.
+        """
         return False
     
     def get_marginal_fields(self, pipeline):
+        """
+        Get the marginal fields from the given pipeline.
+
+        The marginal fields are all outputs produced by marginal stages.
+        Marginal stages are those stages, for which the :meth:`is_stage_marginal` method returns True.
+
+        Args:
+            pipeline (Pipeline): The pipeline object.
+
+        Returns:
+            set: A set of marginal fields.
+        """
         marginal_fields = set()
         for stage in pipeline.stages:
             if self.is_stage_marginal(stage.id):
