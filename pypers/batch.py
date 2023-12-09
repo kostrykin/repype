@@ -14,6 +14,7 @@ from typing import (
     Union,
     Type,
     Any,
+    List,
 )
 
 from .pipeline import ProcessingControl
@@ -170,24 +171,24 @@ class TaskLoader:
 
     suffix_hint = ''
 
-    def filepath(self, filepath):
+    def filepath(self, filepath: PathType) -> PathType:
         convert_to_path_obj = isinstance(filepath, pathlib.Path)
         filepath = str(filepath)
         filepath = filepath if any([filepath.lower().endswith(f'.{suffix.lower()}') for suffix in self.suffixes]) else f'{filepath}.{self.default_suffix}'
         return pathlib.Path(filepath) if convert_to_path_obj else filepath
     
     @property
-    def default_suffix(self):
+    def default_suffix(self) -> str:
         return self.suffixes[0]
     
     @property
-    def suffixes(self):
+    def suffixes(self) -> List[str]:
         return self.suffix_hint.split(',')
 
-    def load(self, filepath):
+    def load(self, filepath: PathType) -> dict:
         raise NotImplementedError()
     
-    def dump(self, filepath, data):
+    def dump(self, filepath: PathType, data: dict):
         raise NotImplementedError()
     
 
