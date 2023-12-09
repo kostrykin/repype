@@ -50,7 +50,8 @@ def suggest_cfgns(class_name: str) -> str:
 
 
 class Stage(object):
-    """A pipeline stage.
+    """
+    A pipeline stage.
 
     Each stage can be controlled by a separate set of hyperparameters. Refer to the documentation of the respective pipeline stages for details. Most hyperparameters reside in namespaces, which are uniquely associated with the corresponding pipeline stages.
 
@@ -149,7 +150,7 @@ class Stage(object):
         raise NotImplementedError()
 
     def configure(self, *args, **kwargs):
-        # FIXME: add documentation, check implementation
+        # FIXME: add documentation
         return dict()
 
     def __str__(self):
@@ -203,7 +204,11 @@ def _create_config_entry(cfg, key, factor, default_user_factor, type=None, min=N
 
 
 class Configurator:
-    """Automatically configures hyperparameters of a pipeline.
+    """
+    Automatically configures hyperparameters of a pipeline.
+    
+    :param pipeline: An instance of the `Pipeline` class.
+    :type pipeline: Pipeline
     """
 
     def __init__(self, pipeline: 'Pipeline'):
@@ -212,14 +217,40 @@ class Configurator:
 
     @property
     def pipeline(self):
+        """
+        Get the pipeline associated with this configurator.
+        
+        :return: The pipeline instance.
+        :rtype: Pipeline
+        """
         pipeline = self._pipeline()
         assert pipeline is not None
         return pipeline
     
     def configure(self, base_cfg, input):
+        """
+        Configure the hyperparameters of the pipeline.
+        
+        :param base_cfg: The base configuration.
+        :type base_cfg: Config
+        :param input: The input data.
+        :type input: Any
+        :return: The configured hyperparameters.
+        :rtype: Config
+        """
         return self.pipeline.configure(base_cfg, input)
     
     def first_differing_stage(self, config1: 'Config', config2: 'Config'):
+        """
+        Find the first stage with differing configurations between two sets of hyperparameters.
+        
+        :param config1: The first set of hyperparameters.
+        :type config1: Config
+        :param config2: The second set of hyperparameters.
+        :type config2: Config
+        :return: The first differing stage, or None if no differences are found.
+        :rtype: Stage or None
+        """
         for stage in self.pipeline.stages:
             if any([
                 stage.cfgns in config1 and stage.cfgns not in config2,
@@ -231,17 +262,24 @@ class Configurator:
 
 
 class Pipeline:
-    """Represents a processing pipeline.
-    
-    Note that hyperparameters are *not* set automatically if the :py:meth:`~.process_image` method is used directly. Hyperparameters are only set automatically, if the :py:mod:`~.configure` method or batch processing are used.
+    """
+    Defines a processing pipeline.
+
+    This class defines a processing pipeline that consists of multiple stages. Each stage performs a specific operation on the input data. The pipeline processes the input data by executing the `process` method of each stage successively.
+
+    Note that hyperparameters are *not* set automatically if the :py:meth:`~.process_image` method is used directly. Hyperparameters are only set automatically if the :py:mod:`~.configure` method or batch processing is used.
+
+    :param configurator: An instance of the `Configurator` class used to automatically configure hyperparameters of the pipeline. If not provided, a default `Configurator` instance will be created.
+    :type configurator: Configurator, optional
     """
     
-    def __init__(self, configurator: 'Configurator' = None):
+    def __init__(self, configurator: Optional[Configurator] = None):
         self.stages = []
         self.configurator = configurator if configurator else Configurator(self)
 
     def process(self, input, cfg, first_stage=None, last_stage=None, data=None, log_root_dir=None, out=None, **kwargs):
-        """Processes the input.
+        """
+        Processes the input.
 
         The :py:meth:`~.Stage.process` methods of the stages of the pipeline are executed successively.
 
@@ -300,7 +338,8 @@ class Pipeline:
         return extra_stages
 
     def find(self, cfgns, not_found_dummy=float('inf')):
-        """Returns the position of the stage identified by ``stage_cfgns``.
+        """
+        Returns the position of the stage identified by ``stage_cfgns``.
 
         Returns ``not_found_dummy`` if the stage is not found.
         """
@@ -327,7 +366,8 @@ class Pipeline:
             return after + 1
 
     def configure(self, base_cfg, *args, **kwargs):
-        """Automatically configures hyperparameters.
+        """
+        Automatically configures hyperparameters.
         """
         cfg = base_cfg.copy()
         for stage in self.stages:
@@ -347,7 +387,8 @@ class Pipeline:
 
 
 def create_pipeline(stages: Sequence):
-    """Creates and returns a new :py:class:`.Pipeline` object configured for the given stages.
+    """
+    Creates and returns a new :py:class:`.Pipeline` object configured for the given stages.
 
     The stage order is determined automatically.
     """
@@ -389,4 +430,3 @@ def create_pipeline(stages: Sequence):
         available_inputs -= next_stage.consumes
 
     return pipeline
-
