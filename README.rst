@@ -10,7 +10,12 @@
     </h1>
   </div>
 
-**Installation:** ``python setup.py install``
+**Installation:**
+
+.. code::
+
+    git clone git@github.com:kostrykin/pypers.git
+    cd pypers && python setup.py install
 
 **Documentation:** https://pypers-batch.readthedocs.io
 
