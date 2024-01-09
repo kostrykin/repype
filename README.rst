@@ -1,11 +1,13 @@
 .. raw:: html
 
-    <div align="center">
+  <div align="center">
+    <h1>
+      <a href="https://github.com/kostrykin/pypers">pypers</a><br>
       <a href="https://github.com/kostrykin/pypers/actions/workflows/tests.yml"><img src="https://github.com/kostrykin/pypers/actions/workflows/tests.yml/badge.svg" /></a>
       <a href="https://github.com/kostrykin/pypers/actions/workflows/tests.yml"><img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/kostrykin/5f8b1433a1c405da22639f817d6a38d9/raw/pypers.json" /></a>
       <a href="https://pypers-batch.readthedocs.io"><img src="https://readthedocs.org/projects/pypers-batch/badge/?version=latest" /></a>
-      <h1><a href="https://github.com/kostrykin/pypers">pypers</a></h1>
-    </div>
+    </h1>
+  </div>
 
 Powerful batch processing using pipelines for orchestration of experiments.
 
@@ -27,3 +29,12 @@ Copyright (c) 2017-2024 Leonid Kostrykin, Biomedical Computer Vision Group, Heid
 
 This work is licensed under the terms of the MIT license.
 For a copy, see `LICENSE </LICENSE>`_.
+
+----
+
+.. raw:: html
+
+  <div align="center">
+    Copyright (c) 2017-2024 Leonid Kostrykin, Biomedical Computer Vision Group, Heidelberg University<br>
+    This work is licensed under the terms of the MIT license. For a copy, see <a href="LICENSE">LICENSE</a>.
+  </div>
