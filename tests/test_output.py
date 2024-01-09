@@ -1,5 +1,8 @@
 import unittest
 import time
+import io
+import contextlib
+import re
 
 import pypers.output
 
@@ -57,7 +60,7 @@ class OutputTest(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def test_DummyOutput(self):
+    def test_DummyOutput(self):  ## In order to test Output.progress (see below), we need to test DummyOutput first.
         self.out.write('line 1')
         self.out.write('line 2')
         self.assertEqual(str(self.out), 'line 1\nline 2')
@@ -106,6 +109,38 @@ class OutputTest(unittest.TestCase):
         for _ in progress_generator:
             pass
         self.assertEqual(str(self.out), '')
+
+
+class ConsoleOutputTest(unittest.TestCase):
+
+    def setUp(self):
+        self.out = pypers.output.ConsoleOutput()
+        self.out_str_buf = io.StringIO()
+        self.ctx = contextlib.redirect_stdout(self.out_str_buf)
+        self.ctx.__enter__()
+
+    @property
+    def out_str(self):
+        return re.sub(r'\033\[K', '', self.out_str_buf.getvalue())
+        #return '\n'.join([line.rstrip() for line in text.split('\n')])
+    
+    def tearDown(self):
+        self.ctx.__exit__(None, None, None)
+
+    def test_xxx(self):
+        self.out.write('line 1')
+        self.assertEqual(self.out_str, 'line 1\n')
+
+        self.out.write('line 2')
+        self.assertEqual(self.out_str, 'line 1\nline 2\n')
+
+        out2 = self.out.derive(muted=True)
+        out2.write('line 3')
+        self.assertEqual(self.out_str, 'line 1\nline 2\n')
+
+        out2 = self.out.derive(muted=False, margin=2)
+        out2.write('line 4\nline 5')
+        self.assertEqual(self.out_str, 'line 1\nline 2\n  line 4\n  line 5\n')
 
 if __name__ == '__main__':
     unittest.main()
