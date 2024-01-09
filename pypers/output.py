@@ -132,8 +132,8 @@ class Output:
                 eta = ', ETA: ' + format_hms(speed * (n - item_idx))
             output = f'{100 * item_idx / n:.1f}% ({item_idx} / {n}{eta})'
             if progressbar_length is not None:
-                progressbar =  ((progressbar_length * item_idx) // n) * '='
-                progressbar =  progressbar + (progressbar_length - len(progressbar)) * ' '
+                progressbar = ((progressbar_length * item_idx) // n) * '='
+                progressbar = progressbar + (progressbar_length - len(progressbar)) * ' '
                 output = f'[{progressbar}] {output}'
             if text is not None:
                 output = f'{text}… {output}'
@@ -213,7 +213,7 @@ class ConsoleOutput(Output):
     """Implements the :py:class:`~.Output` class for terminal-based applications.
     """
 
-    def __init__(self, muted=False, parent=None, margin=0):
+    def __init__(self, parent=None, muted=False, margin=0):
         super(ConsoleOutput, self).__init__(parent, muted, margin)
         self._intermediate_line_length = 0
 
@@ -238,5 +238,5 @@ class ConsoleOutput(Output):
     
     def derive(self, muted=False, margin=0):
         assert margin >= 0
-        return ConsoleOutput(muted, self, self.margin + margin)
+        return ConsoleOutput(self, muted, self.margin + margin)
         
