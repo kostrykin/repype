@@ -1,14 +1,18 @@
-|tests-passing| |tests-coverage|
+.. raw:: html
 
-.. |tests-passing| image:: https://github.com/kostrykin/pypers/actions/workflows/tests.yml/badge.svg
-.. |tests-coverage| image:: https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/kostrykin/5f8b1433a1c405da22639f817d6a38d9/raw/pypers.json
+  <div align="center">
+    <h6>Powerful batch processing using pipelines for orchestration of your experiments.</h6>
+    <h1>
+      <a href="https://github.com/kostrykin/pypers">pypers</a><br>
+      <a href="https://github.com/kostrykin/pypers/actions/workflows/tests.yml"><img src="https://github.com/kostrykin/pypers/actions/workflows/tests.yml/badge.svg" /></a>
+      <a href="https://github.com/kostrykin/pypers/actions/workflows/tests.yml"><img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/kostrykin/5f8b1433a1c405da22639f817d6a38d9/raw/pypers.json" /></a>
+      <a href="https://pypers-batch.readthedocs.io"><img src="https://readthedocs.org/projects/pypers-batch/badge/?version=latest" /></a><br>
+    </h1>
+  </div>
 
-pypers
-======
+**Installation:** ``python setup.py install``
 
-Powerful batch processing using pipelines for orchestration of experiments.
-
-The documentation is available here: https://pypers-batch.readthedocs.io
+**Documentation:** https://pypers-batch.readthedocs.io
 
 **Development instructions:**
 
@@ -22,7 +26,9 @@ The documentation is available here: https://pypers-batch.readthedocs.io
 
 ----
 
-Copyright (c) 2017-2024 Leonid Kostrykin, Biomedical Computer Vision Group, Heidelberg University
+.. raw:: html
 
-This work is licensed under the terms of the MIT license.
-For a copy, see `LICENSE </LICENSE>`_.
+  <div align="center">
+    Copyright (c) 2017-2024 Leonid Kostrykin, Biomedical Computer Vision Group, Heidelberg University<br>
+    This work is licensed under the terms of the MIT license. For a copy, see <a href="LICENSE">LICENSE</a>.
+  </div>
