@@ -1,5 +1,7 @@
 *.swp
 .DS_Store
+.coveragerc
+coverage.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

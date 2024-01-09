@@ -10,6 +10,8 @@ permissions:
   contents: read
 
 jobs:
+
+
   build:
 
     runs-on: ubuntu-latest
@@ -38,7 +40,54 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        pip install coverage
     -
-      name: Test with pytest
+      name: Test with unittest/coverage
       run: |
-        python -m unittest
+        coverage run -m unittest discover
+    -
+      name: Combine results
+      run: |
+        python -m coverage combine
+        python -m coverage json
+    -
+      name: Upload coverage results
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage
+        path: |
+          coverage.*
+          .coverage*
+
+
+  create_coverage_badge:
+
+    runs-on: ubuntu-latest
+    steps:
+    - 
+      name: Download coverage results
+      uses: actions/download-artifact@v3
+      with:
+        name: coverage
+    -
+      name: Install jq
+      run: |
+        sudo apt install jq
+    -
+      name: Fetch coverage
+      id: coverage
+      shell: bash
+      run: |
+        echo "value=$(jq -r '[.totals.percent_covered_display][0]' coverage.json)" >> $GITHUB_OUTPUT
+    -
+      name: Create badge
+      uses: schneegans/dynamic-badges-action@v1.6.0
+      with:
+        auth: ${{ secrets.GIST_SECRET }}
+        gistID: 5f8b1433a1c405da22639f817d6a38d9
+        filename: covbadge.json
+        label: Coverage
+        message: ${{ steps.coverage.outputs.value }}%
+        minColorRange: 50
+        maxColorRange: 90
+        valColorRange: ${{ steps.coverage.outputs.value }}
