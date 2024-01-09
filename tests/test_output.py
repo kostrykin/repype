@@ -122,7 +122,6 @@ class ConsoleOutputTest(unittest.TestCase):
     @property
     def out_str(self):
         return re.sub(r'\033\[K', '', self.out_str_buf.getvalue())
-        #return '\n'.join([line.rstrip() for line in text.split('\n')])
     
     def tearDown(self):
         self.ctx.__exit__(None, None, None)
