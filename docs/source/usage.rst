@@ -117,6 +117,7 @@ To perform batch processing of all tasks specified in the current working direct
 
 This will run the batch system in *dry mode*, so nothing will actually be processed. Instead, each task which is going to be processed will be printed, along with some additional information. To actually start the processing, re-run the command and include the ``--run`` argument.
 
-In this example, the current working directory will correspond to the *root directory* when it comes to resolving the ``{ROOTDIR}`` placeholder in the path specification.
+.. note::
+    In this example, the current working directory will correspond to the *root directory* when it comes to resolving the ``{ROOTDIR}`` placeholder in the path specification.
 
 Note that the batch system will automatically skip tasks which already have been completed in a previous run, unless the ``--force`` argument is used. On the other hand, tasks will not be marked as completed if the ``--oneshot`` argument is used. To run only a single task from the root directory, use the ``--task`` argument, or ``--task-dir`` if you want to automatically include the dervied tasks. Note that, in both cases, the tasks must be specified relatively to the root directory.
