@@ -1,15 +1,15 @@
-|tests-passing| |tests-coverage| |docs-status|
+.. raw:: html
 
-.. |tests-passing| image:: https://github.com/kostrykin/pypers/actions/workflows/tests.yml/badge.svg
-.. |tests-coverage| image:: https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/kostrykin/5f8b1433a1c405da22639f817d6a38d9/raw/pypers.json
-.. |docs-status| image:: https://readthedocs.org/projects/pypers-batch/badge/?version=latest
-
-pypers
-======
+    <div align="center">
+      <a href="https://github.com/kostrykin/pypers/actions/workflows/tests.yml"><img src="https://github.com/kostrykin/pypers/actions/workflows/tests.yml/badge.svg" /></a>
+      <a href="https://github.com/kostrykin/pypers/actions/workflows/tests.yml"><img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/kostrykin/5f8b1433a1c405da22639f817d6a38d9/raw/pypers.json" /></a>
+      <a href="https://pypers-batch.readthedocs.io"><img src="https://readthedocs.org/projects/pypers-batch/badge/?version=latest" /></a>
+      <h1><a href="https://github.com/kostrykin/pypers">pypers</a></h1>
+    </div>
 
 Powerful batch processing using pipelines for orchestration of experiments.
 
-The documentation is available here: https://pypers-batch.readthedocs.io
+The documentation is available on: https://pypers-batch.readthedocs.io
 
 **Development instructions:**
 
