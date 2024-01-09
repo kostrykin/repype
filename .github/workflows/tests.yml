@@ -45,7 +45,7 @@ jobs:
       name: Test with unittest/coverage
       run: |
         coverage run -m unittest discover
-        python -m coverage json
+        python -m coverage json --omit "tests/*"
     -
       name: Upload coverage results
       uses: actions/upload-artifact@v3
@@ -55,7 +55,7 @@ jobs:
         path: coverage.json
 
 
-  create_coverage_badge:
+  update_coverage_badge_data:
 
     runs-on: ubuntu-latest
     needs: ['run_tests']
