@@ -1,7 +1,8 @@
-|tests-passing| |tests-coverage|
+|tests-passing| |tests-coverage| |docs-status|
 
 .. |tests-passing| image:: https://github.com/kostrykin/pypers/actions/workflows/tests.yml/badge.svg
 .. |tests-coverage| image:: https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/kostrykin/5f8b1433a1c405da22639f817d6a38d9/raw/pypers.json
+.. |docs-status| image:: https://readthedocs.org/projects/pypers-batch/badge/?version=latest
 
 pypers
 ======
