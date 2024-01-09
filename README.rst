@@ -25,13 +25,6 @@ The documentation is available on: https://pypers-batch.readthedocs.io
 
 ----
 
-Copyright (c) 2017-2024 Leonid Kostrykin, Biomedical Computer Vision Group, Heidelberg University
-
-This work is licensed under the terms of the MIT license.
-For a copy, see `LICENSE </LICENSE>`_.
-
-----
-
 .. raw:: html
 
   <div align="center">
