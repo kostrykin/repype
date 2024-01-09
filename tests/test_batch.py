@@ -1,4 +1,5 @@
 import unittest
+import argparse
 import pathlib
 import re
 import json
@@ -99,9 +100,55 @@ class DummyTask(pypers.batch.Task):
             with open(log_root_dir + '/stage3.txt', 'w') as file:
                 file.write(f"{b} * {cfg['x3']}")
         return dict(c = b * cfg['x3'])
+    
+
+import unittest.mock
+class run_cli_Test(unittest.TestCase):
+
+    def setUp(self):
+        self.tested = TaskTest()
+        self.tested.setUp()
+
+    def tearDown(self):
+        self.tested.tearDown()
+
+    @unittest.mock.patch('argparse.ArgumentParser.parse_args', return_value = argparse.Namespace(
+            path = str(rootdir),
+            run = True,
+            verbosity = -1,
+            force = False,
+            oneshot = False,
+            last_stage = None,
+            no_pickup = False,
+            task = list(),
+            task_dir = list(),
+            report = None,
+        ))
+    def test(self, *args):
+        # Determine the expected results
+        data_expected = dict()
+        for task in self.tested.batch.tasks:
+            task.run(out = 'muted')
+            if hasattr(task, 'result_path'):
+                result_path = _get_written_results_file(task)
+                with gzip.open(result_path, 'rb') as fin:
+                    data_expected[result_path] = dill.load(fin)
+
+        # Clear the previously written results
+        for task in self.tested.batch.tasks:
+            task.reset()
+
+        # Call the CLI
+        pypers.batch.run_cli(DummyTask)
+
+        # Compare the results
+        for path, expeceted in data_expected.items():
+            with gzip.open(path, 'rb') as fin:
+                actual = dill.load(fin)
+            self.assertEqual(actual, expeceted)
 
 
-class Task(unittest.TestCase):
+class TaskTest(unittest.TestCase):
 
     def setUp(self):
         self.batch = pypers.batch.BatchLoader(DummyTask, pypers.batch.JSONLoader())
@@ -206,6 +253,12 @@ class Task(unittest.TestCase):
                     self.assertIsNone(data_expected)
                 else:
                     self.assertEqual(data_actual[task.path], data_expected)
+
+    def test_run_dry(self):
+        task = self.batch.tasks[0]
+        actual = task.run(dry = True, out = 'muted')
+        expected = {file_id: None for file_id in task.file_ids}
+        self.assertEqual(actual, expected)
 
     def test_pending(self):
         for task in self.batch.tasks:
@@ -383,6 +436,41 @@ class ExtendedTaskTest(unittest.TestCase):
             with self.subTest(file_id = file_id):
                 self.assertFalse((task.path / 'results_a' / f'{file_id}.json').exists())
                 self.assertFalse((task.path / 'results_c' / f'{file_id}.json').exists())
+
+
+class _copy_dict_Test(unittest.TestCase):
+
+    def test_copy_dict(self):
+        # Test case 1: Empty dictionary
+        d1 = {}
+        d2 = pypers.batch._copy_dict(d1)
+        self.assertEqual(d1, d2)
+        self.assertIsNot(d1, d2)
+
+        # Test case 2: Nested dictionary
+        d1 = {'a': 1, 'b': {'c': 2, 'd': {'e': 3}}}
+        d2 = pypers.batch._copy_dict(d1)
+        self.assertEqual(d1, d2)
+        self.assertIsNot(d1, d2)
+        self.assertIsNot(d1['b'], d2['b'])
+        self.assertIsNot(d1['b']['d'], d2['b']['d'])
+
+        # Test case 3: Dictionary with different value types
+        d1 = {'a': 1, 'b': [1, 2, 3], 'c': {'d': True}}
+        d2 = pypers.batch._copy_dict(d1)
+        self.assertEqual(d1, d2)
+        self.assertIsNot(d1, d2)
+        self.assertIsNot(d1['b'], d2['b'])
+        self.assertIsNot(d1['c'], d2['c'])
+
+
+class _is_subpath_Test(unittest.TestCase):
+
+    def test_is_subpath(self):
+        # Test when values are illegal
+        path = ''
+        subpath = pathlib.Path('/Users/void/Documents')
+        self.assertFalse(pypers.batch._is_subpath(path, subpath))
 
 
 if __name__ == '__main__':

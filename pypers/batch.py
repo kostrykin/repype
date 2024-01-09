@@ -58,10 +58,19 @@ def resolve_pathpattern(pathpattern: PathType, fileid: Any) -> str:
 
 
 def _copy_dict(d):
-    """Returns a deep copy of a dictionary.
+    """Returns a deep copy of a dictionary (regarding nested dictionaries and lists).
+
+    Objects of other types than dictionaries or lists are not copied.
     """
     assert isinstance(d, dict), 'not a "dict" object'
-    return {item[0]: _copy_dict(item[1]) if isinstance(item[1], dict) else item[1] for item in d.items()}
+    def _deep_copy(value):
+        if isinstance(value, dict):
+            return _copy_dict(value)
+        elif isinstance(value, list):
+            return list(value)
+        else:
+            return value
+    return {item[0]: _deep_copy(item[1]) for item in d.items()}
 
 
 def _is_subpath(path: PathType, subpath: PathType) -> bool:
@@ -221,7 +230,7 @@ class YAMLLoader(TaskLoader):
 
 
 class Task:
-    """Represents a batch processing task (see :ref:`batch_task_spec`).
+    """Batch processing task that bundles one or muiltiple input files to be processed using the same set of manaully set hyperparameters (see :ref:`batch_task_spec`).
 
     :param path: The path of the directory where the task specification resides.
     :param data: Dictionary corresponding to the task specification (JSON data).
@@ -689,7 +698,7 @@ def run_cli(task_cls, task_loader = JSONLoader(), parser = None):
     args.task_dir = [_get_path(args.path, task_dir_path) for task_dir_path in args.task_dir]
 
     dry = not args.run
-    out = get_output()
+    out = get_output() if args.verbosity >= 0 else get_output('muted')
     runnable_tasks = [task for task in loader.tasks if task.runnable]
     out.write(f'Loaded {len(runnable_tasks)} runnable task(s)')
     if dry: out.write(f'DRY RUN: use "--run" to run the tasks instead')
