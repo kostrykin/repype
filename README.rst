@@ -10,6 +10,8 @@
     </h1>
   </div>
 
+**Installation:** ``python setup.py install``
+
 **Documentation:** https://pypers-batch.readthedocs.io
 
 **Development instructions:**
