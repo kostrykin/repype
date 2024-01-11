@@ -1,7 +1,7 @@
 .. raw:: html
 
   <div align="center">
-    <h6>Powerful batch processing using pipelines for orchestration of your experiments.</h6>
+    <h6>To support the sustainability of your software experiments</h6>
     <h1>
       <a href="https://github.com/kostrykin/pypers">pypers</a><br>
       <a href="https://github.com/kostrykin/pypers/actions/workflows/tests.yml"><img src="https://github.com/kostrykin/pypers/actions/workflows/tests.yml/badge.svg" /></a>
