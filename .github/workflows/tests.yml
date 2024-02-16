@@ -30,6 +30,7 @@ jobs:
     steps:
     -
       uses: actions/checkout@v3
+      if: github.event_name == 'pull_request' || github.ref == 'refs/heads/master'
     -
       name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
@@ -59,7 +60,7 @@ jobs:
 
     runs-on: ubuntu-latest
     needs: ['run_tests']
-    if: github.ref == 'refs/heads/master'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     steps:
     - 
       name: Download coverage results
