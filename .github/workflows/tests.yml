@@ -103,7 +103,7 @@ jobs:
 
     - name: Create badge
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-      uses: schneegans/dynamic-badges-action@v1.6.0
+      uses: schneegans/dynamic-badges-action@v1.7.0
       with:
         auth: ${{ secrets.GIST_SECRET }}
         gistID: 5f8b1433a1c405da22639f817d6a38d9
