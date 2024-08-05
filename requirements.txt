@@ -1,5 +1,4 @@
 ipython>=7.31.1
 dill~=0.3.2
-sphinx-autorun>=1.1.1
 pyyaml
-sphinx-rtd-theme
+textual
