@@ -8,6 +8,7 @@ from typing import (
 )
 
 import pypers.pipeline
+import pypers.config
 import yaml
 
 
@@ -29,6 +30,11 @@ class Task:
     def runnable(self) -> bool:
         return bool(self.full_spec.get('runnable'))
     
+    @property
+    def config(self):
+        self.spec.setdefault('config', dict())
+        return pypers.config.Config(self.full_spec['config'])
+    
     def get_path_pattern(self, key: str, default: Optional[str] = None) -> Optional[pathlib.Path]:
         path_pattern = self.full_spec.get(key)
         if path_pattern is None:
@@ -43,6 +49,13 @@ class Task:
         module = importlib.import_module(module_name)
         pipeline_class = getattr(module, class_name)
         return pipeline_class(*args, **kwargs)
+    
+    @property
+    def config_digest(self):
+        """
+        Hash code of the hyperparameters of this task.
+        """
+        return self.config.md5.hexdigest()
     
 
 class Batch:

@@ -216,6 +216,54 @@ class Task__get_path_pattern(unittest.TestCase):
         self.assertEqual(task.get_path_pattern('cfg_pathpattern', default = 'cfg/%s.yml'), path / 'cfg/%s.yml')
 
 
+class Task__config(unittest.TestCase):
+
+    @testsuite.with_temporary_paths(1)
+    def test_without_config(self, path):
+        task = pypers.task.Task(
+            path = path,
+            parent = None,
+            spec = dict(),
+        )
+        task.config['key1/key2'] = 'value'
+        self.assertEqual(task.full_spec, dict(config = dict(key1 = dict(key2 = 'value'))))
+
+    @testsuite.with_temporary_paths(1)
+    def test_with_config(self, path):
+        task = pypers.task.Task(
+            path = path,
+            parent = None,
+            spec = dict(
+                config = dict(key1 = dict(key2 = 'value2')),
+            ),
+        )
+        task.config['key1/key3'] = 'value3'
+        self.assertEqual(task.full_spec, dict(config = dict(key1 = dict(key2 = 'value2', key3 = 'value3'))))
+
+
+class Task__config_digest(unittest.TestCase):
+
+    @testsuite.with_temporary_paths(1)
+    def test_empty(self, path):
+        task = pypers.task.Task(
+            path = path,
+            parent = None,
+            spec = dict(),
+        )
+        self.assertEqual(task.config_digest, '99914b932bd37a50b983c5e7c90ae93b')
+
+    @testsuite.with_temporary_paths(1)
+    def test_nonempty(self, path):
+        task = pypers.task.Task(
+            path = path,
+            parent = None,
+            spec = dict(
+                config = dict(key1 = dict(key2 = 'value2')),
+            ),
+        )
+        self.assertEqual(task.config_digest, 'a7179809f6aae5f73a3e0470f33d8ebd')
+
+
 def create_task_file(task_path, spec_yaml):
     task_path = pathlib.Path(task_path)
     task_filepath = task_path / 'task.yml'
