@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+import pathlib
 import tempfile
 
 import pypers.pipeline
@@ -8,9 +9,11 @@ def with_temporary_paths(count: int):
     def decorator(test_func):
         def wrapper(self, *args, **kwargs):
             paths = [tempfile.TemporaryDirectory() for _ in range(count)]
-            ret = test_func(self, *[path.name for path in paths], *args, **kwargs)
-            for path in paths:
-                path.cleanup()
+            try:
+                ret = test_func(self, *[pathlib.Path(path.name) for path in paths], *args, **kwargs)
+            finally:
+                for path in paths:
+                    path.cleanup()
             return ret
         return wrapper
     return decorator
