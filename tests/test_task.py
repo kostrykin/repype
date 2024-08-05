@@ -3,12 +3,15 @@ from unittest.mock import patch
 
 import pypers.pipeline
 import pypers.task
+from . import testsuite
 
 
 class Task__init(unittest.TestCase):
 
-    def test_without_parent(self):
+    @testsuite.with_temporary_paths(1)
+    def test_without_parent(self, path):
         task = pypers.task.Task(
+            path = path,
             parent = None,
             spec = dict(
                 field1 = 1,
@@ -23,8 +26,10 @@ class Task__init(unittest.TestCase):
             ),
         )
 
-    def test_with_parent(self):
+    @testsuite.with_temporary_paths(2)
+    def test_without_parent(self, path1, path2):
         parent = pypers.task.Task(
+            path = path1,
             parent = None,
             spec = dict(
                 field1 = 1,
@@ -32,6 +37,7 @@ class Task__init(unittest.TestCase):
             ),
         )
         task = pypers.task.Task(
+            path = path2,
             parent = parent,
             spec = dict(
                 field2 = 3,
@@ -54,8 +60,10 @@ class Task__init(unittest.TestCase):
 
 class Task__create_pipeline(unittest.TestCase):
 
-    def test_from_spec(self):
+    @testsuite.with_temporary_paths(1)
+    def test_from_spec(self, path):
         task = pypers.task.Task(
+            path = path,
             parent = None,
             spec = dict(
                 pipeline = 'pypers.pipeline.Pipeline',
@@ -66,9 +74,11 @@ class Task__create_pipeline(unittest.TestCase):
             pypers.pipeline.Pipeline,
         )
 
+    @testsuite.with_temporary_paths(1)
     @patch('pypers.pipeline.Pipeline')
-    def test_from_spec_args_and_kwargs(self, mock_Pipeline):
+    def test_from_spec_args_and_kwargs(self, path, mock_Pipeline):
         task = pypers.task.Task(
+            path = path,
             parent = None,
             spec = dict(
                 pipeline = 'pypers.pipeline.Pipeline',
@@ -87,15 +97,18 @@ class Task__create_pipeline(unittest.TestCase):
             kwarg2 = 'kwarg2',
         )
 
-    def test_from_spec_missing(self):
+    @testsuite.with_temporary_paths(1)
+    def test_from_spec_missing(self, path):
         task = pypers.task.Task(
+            path = path,
             parent = None,
             spec = dict(),
         )
         with self.assertRaises(AssertionError):
             task.create_pipeline()
 
-    def test_override(self):
+    @testsuite.with_temporary_paths(1)
+    def test_override(self, path):
 
         class DerivedTask(pypers.task.Task):
 
@@ -103,6 +116,7 @@ class Task__create_pipeline(unittest.TestCase):
                 return pypers.pipeline.Pipeline(*args, **kwargs)
         
         task = DerivedTask(
+            path = path,
             parent = None,
             spec = dict(),
         )

@@ -1,6 +1,19 @@
+from collections.abc import Sequence
+import tempfile
+
 import pypers.pipeline
 
-from collections.abc import Sequence
+
+def with_temporary_paths(count: int):
+    def decorator(test_func):
+        def wrapper(self, *args, **kwargs):
+            paths = [tempfile.TemporaryDirectory() for _ in range(count)]
+            ret = test_func(self, *[path.name for path in paths], *args, **kwargs)
+            for path in paths:
+                path.cleanup()
+            return ret
+        return wrapper
+    return decorator
 
 
 # __init__(self, name: str, inputs: Sequence, outputs: Sequence, consumes: Sequence, process: callable, configure: callable = None):
