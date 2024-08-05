@@ -57,9 +57,9 @@ class Task__full_spec(unittest.TestCase):
             ),
         )
 
-    @testsuite.with_temporary_paths(2)
-    def test_with_parent(self, path1, path2):
-        parent = pypers.task.Task(
+    @testsuite.with_temporary_paths(3)
+    def test_with_parent(self, path1, path2, path3):
+        task1 = pypers.task.Task(
             path = path1,
             parent = None,
             spec = dict(
@@ -67,19 +67,34 @@ class Task__full_spec(unittest.TestCase):
                 field2 = 2,
             ),
         )
-        task = pypers.task.Task(
+        task2 = pypers.task.Task(
             path = path2,
-            parent = parent,
+            parent = task1,
             spec = dict(
                 field2 = 3,
                 field3 = 4,
             ),
         )
+        task3 = pypers.task.Task(
+            path = path3,
+            parent = task2,
+            spec = dict(
+                field2 = 5,
+            ),
+        )
         self.assertEqual(
-            task.full_spec,
+            task2.full_spec,
             dict(
                 field1 = 1,
                 field2 = 3,
+                field3 = 4,
+            ),
+        )
+        self.assertEqual(
+            task3.full_spec,
+            dict(
+                field1 = 1,
+                field2 = 5,
                 field3 = 4,
             ),
         )

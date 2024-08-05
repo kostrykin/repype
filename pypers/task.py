@@ -22,7 +22,7 @@ class Task:
         self.path = path
 
     @property
-    def full_spec(self):
+    def full_spec(self) -> dict:
         return (self.parent.full_spec | self.spec) if self.parent else self.spec
 
     def create_pipeline(self, *args, **kwargs) -> pypers.pipeline.Pipeline:
