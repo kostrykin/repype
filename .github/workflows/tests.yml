@@ -1,24 +1,32 @@
 name: Tests
 
 on:
+
+  workflow_dispatch:
+
   push:
-    branches: [ "*" ]
+    branches:
+      - master
+    
   pull_request:
     branches: [ "*" ]
 
+
 permissions:
   contents: read
+  issues: write
+  pull-requests: write
+
 
 jobs:
-
 
   run_tests:
 
     runs-on: ubuntu-latest
+    
     strategy:
       matrix:
         python-version:
-        - "3.7"
         - "3.8"
         - "pypy3.9"
         - "pypy3.10"
@@ -28,63 +36,25 @@ jobs:
         - "3.12"
 
     steps:
-    -
-      uses: actions/checkout@v3
-    -
-      name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+
+    - uses: actions/checkout@v4
+      if: github.event_name == 'pull_request' || github.ref == 'refs/heads/master'
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-    -
-      name: Install dependencies
+
+    - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install coverage
-    -
-      name: Test with unittest/coverage
-      run: |
-        coverage run -m unittest discover
-        python -m coverage json --omit "tests/*"
-    -
-      name: Upload coverage results
-      uses: actions/upload-artifact@v3
-      if: strategy.job-index == 0
-      with:
-        name: coverage
-        path: coverage.json
 
-
-  update_coverage_badge_data:
-
-    runs-on: ubuntu-latest
-    needs: ['run_tests']
-    if: github.ref == 'refs/heads/master'
-    steps:
-    - 
-      name: Download coverage results
-      uses: actions/download-artifact@v3
+    - name: Run tests
+      uses: kostrykin/report-test-coverage-action@v1.0.0
       with:
-        name: coverage
-    -
-      name: Install jq
-      run: |
-        sudo apt install jq
-    -
-      name: Fetch coverage
-      id: coverage
-      shell: bash
-      run: |
-        echo "value=$(jq -r '[.totals.percent_covered_display][0]' coverage.json)" >> $GITHUB_OUTPUT
-    -
-      name: Create badge
-      uses: schneegans/dynamic-badges-action@v1.6.0
-      with:
-        auth: ${{ secrets.GIST_SECRET }}
-        gistID: 5f8b1433a1c405da22639f817d6a38d9
-        filename: pypers.json
-        label: Coverage
-        message: ${{ steps.coverage.outputs.value }}%
-        minColorRange: 50
-        maxColorRange: 90
-        valColorRange: ${{ steps.coverage.outputs.value }}
+        report: ${{ strategy.job-index == 0 }}
+        gist-id: 5f8b1433a1c405da22639f817d6a38d9
+        github-auth: ${{ secrets.GITHUB_TOKEN }}
+        gist-auth: ${{ secrets.GIST_SECRET }}
+        gist-filename: pypers.json
