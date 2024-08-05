@@ -10,6 +10,24 @@ from . import testsuite
 class Task__init(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
+    def test_with_path(self, path):
+        task = pypers.task.Task(
+            path = pathlib.Path(path),
+            parent = None,
+            spec = dict(),
+        )
+        self.assertEqual(task.path, pathlib.Path(path))
+
+    @testsuite.with_temporary_paths(1)
+    def test_with_str_path(self, path):
+        task = pypers.task.Task(
+            path = str(path),
+            parent = None,
+            spec = dict(),
+        )
+        self.assertEqual(task.path, pathlib.Path(path))
+
+    @testsuite.with_temporary_paths(1)
     def test_without_parent(self, path):
         task = pypers.task.Task(
             path = path,
@@ -166,6 +184,36 @@ class Task__create_pipeline(unittest.TestCase):
             task.create_pipeline(),
             pypers.pipeline.Pipeline,
         )
+
+
+class Task__get_path_pattern(unittest.TestCase):
+
+    @testsuite.with_temporary_paths(1)
+    def test_defined(self, path):
+        task = pypers.task.Task(
+            path = path,
+            parent = None,
+            spec = dict(cfg_pathpattern = 'cfg/%s.yml'),
+        )
+        self.assertEqual(task.get_path_pattern('cfg_pathpattern'), path / 'cfg/%s.yml')
+
+    @testsuite.with_temporary_paths(1)
+    def test_undefined(self, path):
+        task = pypers.task.Task(
+            path = path,
+            parent = None,
+            spec = dict(),
+        )
+        self.assertIsNone(task.get_path_pattern('cfg_pathpattern'))
+
+    @testsuite.with_temporary_paths(1)
+    def test_undefined_with_default(self, path):
+        task = pypers.task.Task(
+            path = path,
+            parent = None,
+            spec = dict(),
+        )
+        self.assertEqual(task.get_path_pattern('cfg_pathpattern', default = 'cfg/%s.yml'), path / 'cfg/%s.yml')
 
 
 def create_task_file(task_path, spec_yaml):

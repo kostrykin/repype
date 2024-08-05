@@ -19,11 +19,22 @@ class Task:
     def __init__(self, path: PathLike, spec: dict, parent: Optional[Self] = None):
         self.spec = spec
         self.parent = parent
-        self.path = path
+        self.path = pathlib.Path(path)
 
     @property
     def full_spec(self) -> dict:
         return (self.parent.full_spec | self.spec) if self.parent else self.spec
+    
+    @property
+    def runnable(self) -> bool:
+        return bool(self.full_spec.get('runnable'))
+    
+    def get_path_pattern(self, key: str, default: Optional[str] = None) -> Optional[pathlib.Path]:
+        path_pattern = self.full_spec.get(key)
+        if path_pattern is None:
+            return self.path / default if default else None
+        else:
+            return self.path / path_pattern
 
     def create_pipeline(self, *args, **kwargs) -> pypers.pipeline.Pipeline:
         pipeline_name = self.full_spec.get('pipeline')
