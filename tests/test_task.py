@@ -7,6 +7,35 @@ import pypers.task
 from . import testsuite
 
 
+class decode_file_ids(unittest.TestCase):
+
+    def test_empty(self):
+        self.assertEqual(pypers.task.decode_file_ids(''), [])
+
+    def test_single(self):
+        self.assertEqual(pypers.task.decode_file_ids('1'), [1])
+
+    def test_range(self):
+        self.assertEqual(pypers.task.decode_file_ids('1-2'), [1, 2])
+        self.assertEqual(pypers.task.decode_file_ids('1 - 3'), [1, 2, 3])
+
+    def test_invalid(self):
+        with self.assertRaises(ValueError):
+            pypers.task.decode_file_ids('1-')
+        with self.assertRaises(ValueError):
+            pypers.task.decode_file_ids('-1')
+        with self.assertRaises(ValueError):
+            pypers.task.decode_file_ids('-')
+        with self.assertRaises(ValueError):
+            pypers.task.decode_file_ids('3-1')
+        with self.assertRaises(ValueError):
+            pypers.task.decode_file_ids('1-1')
+
+    def test_mixed(self):
+        self.assertEqual(pypers.task.decode_file_ids('1,2-3,4'), [1, 2, 3, 4])
+        self.assertEqual(pypers.task.decode_file_ids('1, 2-3'), [1, 2, 3])
+
+
 class Task__init(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
@@ -262,6 +291,34 @@ class Task__config_digest(unittest.TestCase):
             ),
         )
         self.assertEqual(task.config_digest, 'a7179809f6aae5f73a3e0470f33d8ebd')
+
+
+class Task__file_ids(unittest.TestCase):
+
+    @testsuite.with_temporary_paths(1)
+    def test_str(self, path):
+        task = pypers.task.Task(
+            path = path,
+            parent = None,
+            spec = dict(
+                file_ids = '1, 2-3, 4',
+            ),
+        )
+        self.assertEqual(task.file_ids, [1, 2, 3, 4])
+
+    @testsuite.with_temporary_paths(1)
+    def test_list(self, path):
+        task = pypers.task.Task(
+            path = path,
+            parent = None,
+            spec = dict(
+                file_ids = [
+                    'id-1',
+                    'id-2',
+                ],
+            ),
+        )
+        self.assertEqual(task.file_ids, ['id-1', 'id-2'])
 
 
 def create_task_file(task_path, spec_yaml):
