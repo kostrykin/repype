@@ -1,4 +1,5 @@
 import importlib
+import os
 import pathlib
 import re
 from types import SimpleNamespace
@@ -12,6 +13,7 @@ from typing import (
     Union,
 )
 
+from deprecated import deprecated
 import pypers.pipeline
 import pypers.config
 import yaml
@@ -72,11 +74,6 @@ class Task:
         return bool(self.full_spec.get('runnable'))
     
     @property
-    def config(self):
-        self.spec.setdefault('config', dict())
-        return pypers.config.Config(self.full_spec['config'])
-    
-    @property
     def file_ids(self):
         return decode_file_ids(self.full_spec.get('file_ids', []))
     
@@ -87,12 +84,59 @@ class Task:
         """
         return self.parent.root if self.parent else self
     
+    def create_config(self) -> pypers.config.Config:
+        """
+        Creates object which represents the hyperparameters of this task.
+
+        The hyperparameters are combined from three sources, in the following order, where the later sources take precedence:
+        1. The hyperparameters of the parent task.
+        2. The base config file specified in the task spec.
+        2. The config section of the task spec.
+
+        Changes to the hyperparameters are not reflected in the spec of the task.
+        """
+        config = pypers.config.Config(self.spec.get('config', dict())).copy()
+
+        # Load the base config file
+        base_config_path = self.spec.get('base_config_path')
+        if base_config_path:
+            base_config_path = self.resolve_path(base_config_path)
+            with base_config_path.open('r') as base_config_file:
+                base_config = pypers.config.Config(yaml.safe_load(base_config_file))
+            
+            # Merge the task config into the base config
+            config = base_config.merge(config)
+
+        # Merge the config obtained from the base config and the task spec into the parent config
+        if self.parent:
+            parent_config = self.parent.create_config()
+            return parent_config.merge(config)
+        else:
+            return config
+    
     def get_path_pattern(self, key: str, default: Optional[str] = None) -> Optional[pathlib.Path]:
         path_pattern = self.full_spec.get(key)
         if path_pattern is None:
             return self.path / default if default else None
         else:
             return self.path / path_pattern
+
+    def resolve_path(self, path):
+        if path is None:
+            return None
+        
+        # Replace placeholders in the path
+        path = pathlib.Path(os.path.expanduser(str(path))
+            .replace('{DIRNAME}', self.path.name)
+            .replace('{ROOTDIR}', str(self.root.path)))
+        
+        # If the path is absolute, resolve symlinks
+        if path.is_absolute():
+            return path.resolve()
+        
+        # Otherwise, make the path relative to the current working directory
+        else:
+            return path.resolve().relative_to(os.getcwd())
 
     def create_pipeline(self, *args, **kwargs) -> pypers.pipeline.Pipeline:
         pipeline_name = self.full_spec.get('pipeline')
@@ -102,15 +146,9 @@ class Task:
         pipeline_class = getattr(module, class_name)
         return pipeline_class(*args, **kwargs)
     
-    @property
-    def config_digest(self):
-        """
-        Hash code of the hyperparameters of this task.
-        """
-        return self.config.md5.hexdigest()
-    
     def __repr__(self):
-        return f'Task({self.path}, {self.config_digest})'
+        config = self.create_config()
+        return f'Task({self.path}, {config.sha.hexdigest()[:7]})'
     
 
 class Batch:
