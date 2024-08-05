@@ -39,7 +39,7 @@ class Batch:
     def __init__(self):
         self.tasks = dict()
 
-    def task(self, path: PathLike, spec: Optional[dict] = None):
+    def task(self, path: PathLike, spec: Optional[dict] = None) -> Optional[Task]:
         path = pathlib.Path(path)
         task = self.tasks.get(path)
 
