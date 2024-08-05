@@ -321,6 +321,30 @@ class Task__file_ids(unittest.TestCase):
         self.assertEqual(task.file_ids, ['id-1', 'id-2'])
 
 
+class Task__root(unittest.TestCase):
+
+    @testsuite.with_temporary_paths(3)
+    def test(self, path1, path2, path3):
+        task1 = pypers.task.Task(
+            path = path1,
+            parent = None,
+            spec = dict(),
+        )
+        task2 = pypers.task.Task(
+            path = path2,
+            parent = task1,
+            spec = dict(),
+        )
+        task3 = pypers.task.Task(
+            path = path3,
+            parent = task2,
+            spec = dict(),
+        )
+        self.assertIs(task1.root, task1)
+        self.assertIs(task2.root, task1)
+        self.assertIs(task3.root, task1)
+
+
 def create_task_file(task_path, spec_yaml):
     task_path = pathlib.Path(task_path)
     task_filepath = task_path / 'task.yml'

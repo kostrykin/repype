@@ -80,6 +80,13 @@ class Task:
     def file_ids(self):
         return decode_file_ids(self.full_spec.get('file_ids', []))
     
+    @property
+    def root(self) -> Self:
+        """
+        The root task of the task tree.
+        """
+        return self.parent.root if self.parent else self
+    
     def get_path_pattern(self, key: str, default: Optional[str] = None) -> Optional[pathlib.Path]:
         path_pattern = self.full_spec.get(key)
         if path_pattern is None:
@@ -101,6 +108,9 @@ class Task:
         Hash code of the hyperparameters of this task.
         """
         return self.config.md5.hexdigest()
+    
+    def __repr__(self):
+        return f'Task({self.path}, {self.config_digest})'
     
 
 class Batch:
