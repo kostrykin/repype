@@ -1,4 +1,8 @@
+import dill
+import gzip
+import json
 import pathlib
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -518,6 +522,107 @@ class Task__get_marginal_fields(unittest.TestCase):
                 ]
             )
         )
+
+
+class Task__store(unittest.TestCase):
+
+    @testsuite.with_temporary_paths(1)
+    def test(self, path):
+        task = pypers.task.Task(
+            path = path,
+            parent = None,
+            spec = dict(
+                runnable = True,
+                file_ids = ['file-0'],
+                marginal_stages = [
+                    'stage2',
+                ],
+                config = dict(
+                    key1 = 'value1',
+                ),
+            ),
+        )
+        pipeline = pypers.pipeline.create_pipeline(
+            [
+                testsuite.create_stage(id = 'stage1', outputs = ['output1.1']),
+                testsuite.create_stage(id = 'stage2', inputs = ['output1.1'], outputs = ['output2.1', 'output2.2']),
+                testsuite.create_stage(id = 'stage3', inputs = ['output1.1', 'output2.1', 'output2.2'], outputs = ['output3.1']),
+            ]
+        )
+        config = task.create_config()
+        data = {
+            'file-0': {
+                'output1.1': 'value1.1',
+                'output2.1': 'value2.1',
+                'output2.2': 'value2.2',
+                'output3.1': 'value3.1',
+            },
+        }
+        task.store(pipeline, data, config)
+
+        # Load the stored data
+        with gzip.open(task.data_filepath, 'rb') as data_file:
+            stored_data = dill.load(data_file)
+
+        # Load the stored digest config
+        with task.digest_json_filepath.open('r') as digest_json_file:
+            stored_config = pypers.config.Config(json.load(digest_json_file))
+
+        self.assertFalse(task.pending(config))
+        self.assertEqual(
+            stored_data,
+            {
+                'file-0': {
+                    'output1.1': 'value1.1',
+                    'output3.1': 'value3.1',
+                }
+            },
+        )
+        self.assertEqual(stored_config, config)
+
+
+class Task__pickup(unittest.TestCase):
+
+    def setUp(self):
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.task = pypers.task.Task(
+            path = pathlib.Path(self.tempdir.name),
+            parent = None,
+            spec = dict(
+                runnable = True,
+                file_ids = ['file-0'],
+                marginal_stages = [
+                    'stage2',
+                ],
+            ),
+        )
+        self.data_without_marginals = {
+            'file-0': {
+                'output1.1': 'value1.1',
+                'output3.1': 'value3.1',
+            },
+        }
+        with gzip.open(self.task.data_filepath, 'wb') as data_file:
+            dill.dump(self.data_without_marginals, data_file, byref=True)
+
+    def tearDown(self):
+        self.tempdir.cleanup()
+
+    def test_without_pipeline(self):
+        data = self.task.pickup()
+        self.assertEqual(data, self.data_without_marginals)
+
+    @patch.object(pypers.pipeline.Pipeline, 'fields', {'output1.1', 'output2.1', 'output2.2', 'output3.1'})  # FIXME: Remove this hack when the pipeline is migrated to use `file_id` instead of `input`
+    def test_with_pipeline(self):
+        pipeline = pypers.pipeline.create_pipeline(
+            [
+                testsuite.create_stage(id = 'stage1', outputs = ['output1.1']),
+                testsuite.create_stage(id = 'stage2', inputs = ['output1.1'], outputs = ['output2.1', 'output2.2']),
+                testsuite.create_stage(id = 'stage3', inputs = ['output1.1', 'output2.1', 'output2.2'], outputs = ['output3.1']),
+            ]
+        )
+        data = self.task.pickup(pipeline)
+        self.assertEqual(data, self.data_without_marginals)
 
 
 def create_task_file(task_path, spec_yaml):

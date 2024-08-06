@@ -1,3 +1,5 @@
+import dill
+import gzip
 import importlib
 import os
 import pathlib
@@ -21,6 +23,8 @@ import yaml
 
 PathLike = TypeVar('PathLike', str, pathlib.Path)
 FileID = TypeVar('FileID', int, str)
+DataDictionary = dict[str, Any]
+MultiDataDictionary = dict[FileID, DataDictionary]
 
 
 def decode_file_ids(spec: Union[str, List[FileID]]) -> List[FileID]:
@@ -103,6 +107,18 @@ class Task:
     @property
     def marginal_stages(self) -> List[str]:
         return self.full_spec.get('marginal_stages', [])
+        
+    @property
+    def data_filepath(self):
+        return self.resolve_path('data.dill.gz')
+        
+    @property
+    def digest_json_filepath(self):
+        return self.resolve_path('.digest.json')
+        
+    @property
+    def digest_sha_filepath(self):
+        return self.resolve_path('.digest.sha')
     
     def create_config(self) -> pypers.config.Config:
         """
@@ -184,10 +200,9 @@ class Task:
     
     def pending(self, config: pypers.config.Config) -> bool:
         """
-        ``True`` if the task needs to run, and ``False`` if the task is completed or not runnable.
+        True if the task needs to run, and False if the task is completed or not runnable.
         """
-        digest_sha_path = self.resolve_path('.digest.sha')
-        return self.runnable and not (digest_sha_path.exists() and digest_sha_path.read_text() == config.sha.hexdigest())
+        return self.runnable and not (self.digest_sha_filepath.exists() and self.digest_sha_filepath.read_text() == config.sha.hexdigest())
     
     def get_marginal_fields(self, pipeline: pypers.pipeline.Pipeline) -> FrozenSet[str]:
         """
@@ -204,6 +219,67 @@ class Task:
         """
         marginal_fields = sum((list(stage.outputs) for stage in pipeline.stages if stage.id in self.marginal_stages), list())
         return frozenset(marginal_fields)
+    
+    def pickup(self, pipeline: Optional[pypers.pipeline.Pipeline] = None) -> MultiDataDictionary:
+        """
+        Pick up the digested data of the task.
+
+        To ensure consistency with the task specification, it is verified that the digested data contains results for all file IDs, and no additional file IDs.
+        If pipeline is not None, a check for consistency of the data with the pipeline is performed.
+        The digested data is consistent with the pipeline if the data contains all fields which are not marginal according to the :meth:`get_marginal_fields` method, and no additional fields.
+
+        Args:
+            pipeline (Pipeline): The pipeline object.
+
+        Returns:
+            dict: A dictionary of data dictionaries.
+        """
+        assert self.runnable
+        assert self.data_filepath.is_file()
+        with gzip.open(self.data_filepath, 'rb') as data_file:
+            data = dill.load(data_file)
+
+        # Check if the data is consistent with the task specification
+        assert frozenset(data.keys()) == frozenset(self.file_ids), 'Digested data is inconsistent with task specification.'
+
+        # Check if the data is consistent with the pipeline
+        if pipeline is not None:
+            required_fields = pipeline.fields - self.get_marginal_fields(pipeline)
+            assert all(
+                (frozenset(data[file_id].keys()) == required_fields for file_id in data.keys())
+            ), 'Digested data is inconsistent with the pipeline.'
+
+        # Return the digested data
+        return data
+        
+    def store(self, pipeline: pypers.pipeline.Pipeline, data: MultiDataDictionary, config: pypers.config.Config):
+        """
+        Store the results of the task and the metadata.
+        """
+        assert self.runnable
+        assert frozenset(data.keys()) == frozenset(self.file_ids)
+
+        # Strip the marginal fields from the data
+        marginal_fields = self.get_marginal_fields(pipeline)
+        data_without_marginals = {
+            file_id: {
+                field: data[file_id][field]
+                for field in data[file_id] if field not in marginal_fields
+            }
+            for file_id in data
+        }
+
+        # Store the stripped data
+        with gzip.open(self.data_filepath, 'wb') as data_file:
+            dill.dump(data_without_marginals, data_file, byref=True)
+
+        # Store the digest config
+        with self.digest_json_filepath.open('w') as digest_json_file:
+            config.dump_json(digest_json_file)
+
+        # Store the digest hash
+        with self.digest_sha_filepath.open('w') as digest_sha_file:
+            digest_sha_file.write(config.sha.hexdigest())
     
     def __repr__(self):
         config = self.create_config()

@@ -383,7 +383,7 @@ class Pipeline:
         fields = set(['input'])
         for stage in self.stages:
             fields |= stage.outputs
-        return fields
+        return frozenset(fields)
 
 
 def create_pipeline(stages: Sequence[Stage], *args, **kwargs) -> Pipeline:
