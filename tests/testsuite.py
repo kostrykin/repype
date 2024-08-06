@@ -19,9 +19,7 @@ def with_temporary_paths(count: int):
     return decorator
 
 
-# __init__(self, name: str, inputs: Sequence, outputs: Sequence, consumes: Sequence, process: callable, configure: callable = None):
-
-def create_stage(**kwargs):
+def create_stage_class(**kwargs):
     kwargs = dict(kwargs)
 
     kwargs.setdefault('inputs'  , [])
@@ -47,7 +45,11 @@ def create_stage(**kwargs):
             if _configure is None: return dict()
             else: return _configure(*args, **kwargs)
 
-    return DummyStage()
+    return DummyStage
+
+def create_stage(**kwargs):
+    stage_class = create_stage_class(**kwargs)
+    return stage_class()
 
 
 # Test create_stage:

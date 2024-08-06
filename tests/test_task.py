@@ -213,6 +213,24 @@ class Task__create_pipeline(unittest.TestCase):
             pypers.pipeline.Pipeline,
         )
 
+    test_stage1_cls = testsuite.create_stage_class(id = 'stage1')
+    test_stage2_cls = testsuite.create_stage_class(id = 'stage2')
+
+    @testsuite.with_temporary_paths(1)
+    def test_from_spec_with_stages(self, path):
+        task = pypers.task.Task(
+            path = path,
+            parent = None,
+            spec = dict(
+                pipeline = [
+                    'tests.test_task.Task__create_pipeline.test_stage1_cls',
+                    'tests.test_task.Task__create_pipeline.test_stage2_cls',
+                ],
+            ),
+        )
+        self.assertIsInstance(task.create_pipeline(), pypers.pipeline.Pipeline)
+        self.assertEqual(frozenset([stage.id for stage in task.create_pipeline().stages]), {'stage1', 'stage2'})
+
 
 class Task__get_path_pattern(unittest.TestCase):
 

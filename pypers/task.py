@@ -56,6 +56,22 @@ def decode_file_ids(spec: Union[str, List[FileID]]) -> List[FileID]:
     # Otherwise, treat the input as a list of file IDs
     else:
         return sorted(frozenset(spec))
+    
+
+def load_from_module(name: str) -> Any:
+    path = name.split('.')
+    for i in range(1, len(path)):
+        module_name = '.'.join(path[:-i])
+        try:
+            current = importlib.import_module(module_name)
+            for attribute in path[-i:]:
+                current = getattr(current, attribute)
+            return current
+        except ImportError:
+            if i == len(path) - 1:
+                raise
+            else:
+                continue
 
 
 class Task:
@@ -149,12 +165,22 @@ class Task:
         return path.resolve()
 
     def create_pipeline(self, *args, **kwargs) -> pypers.pipeline.Pipeline:
-        pipeline_name = self.full_spec.get('pipeline')
-        assert pipeline_name is not None
-        module_name, class_name = pipeline_name.rsplit('.', 1)
-        module = importlib.import_module(module_name)
-        pipeline_class = getattr(module, class_name)
-        return pipeline_class(*args, **kwargs)
+        pipeline = self.full_spec.get('pipeline')
+        assert pipeline is not None
+        assert isinstance(pipeline, (str, list))
+
+        # Load the pipeline from a module
+        if isinstance(pipeline, str):
+            pipeline_class = load_from_module(pipeline)
+            return pipeline_class(*args, **kwargs)
+        
+        # Create the pipeline from a list of stages
+        if isinstance(pipeline, list):
+            stages = list()
+            for stage in pipeline:
+                stage_class = load_from_module(stage)
+                stages.append(stage_class())
+            return pypers.pipeline.create_pipeline(stages, *args, **kwargs)
     
     def pending(self, config: pypers.config.Config) -> bool:
         """
