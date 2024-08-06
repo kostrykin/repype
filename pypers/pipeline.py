@@ -386,7 +386,7 @@ class Pipeline:
         return fields
 
 
-def create_pipeline(stages: Sequence):
+def create_pipeline(stages: Sequence[Stage], *args, **kwargs) -> Pipeline:
     """
     Creates and returns a new :py:class:`.Pipeline` object configured for the given stages.
 
@@ -403,7 +403,7 @@ def create_pipeline(stages: Sequence):
     outputs = list(available_inputs) + sum((list(stage.outputs) for stage in stages), [])
     assert len(outputs) == len(frozenset(outputs)), 'ambiguous outputs'
 
-    pipeline = Pipeline()
+    pipeline = Pipeline(*args, **kwargs)
     while len(remaining_stages) > 0:
         next_stage = None
 

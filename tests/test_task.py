@@ -198,7 +198,6 @@ class Task__create_pipeline(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_override(self, path):
-
         class DerivedTask(pypers.task.Task):
 
             def create_pipeline(self, *args, **kwargs):
@@ -414,6 +413,93 @@ class Task__pending(unittest.TestCase):
         task.resolve_path('.digest.sha').write_text(config.sha.hexdigest())
         config['key'] = 'value'
         self.assertTrue(task.pending(config))
+
+
+class Task__marginal_states(unittest.TestCase):
+
+    @testsuite.with_temporary_paths(1)
+    def test_from_spec_missing(self, path):
+        task = pypers.task.Task(
+            path = path,
+            parent = None,
+            spec = dict(),
+        )
+        self.assertEqual(task.marginal_stages, [])
+
+    @testsuite.with_temporary_paths(1)
+    def test_from_spec(self, path):
+        task = pypers.task.Task(
+            path = path,
+            parent = None,
+            spec = dict(
+                marginal_stages = [
+                    'stage1',
+                    'stage2',
+                ],
+            ),
+        )
+        self.assertEqual(task.marginal_stages, ['stage1', 'stage2'])
+
+    @testsuite.with_temporary_paths(1)
+    def test_override(self, path):
+        class DerivedTask(pypers.task.Task):
+
+            marginal_stages = [
+                'stage1',
+                'stage2',
+            ]
+
+        task = DerivedTask(
+            path = path,
+            parent = None,
+            spec = dict(),
+        )
+        self.assertEqual(task.marginal_stages, ['stage1', 'stage2'])
+
+
+class Task__get_marginal_fields(unittest.TestCase):
+
+    @testsuite.with_temporary_paths(1)
+    def test_empty_pipeline(self, path):
+        task = pypers.task.Task(
+            path = '',
+            parent = None,
+            spec = dict(pipeline = 'pypers.pipeline.Pipeline'),
+        )
+        self.assertEqual(task.get_marginal_fields(task.create_pipeline()), frozenset())
+
+    @testsuite.with_temporary_paths(1)
+    def test(self, path):
+        class DerivedTask(pypers.task.Task):
+
+            marginal_stages = [
+                'stage1',
+                'stage2',
+            ]
+
+            def create_pipeline(self, *args, **kwargs):
+                stages = [
+                    testsuite.create_stage(id = 'stage1', outputs = ['output1.1']),
+                    testsuite.create_stage(id = 'stage2', outputs = ['output2.1', 'output2.2']),
+                    testsuite.create_stage(id = 'stage3', outputs = ['output3']),
+                ]
+                return pypers.pipeline.create_pipeline(stages, *args, **kwargs)
+        
+        task = DerivedTask(
+            path = path,
+            parent = None,
+            spec = dict(),
+        )
+        self.assertEqual(
+            task.get_marginal_fields(task.create_pipeline()),
+            frozenset(
+                [
+                    'output1.1',
+                    'output2.1',
+                    'output2.2',
+                ]
+            )
+        )
 
 
 def create_task_file(task_path, spec_yaml):

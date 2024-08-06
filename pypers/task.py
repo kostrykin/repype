@@ -84,6 +84,10 @@ class Task:
         """
         return self.parent.root if self.parent else self
     
+    @property
+    def marginal_stages(self) -> List[str]:
+        return self.full_spec.get('marginal_stages', [])
+    
     def create_config(self) -> pypers.config.Config:
         """
         Creates object which represents the hyperparameters of this task.
@@ -158,6 +162,22 @@ class Task:
         """
         digest_sha_path = self.resolve_path('.digest.sha')
         return self.runnable and not (digest_sha_path.exists() and digest_sha_path.read_text() == config.sha.hexdigest())
+    
+    def get_marginal_fields(self, pipeline: pypers.pipeline.Pipeline) -> FrozenSet[str]:
+        """
+        Get the marginal fields from a pipeline.
+
+        The marginal fields are all outputs produced by marginal stages.
+        Marginal stages are those stages which are listed in the :attr:`marginal_stages` property.
+
+        Args:
+            pipeline (Pipeline): The pipeline object.
+
+        Returns:
+            set: A set of marginal fields.
+        """
+        marginal_fields = sum((list(stage.outputs) for stage in pipeline.stages if stage.id in self.marginal_stages), list())
+        return frozenset(marginal_fields)
     
     def __repr__(self):
         config = self.create_config()
