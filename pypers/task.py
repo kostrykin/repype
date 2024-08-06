@@ -61,9 +61,9 @@ def decode_file_ids(spec: Union[str, List[FileID]]) -> List[FileID]:
 class Task:
 
     def __init__(self, path: PathLike, spec: dict, parent: Optional[Self] = None):
-        self.spec = spec
+        self.spec   = spec
         self.parent = parent
-        self.path = pathlib.Path(path)
+        self.path   = pathlib.Path(path)
 
     @property
     def full_spec(self) -> dict:
@@ -126,8 +126,8 @@ class Task:
         Resolves a path relative to the task directory.
 
         In addition, following placeholders are replaced:
-        - `{DIRNAME}`: The name of the task directory.
-        - `{ROOTDIR}`: The root directory of the task tree.
+        - ``{DIRNAME}``: The name of the task directory.
+        - ``{ROOTDIR}``: The root directory of the task tree.
         """
         if path is None:
             return None
@@ -151,6 +151,13 @@ class Task:
         module = importlib.import_module(module_name)
         pipeline_class = getattr(module, class_name)
         return pipeline_class(*args, **kwargs)
+    
+    def pending(self, config: pypers.config.Config) -> bool:
+        """
+        ``True`` if the task needs to run, and ``False`` if the task is completed or not runnable.
+        """
+        digest_sha_path = self.resolve_path('.digest.sha')
+        return self.runnable and not (digest_sha_path.exists() and digest_sha_path.read_text() == config.sha.hexdigest())
     
     def __repr__(self):
         config = self.create_config()

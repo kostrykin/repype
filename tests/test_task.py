@@ -370,6 +370,52 @@ class Task__resolve_path(unittest.TestCase):
         self.assertEqual(task2.resolve_path('{ROOTDIR}/{DIRNAME}.txt'), (path1 / 'subdir.txt').resolve())
 
 
+class Task__pending(unittest.TestCase):
+
+    @testsuite.with_temporary_paths(1)
+    def test_not_runnable(self, path):
+        task = pypers.task.Task(
+            path = path,
+            parent = None,
+            spec = dict(),
+        )
+        config = task.create_config()
+        self.assertFalse(task.pending(config))
+
+    @testsuite.with_temporary_paths(1)
+    def test_without_digest(self, path):
+        task = pypers.task.Task(
+            path = path,
+            parent = None,
+            spec = dict(runnable = True),
+        )
+        config = task.create_config()
+        self.assertTrue(task.pending(config))
+
+    @testsuite.with_temporary_paths(1)
+    def test_with_digest(self, path):
+        task = pypers.task.Task(
+            path = path,
+            parent = None,
+            spec = dict(runnable = True),
+        )
+        config = task.create_config()
+        task.resolve_path('.digest.sha').write_text(config.sha.hexdigest())
+        self.assertFalse(task.pending(config))
+
+    @testsuite.with_temporary_paths(1)
+    def test_with_wrong_digest(self, path):
+        task = pypers.task.Task(
+            path = path,
+            parent = None,
+            spec = dict(runnable = True),
+        )
+        config = task.create_config()
+        task.resolve_path('.digest.sha').write_text(config.sha.hexdigest())
+        config['key'] = 'value'
+        self.assertTrue(task.pending(config))
+
+
 def create_task_file(task_path, spec_yaml):
     task_path = pathlib.Path(task_path)
     task_filepath = task_path / 'task.yml'
