@@ -222,11 +222,11 @@ class Task:
     
     def pickup(self, pipeline: Optional[pypers.pipeline.Pipeline] = None) -> MultiDataDictionary:
         """
-        Pick up the digested data of the task.
+        Pick up the previously computed data of the task.
 
-        To ensure consistency with the task specification, it is verified that the digested data contains results for all file IDs, and no additional file IDs.
+        To ensure consistency with the task specification, it is verified that the picked up data contains results for all file IDs, and no additional file IDs.
         If pipeline is not None, a check for consistency of the data with the pipeline is performed.
-        The digested data is consistent with the pipeline if the data contains all fields which are not marginal according to the :meth:`get_marginal_fields` method, and no additional fields.
+        The picked up data is consistent with the pipeline if the data contains all fields which are not marginal according to the :meth:`get_marginal_fields` method, and no additional fields.
 
         Args:
             pipeline (Pipeline): The pipeline object.
@@ -240,16 +240,16 @@ class Task:
             data = dill.load(data_file)
 
         # Check if the data is consistent with the task specification
-        assert frozenset(data.keys()) == frozenset(self.file_ids), 'Digested data is inconsistent with task specification.'
+        assert frozenset(data.keys()) == frozenset(self.file_ids), 'Picked up data is inconsistent with task specification.'
 
         # Check if the data is consistent with the pipeline
         if pipeline is not None:
             required_fields = pipeline.fields - self.get_marginal_fields(pipeline)
             assert all(
                 (frozenset(data[file_id].keys()) == required_fields for file_id in data.keys())
-            ), 'Digested data is inconsistent with the pipeline.'
+            ), 'Picked up data is inconsistent with the pipeline.'
 
-        # Return the digested data
+        # Return the picked up data
         return data
         
     def store(self, pipeline: pypers.pipeline.Pipeline, data: MultiDataDictionary, config: pypers.config.Config):
@@ -317,5 +317,5 @@ class Batch:
         
         # Check whether the task has the right spec
         else:
-            assert task.spec == spec, f'{path}: Requested spec {spec} does not match previously loaded spec {task.spec}'
+            assert task.spec == spec, f'{path}: Requested specification {spec} does not match previously loaded specification {task.spec}'
             return task
