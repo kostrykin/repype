@@ -348,6 +348,28 @@ class Task__root(unittest.TestCase):
         self.assertIs(task3.root, task1)
 
 
+class Task__resolve_path(unittest.TestCase):
+
+    @testsuite.with_temporary_paths(2)
+    def test(self, path1, path2):
+        task1 = pypers.task.Task(
+            path = path1,
+            parent = None,
+            spec = dict(),
+        )
+        task2 = pypers.task.Task(
+            path = path2 / 'subdir',
+            parent = task1,
+            spec = dict(),
+        )
+        self.assertEqual(task2.resolve_path('file.txt'), (path2 / 'subdir' / 'file.txt').resolve())
+        self.assertEqual(task2.resolve_path('./file.txt'), (path2 / 'subdir' / 'file.txt').resolve())
+        self.assertEqual(task2.resolve_path('../file.txt'), (path2 / 'file.txt').resolve())
+        self.assertEqual(task2.resolve_path('../{DIRNAME}.txt'), (path2 / 'subdir.txt').resolve())
+        self.assertEqual(task2.resolve_path('{ROOTDIR}/file.txt'), (path1 / 'file.txt').resolve())
+        self.assertEqual(task2.resolve_path('{ROOTDIR}/{DIRNAME}.txt'), (path1 / 'subdir.txt').resolve())
+
+
 def create_task_file(task_path, spec_yaml):
     task_path = pathlib.Path(task_path)
     task_filepath = task_path / 'task.yml'

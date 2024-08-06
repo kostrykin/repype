@@ -122,6 +122,13 @@ class Task:
             return self.path / path_pattern
 
     def resolve_path(self, path):
+        """
+        Resolves a path relative to the task directory.
+
+        In addition, following placeholders are replaced:
+        - `{DIRNAME}`: The name of the task directory.
+        - `{ROOTDIR}`: The root directory of the task tree.
+        """
         if path is None:
             return None
         
@@ -130,13 +137,12 @@ class Task:
             .replace('{DIRNAME}', self.path.name)
             .replace('{ROOTDIR}', str(self.root.path)))
         
-        # If the path is absolute, resolve symlinks
-        if path.is_absolute():
-            return path.resolve()
+        # If the path is not absolute, treat it as relative to the task directory
+        if not path.is_absolute():
+            path = self.path / path
         
-        # Otherwise, make the path relative to the current working directory
-        else:
-            return path.resolve().relative_to(os.getcwd())
+        # Resolve symlinks
+        return path.resolve()
 
     def create_pipeline(self, *args, **kwargs) -> pypers.pipeline.Pipeline:
         pipeline_name = self.full_spec.get('pipeline')
