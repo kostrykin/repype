@@ -1,13 +1,14 @@
-import time
-import weakref
+from collections.abc import Sequence, Iterable
+import hashlib
+import json
 import os
 import re
-
+import time
+import weakref
 from typing import (
     Union,
     Optional
 )
-from collections.abc import Sequence
 
 from .config import Config
 from .output import (
@@ -152,6 +153,40 @@ class Stage(object):
     def configure(self, *args, **kwargs):
         # FIXME: add documentation
         return dict()
+    
+    @property
+    def signature(self):
+        signature = dict()
+
+        # Iterate over all attributes of the stage (leaving out a few special ones)
+        for key in dir(self):
+            if key in ('__doc__', '__weakref__', '__module__', '__dict__', 'signature', 'sha'): continue
+            value = getattr(self, key)
+
+            if isinstance(value, Iterable):
+                # Only keep the item if the iterable is is JSON-serializable
+                try:
+                    value = json.loads(json.dumps(list(value)))
+                except TypeError:
+                    continue
+
+            if callable(value):
+                # Only keep the item if has a custom implementation
+                try:
+                    value = value.__code__.co_code.hex()
+                except AttributeError:
+                    continue
+
+            # Add the item to the signature
+            signature[key] = value
+
+        # Return the signature
+        return signature
+
+    @property
+    def sha(self):
+        signature_str = json.dumps(self.signature)
+        return hashlib.sha1(signature_str.encode('utf-8')).hexdigest()
 
     def __str__(self):
         return self.id

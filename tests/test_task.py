@@ -428,22 +428,58 @@ class Task__pending(unittest.TestCase):
             spec = dict(runnable = True),
         )
         config = task.create_config()
-        task.resolve_path('.digest.sha').write_text(config.sha.hexdigest())
+        with task.resolve_path('.sha.json').open('w') as digest_sha_file:
+            json.dump(
+                dict(
+                    stages = dict(
+                        stage1 = self.pipeline.stages[0].sha,
+                    ),
+                    sha = task.compute_sha(config),
+                ),
+                digest_sha_file,
+            )
         self.assertFalse(task.pending(self.pipeline, config))
 
     @testsuite.with_temporary_paths(1)
-    def test_with_wrong_digest(self, path):
+    def test_with_changed_config(self, path):
         task = pypers.task.Task(
             path = path,
             parent = None,
             spec = dict(runnable = True),
         )
         config = task.create_config()
-        task.resolve_path('.digest.sha').write_text(config.sha.hexdigest())
+        with task.resolve_path('.sha.json').open('w') as digest_sha_file:
+            json.dump(
+                dict(
+                    stages = dict(
+                        stage1 = self.pipeline.stages[0].sha,
+                    ),
+                    sha = task.compute_sha(config),
+                ),
+                digest_sha_file,
+            )
         config['key'] = 'value'
         self.assertTrue(task.pending(self.pipeline, config))
 
-    # FIXME: Add test case for modified pipeline
+    @testsuite.with_temporary_paths(1)
+    def test_with_changed_pipeline(self, path):
+        task = pypers.task.Task(
+            path = path,
+            parent = None,
+            spec = dict(runnable = True),
+        )
+        config = task.create_config()
+        with task.resolve_path('.sha.json').open('w') as digest_sha_file:
+            json.dump(
+                dict(
+                    stages = dict(
+                        stage1 = self.pipeline.stages[0].sha[::-1],
+                    ),
+                    sha = task.compute_sha(config),
+                ),
+                digest_sha_file,
+            )
+        self.assertTrue(task.pending(self.pipeline, config))
 
 
 class Task__marginal_states(unittest.TestCase):
@@ -573,9 +609,9 @@ class Task__store(unittest.TestCase):
         with gzip.open(task.data_filepath, 'rb') as data_file:
             stored_data = dill.load(data_file)
 
-        # Load the stored digest config
+        # Load the task digest
         with task.digest_json_filepath.open('r') as digest_json_file:
-            stored_config = pypers.config.Config(json.load(digest_json_file))
+            task_digest = json.load(digest_json_file)
 
         self.assertFalse(task.pending(pipeline, config))
         self.assertEqual(
@@ -587,7 +623,7 @@ class Task__store(unittest.TestCase):
                 }
             },
         )
-        self.assertEqual(stored_config, config)
+        self.assertEqual(task_digest, task.full_spec)
 
 
 class Task__load(unittest.TestCase):

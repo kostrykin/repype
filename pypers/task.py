@@ -132,7 +132,6 @@ class Task:
             return None
         with self.digest_json_filepath.open('r') as digest_json_file:
             return frozendict.deepfreeze(json.load(digest_json_file))
-        
 
     def get_full_spec_with_config(self, config: pypers.config.Config) -> dict:
         return self.full_spec | dict(config = config.entries)
@@ -219,21 +218,29 @@ class Task:
                 stages.append(stage_class())
             return pypers.pipeline.create_pipeline(stages, *args, **kwargs)
     
-    def pending(self, pipeline: pypers.pipeline.Pipeline, config: pypers.config.Config) -> bool:
+    def pending(self, pipeline: pypers.pipeline.Pipeline, config: pypers.config.Config) -> bool:  # FIXME: Rename to `is_pending`
         """
         True if the task needs to run, and False if the task is completed or not runnable.
         """
+        # Non-runnable tasks never are pending
         if not self.runnable:
             return False
         
+        # If the task is not completed, it is pending
+        if not self.digest_sha_filepath.is_file():
+            return True
+        
+        # Read the hashes of the completed task
         with self.digest_sha_filepath.open('r') as digest_sha_file:
             hashes = json.load(digest_sha_file)
 
+        # If the task is completed, but the pipeline has changed, the task is pending
         for stage in pipeline.stages:
-            if hash(stage) != hashes['stages'][stage.id]:
+            if stage.sha != hashes['stages'][stage.id]:
                 return True
-            
-        return hashes['sha'] == self.compute_sha(config)
+
+        # If the task is completed, but the configuration has changed, the task is pending
+        return hashes['sha'] != self.compute_sha(config)  # FIXME: Rename the `sha` key to `task`
     
     def get_marginal_fields(self, pipeline: pypers.pipeline.Pipeline) -> FrozenSet[str]:
         """
@@ -310,7 +317,7 @@ class Task:
 
         # Store the hashes
         hashes = dict(
-            stages = {stage.id: hash(stage) for stage in pipeline.stages},
+            stages = {stage.id: stage.sha for stage in pipeline.stages},
             sha = self.compute_sha(config),
         )
         with self.digest_sha_filepath.open('w') as digest_sha_file:
@@ -326,7 +333,7 @@ class Task:
                 return stage.id
             
             # Check if the stage implementation has changed
-            if hash(stage) != previous_full_spec['stages'][stage.id]:
+            if stage.sha != previous_full_spec['stages'][stage.id]:
                 return stage.id
             
             # Check if the stage configuration has changed
