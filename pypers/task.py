@@ -358,19 +358,27 @@ class Task:
         # There is no diverging stage
         return None
             
-    def pickup_previous_task(self, pipeline: pypers.pipeline.Pipeline, config: pypers.config.Config) -> Dict:
+    def find_pickup_task(self, pipeline: pypers.pipeline.Pipeline, config: pypers.config.Config) -> Dict:
         first_diverging_stages = {task: task.find_first_diverging_stage(pipeline) for task in self.parents}
 
         # There are no previous tasks to pick up from, so return None
         if len(first_diverging_stages) == 0:
             return None
+
+        # If there is any task without a diverging stage, return that one
+        for pickup_task, first_diverging_stage in first_diverging_stages.items():
+            if first_diverging_stage is None:
+                return dict(
+                    task = pickup_task,
+                    first_divering_stage = None,
+                )
         
         # Find the task with the latest diverging stage
         pickup_task = max(first_diverging_stages, key = lambda task: pipeline.find(first_diverging_stages[task].id))
         
         # Return the determined task and the corresponding latest diverging stage
         return dict(
-            task = pickup_task.load(pipeline),
+            task = pickup_task,
             first_divering_stage = first_diverging_stages[pickup_task],
         )
     
