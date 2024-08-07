@@ -6,14 +6,15 @@ import re
 import time
 import weakref
 from typing import (
+    Any,
+    Optional,
     Union,
-    Optional
 )
 
 from .config import Config
 from .output import (
+    get_output,
     Output,
-    get_output
 )
 
 
@@ -372,7 +373,7 @@ class Pipeline:
             extra_stages.append(extra_stage.id)
         return extra_stages
 
-    def find(self, stage_id, not_found_dummy=float('inf')):
+    def find(self, stage_id: str, not_found_dummy: Any = float('inf')) -> Stage:
         """
         Returns the position of the stage identified by ``stage_id``.
 
