@@ -300,6 +300,22 @@ class Task:
 
         # Return the loaded data
         return data
+    
+    def strip_marginals(self, pipeline: pypers.pipeline.Pipeline, data_chunk: MultiDataDictionary) -> DataDictionary:
+        """
+        Strip the marginal fields from the data.
+
+        Args:
+            data (dict): A dictionary of data dictionaries.
+            pipeline (Pipeline): The pipeline object.
+
+        Returns:
+            dict: A dictionary of data dictionaries without the marginal fields.
+        """
+        marginal_fields = self.get_marginal_fields(pipeline)
+        return {
+            field: data_chunk[field] for field in data_chunk if field not in marginal_fields
+        }
         
     def store(self, pipeline: pypers.pipeline.Pipeline, data: MultiDataDictionary, config: pypers.config.Config):
         """
@@ -309,13 +325,8 @@ class Task:
         assert frozenset(data.keys()) == frozenset(self.file_ids)
 
         # Strip the marginal fields from the data
-        marginal_fields = self.get_marginal_fields(pipeline)
         data_without_marginals = {
-            file_id: {
-                field: data[file_id][field]
-                for field in data[file_id] if field not in marginal_fields
-            }
-            for file_id in data
+            file_id: self.strip_marginals(pipeline, data[file_id]) for file_id in data
         }
 
         # Store the stripped data
@@ -376,7 +387,6 @@ class Task:
         # If there is any task without a diverging stage, return that one
         for pickup_task, first_diverging_stage in first_diverging_stages.items():
             if first_diverging_stage is None:
-                print('***', pickup_task.digest['config'], config.entries)
                 return dict(
                     task = pickup_task,
                     first_diverging_stage = None,
@@ -392,6 +402,38 @@ class Task:
             task = None if first_diverging_stage is pipeline.stages[0] else pickup_task,
             first_diverging_stage = first_diverging_stage,
         )
+    
+    def run(self, config: pypers.config.Config, pickup: bool = True, strip_marginals: bool = True) -> MultiDataDictionary:
+        pipeline = self.create_pipeline()
+
+        # Find a task and stage to pick up from
+        if pickup:
+            pickup = self.find_pickup_task(pipeline, config)
+            data = pickup['task'].load(pipeline)
+            first_stage = pickup['first_diverging_stage']
+
+        # If there is no task to pick up from, run the pipeline from the beginning
+        else:
+            data = dict()
+            first_stage = None
+
+        # Run the pipeline for all file IDs
+        for file_id in enumerate(self.file_ids):
+            data_chunk = pipeline.process(
+                input = file_id,
+                data = data,
+                cfg = config,
+                first_stage = first_stage,
+            )
+
+            if strip_marginals:
+                data_chunk = self.strip_marginals(pipeline, data_chunk)
+
+            data[file_id] = data_chunk
+
+        # Store the results for later pick up
+        self.store(pipeline, data, config)
+        return data
     
     def __repr__(self):
         config = self.create_config()

@@ -313,7 +313,7 @@ class Pipeline:
         self.stages = []
         self.configurator = configurator if configurator else Configurator(self)
 
-    def process(self, input, cfg, first_stage=None, last_stage=None, data=None, log_root_dir=None, out=None, **kwargs):
+    def process(self, input, cfg, first_stage=None, last_stage=None, data=None, log_root_dir=None, out=None, **kwargs):  # TODO: Rename `cfg` to `config` and `input` to `file_id`
         """
         Processes the input.
 
