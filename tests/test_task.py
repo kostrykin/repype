@@ -581,7 +581,7 @@ class Task__store(unittest.TestCase):
         self.assertEqual(stored_config, config)
 
 
-class Task__pickup(unittest.TestCase):
+class Task__load(unittest.TestCase):
 
     def setUp(self):
         self.tempdir = tempfile.TemporaryDirectory()
@@ -609,7 +609,7 @@ class Task__pickup(unittest.TestCase):
         self.tempdir.cleanup()
 
     def test_without_pipeline(self):
-        data = self.task.pickup()
+        data = self.task.load()
         self.assertEqual(data, self.data_without_marginals)
 
     @patch.object(pypers.pipeline.Pipeline, 'fields', {'output1.1', 'output2.1', 'output2.2', 'output3.1'})  # FIXME: Remove this hack when the pipeline is migrated to use `file_id` instead of `input`
@@ -621,7 +621,7 @@ class Task__pickup(unittest.TestCase):
                 testsuite.create_stage(id = 'stage3', inputs = ['output1.1', 'output2.1', 'output2.2'], outputs = ['output3.1']),
             ]
         )
-        data = self.task.pickup(pipeline)
+        data = self.task.load(pipeline)
         self.assertEqual(data, self.data_without_marginals)
 
 

@@ -220,13 +220,13 @@ class Task:
         marginal_fields = sum((list(stage.outputs) for stage in pipeline.stages if stage.id in self.marginal_stages), list())
         return frozenset(marginal_fields)
     
-    def pickup(self, pipeline: Optional[pypers.pipeline.Pipeline] = None) -> MultiDataDictionary:
+    def load(self, pipeline: Optional[pypers.pipeline.Pipeline] = None) -> MultiDataDictionary:
         """
-        Pick up the previously computed data of the task.
+        Load the previously computed data of the task.
 
-        To ensure consistency with the task specification, it is verified that the picked up data contains results for all file IDs, and no additional file IDs.
+        To ensure consistency with the task specification, it is verified that the loaded data contains results for all file IDs, and no additional file IDs.
         If pipeline is not None, a check for consistency of the data with the pipeline is performed.
-        The picked up data is consistent with the pipeline if the data contains all fields which are not marginal according to the :meth:`get_marginal_fields` method, and no additional fields.
+        The loaded data is consistent with the pipeline if the data contains all fields which are not marginal according to the :meth:`get_marginal_fields` method, and no additional fields.
 
         Args:
             pipeline (Pipeline): The pipeline object.
@@ -240,16 +240,16 @@ class Task:
             data = dill.load(data_file)
 
         # Check if the data is consistent with the task specification
-        assert frozenset(data.keys()) == frozenset(self.file_ids), 'Picked up data is inconsistent with task specification.'
+        assert frozenset(data.keys()) == frozenset(self.file_ids), 'Loaded data is inconsistent with task specification.'
 
         # Check if the data is consistent with the pipeline
         if pipeline is not None:
             required_fields = pipeline.fields - self.get_marginal_fields(pipeline)
             assert all(
                 (frozenset(data[file_id].keys()) == required_fields for file_id in data.keys())
-            ), 'Picked up data is inconsistent with the pipeline.'
+            ), 'Loaded data is inconsistent with the pipeline.'
 
-        # Return the picked up data
+        # Return the loaded data
         return data
         
     def store(self, pipeline: pypers.pipeline.Pipeline, data: MultiDataDictionary, config: pypers.config.Config):
