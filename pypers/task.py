@@ -116,7 +116,7 @@ class Task:
         return self.resolve_path('data.dill.gz')
         
     @property
-    def digest_json_filepath(self):  # FIXME: Rename to digest_task_filepath
+    def digest_task_filepath(self):
         return self.resolve_path('.task.json')
         
     @property
@@ -124,14 +124,14 @@ class Task:
         return self.resolve_path('.sha.json')
 
     @property
-    def stored_full_spec(self):
+    def stored_full_spec(self):  # FIXME: Rename to digest_full_spec
         """
         Immutable full specification which this task was previously completed with (or None).
         """
-        if not self.digest_json_filepath.is_file():
+        if not self.digest_task_filepath.is_file():
             return None
-        with self.digest_json_filepath.open('r') as digest_json_file:
-            return frozendict.deepfreeze(json.load(digest_json_file))
+        with self.digest_task_filepath.open('r') as digest_task_file:
+            return frozendict.deepfreeze(json.load(digest_task_file))
 
     def get_full_spec_with_config(self, config: pypers.config.Config) -> dict:
         return self.full_spec | dict(config = config.entries)
@@ -311,9 +311,9 @@ class Task:
         with gzip.open(self.data_filepath, 'wb') as data_file:
             dill.dump(data_without_marginals, data_file, byref=True)
 
-        # Store the task digest
-        with self.digest_json_filepath.open('w') as digest_json_file:
-            json.dump(self.get_full_spec_with_config(config), digest_json_file)
+        # Store the digest task specification
+        with self.digest_task_filepath.open('w') as digest_task_file:
+            json.dump(self.get_full_spec_with_config(config), digest_task_file)
 
         # Store the hashes
         hashes = dict(

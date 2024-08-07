@@ -609,9 +609,9 @@ class Task__store(unittest.TestCase):
         with gzip.open(task.data_filepath, 'rb') as data_file:
             stored_data = dill.load(data_file)
 
-        # Load the task digest
-        with task.digest_json_filepath.open('r') as digest_json_file:
-            task_digest = json.load(digest_json_file)
+        # Load the digest task specification
+        with task.digest_task_filepath.open('r') as digest_task_file:
+            task_digest = json.load(digest_task_file)
 
         self.assertFalse(task.is_pending(pipeline, config))
         self.assertEqual(
