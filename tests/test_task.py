@@ -434,7 +434,7 @@ class Task__is_pending(unittest.TestCase):
                     stages = dict(
                         stage1 = self.pipeline.stages[0].sha,
                     ),
-                    sha = task.compute_sha(config),
+                    task = task.compute_sha(config),
                 ),
                 digest_sha_file,
             )
@@ -454,7 +454,7 @@ class Task__is_pending(unittest.TestCase):
                     stages = dict(
                         stage1 = self.pipeline.stages[0].sha,
                     ),
-                    sha = task.compute_sha(config),
+                    task = task.compute_sha(config),
                 ),
                 digest_sha_file,
             )

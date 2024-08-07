@@ -218,7 +218,7 @@ class Task:
                 stages.append(stage_class())
             return pypers.pipeline.create_pipeline(stages, *args, **kwargs)
     
-    def pending(self, pipeline: pypers.pipeline.Pipeline, config: pypers.config.Config) -> bool:  # FIXME: Rename to `is_pending`
+    def is_pending(self, pipeline: pypers.pipeline.Pipeline, config: pypers.config.Config) -> bool:
         """
         True if the task needs to run, and False if the task is completed or not runnable.
         """
@@ -240,7 +240,7 @@ class Task:
                 return True
 
         # If the task is completed, but the configuration has changed, the task is pending
-        return hashes['sha'] != self.compute_sha(config)  # FIXME: Rename the `sha` key to `task`
+        return hashes['task'] != self.compute_sha(config)
     
     def get_marginal_fields(self, pipeline: pypers.pipeline.Pipeline) -> FrozenSet[str]:
         """
@@ -318,7 +318,7 @@ class Task:
         # Store the hashes
         hashes = dict(
             stages = {stage.id: stage.sha for stage in pipeline.stages},
-            sha = self.compute_sha(config),
+            task = self.compute_sha(config),
         )
         with self.digest_sha_filepath.open('w') as digest_sha_file:
             json.dump(hashes, digest_sha_file)
