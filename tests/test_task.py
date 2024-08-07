@@ -391,7 +391,7 @@ class Task__resolve_path(unittest.TestCase):
         self.assertEqual(task2.resolve_path('{ROOTDIR}/{DIRNAME}.txt'), (path1 / 'subdir.txt').resolve())
 
 
-class Task__pending(unittest.TestCase):
+class Task__is_pending(unittest.TestCase):
 
     def setUp(self):
         self.pipeline = pypers.pipeline.create_pipeline(
@@ -408,7 +408,7 @@ class Task__pending(unittest.TestCase):
             spec = dict(),
         )
         config = task.create_config()
-        self.assertFalse(task.pending(self.pipeline, config))
+        self.assertFalse(task.is_pending(self.pipeline, config))
 
     @testsuite.with_temporary_paths(1)
     def test_without_digest(self, path):
@@ -418,7 +418,7 @@ class Task__pending(unittest.TestCase):
             spec = dict(runnable = True),
         )
         config = task.create_config()
-        self.assertTrue(task.pending(self.pipeline, config))
+        self.assertTrue(task.is_pending(self.pipeline, config))
 
     @testsuite.with_temporary_paths(1)
     def test_with_digest(self, path):
@@ -438,7 +438,7 @@ class Task__pending(unittest.TestCase):
                 ),
                 digest_sha_file,
             )
-        self.assertFalse(task.pending(self.pipeline, config))
+        self.assertFalse(task.is_pending(self.pipeline, config))
 
     @testsuite.with_temporary_paths(1)
     def test_with_changed_config(self, path):
@@ -459,7 +459,7 @@ class Task__pending(unittest.TestCase):
                 digest_sha_file,
             )
         config['key'] = 'value'
-        self.assertTrue(task.pending(self.pipeline, config))
+        self.assertTrue(task.is_pending(self.pipeline, config))
 
     @testsuite.with_temporary_paths(1)
     def test_with_changed_pipeline(self, path):
@@ -479,7 +479,7 @@ class Task__pending(unittest.TestCase):
                 ),
                 digest_sha_file,
             )
-        self.assertTrue(task.pending(self.pipeline, config))
+        self.assertTrue(task.is_pending(self.pipeline, config))
 
 
 class Task__marginal_states(unittest.TestCase):
@@ -613,7 +613,7 @@ class Task__store(unittest.TestCase):
         with task.digest_json_filepath.open('r') as digest_json_file:
             task_digest = json.load(digest_json_file)
 
-        self.assertFalse(task.pending(pipeline, config))
+        self.assertFalse(task.is_pending(pipeline, config))
         self.assertEqual(
             stored_data,
             {
