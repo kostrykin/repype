@@ -1,6 +1,7 @@
 import dill
 import gzip
 import importlib
+import json
 import os
 import pathlib
 import re
@@ -119,6 +120,19 @@ class Task:
     @property
     def digest_sha_filepath(self):
         return self.resolve_path('.digest.sha')
+
+    @property
+    def config(self):
+        """
+        Hyperparemeters which this task was previously completed with.
+
+        Returns:
+            Config: The hyperparameters or None if the task was not fully run yet.
+        """
+        if not self.digest_json_filepath.is_file():
+            return None
+        with self.digest_json_filepath.open('r') as digest_json_file:
+            return pypers.config.Config(json.safe(digest_json_file))  # FIXME: This should be immutable
     
     def create_config(self) -> pypers.config.Config:
         """
@@ -280,6 +294,12 @@ class Task:
         # Store the digest hash
         with self.digest_sha_filepath.open('w') as digest_sha_file:
             digest_sha_file.write(config.sha.hexdigest())
+
+    def find_first_diverging_stage(self, pipeline: pypers.pipeline.Pipeline, config: pypers.config.Config) -> MultiDataDictionary:
+        previous_config = self.config
+        for stage in pipeline.stages:
+            if previous_config.get(stage.id) != config.get(stage.id):
+                return stage.id
     
     def __repr__(self):
         config = self.create_config()
