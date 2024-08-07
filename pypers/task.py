@@ -340,6 +340,7 @@ class Task:
             digest_sha = json.load(digest_sha_file)
         digest_stage_ids = digest_sha['stages'].keys()
 
+        # Iterate the stages from first to last
         for stage in pipeline.stages:
 
             # Check if the stage is new

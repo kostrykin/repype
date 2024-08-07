@@ -428,6 +428,7 @@ class Task__is_pending(unittest.TestCase):
             spec = dict(runnable = True),
         )
         config = task.create_config()
+        config['key'] = 'value'
         with task.resolve_path('.sha.json').open('w') as digest_sha_file:
             json.dump(
                 dict(
@@ -700,20 +701,69 @@ class Task__find_first_diverging_stage(unittest.TestCase):
         }
         with gzip.open(self.task.data_filepath, 'wb') as data_file:
             dill.dump(self.data_without_marginals, data_file, byref=True)
+        self.config = self.task.create_config()
+        with self.task.resolve_path('.sha.json').open('w') as digest_sha_file:
+            json.dump(
+                dict(
+                    stages = dict(
+                        stage1 = self.pipeline.stages[0].sha,
+                        stage2 = self.pipeline.stages[1].sha,
+                        stage3 = self.pipeline.stages[2].sha,
+                    ),
+                    task = self.task.compute_sha(self.config),
+                ),
+                digest_sha_file,
+            )
+        with self.task.resolve_path('.task.json').open('w') as digest_task_file:
+            json.dump(
+                self.task.get_full_spec_with_config(self.config),
+                digest_task_file,
+            )
 
     def tearDown(self):
         self.tempdir.cleanup()
 
-    def test_changed_config(self):
-        config = self.task.create_config()
-        config['stage2/key'] = 'value'
+    def test_unchanged(self):
+        # There should be no divering stage if nothing is changed
+        self.assertIsNone(
+            self.task.find_first_diverging_stage(pipeline = self.pipeline, config = self.config),
+        )
+
+        # There should be no divering stage if a stage is replaced by the same stage
+        self.pipeline.stages[1] = testsuite.create_stage(id = 'stage2', inputs = ['output1.1'], outputs = ['output2.1', 'output2.2'])
+        self.assertIsNone(
+            self.task.find_first_diverging_stage(pipeline = self.pipeline, config = self.config),
+        )
+
+    def test_removed_stage(self):
+        self.pipeline.stages[1:] = self.pipeline.stages[2:]
+        self.assertIsNone(
+            self.task.find_first_diverging_stage(pipeline = self.pipeline, config = self.config),
+        )
+
+    def test_added_stage(self):
+        self.pipeline.stages.append(
+            testsuite.create_stage(id = 'stage4', inputs = ['output3.1'], outputs = ['output4.1'])
+        )
         self.assertIs(
-            self.task.find_first_diverging_stage(pipeline = self.pipeline, config = config),
+            self.task.find_first_diverging_stage(pipeline = self.pipeline, config = self.config),
+            self.pipeline.stages[3],
+        )
+
+    def test_changed_stage(self):
+        # Change the output of a stage
+        self.pipeline.stages[1] = testsuite.create_stage(id = 'stage2', inputs = ['output1.1'], outputs = ['output2.1', 'output2.2', 'output2.3'])
+        self.assertIs(
+            self.task.find_first_diverging_stage(pipeline = self.pipeline, config = self.config),
             self.pipeline.stages[1],
         )
 
-    def test_changed_pipeline(self):
-        pass  # FIXME: implement
+    def test_changed_config(self):
+        self.config['stage2/key'] = 'value'
+        self.assertIs(
+            self.task.find_first_diverging_stage(pipeline = self.pipeline, config = self.config),
+            self.pipeline.stages[1],
+        )
 
 
 def create_task_file(task_path, spec_yaml):
