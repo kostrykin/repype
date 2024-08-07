@@ -680,10 +680,6 @@ class Task__find_first_diverging_stage(unittest.TestCase):
             parent = None,
             spec = dict(
                 runnable = True,
-                file_ids = ['file-0'],
-                marginal_stages = [
-                    'stage2',
-                ],
             ),
         )
         self.pipeline = pypers.pipeline.create_pipeline(
@@ -693,14 +689,6 @@ class Task__find_first_diverging_stage(unittest.TestCase):
                 testsuite.create_stage(id = 'stage3', inputs = ['output1.1', 'output2.1', 'output2.2'], outputs = ['output3.1']),
             ]
         )
-        self.data_without_marginals = {
-            'file-0': {
-                'output1.1': 'value1.1',
-                'output3.1': 'value3.1',
-            },
-        }
-        with gzip.open(self.task.data_filepath, 'wb') as data_file:
-            dill.dump(self.data_without_marginals, data_file, byref=True)
         self.config = self.task.create_config()
         with self.task.resolve_path('.sha.json').open('w') as digest_sha_file:
             json.dump(
@@ -764,6 +752,130 @@ class Task__find_first_diverging_stage(unittest.TestCase):
             self.task.find_first_diverging_stage(pipeline = self.pipeline, config = self.config),
             self.pipeline.stages[1],
         )
+
+
+class Task__find_pickup_task(unittest.TestCase):
+
+    def setUp(self):
+        self.tempdirs = [tempfile.TemporaryDirectory() for _ in range(3)]
+        self.tasks = list()
+        for tempdir in self.tempdirs:
+            task = pypers.task.Task(
+                path = pathlib.Path(tempdir.name),
+                parent = self.tasks[-1] if self.tasks else None,
+                spec = dict(
+                    runnable = True,
+                ),
+            )
+            self.tasks.append(task)
+        self.pipeline = pypers.pipeline.create_pipeline(
+            [
+                testsuite.create_stage(id = 'stage1', outputs = ['output1.1']),
+                testsuite.create_stage(id = 'stage2', inputs = ['output1.1'], outputs = ['output2.1', 'output2.2']),
+                testsuite.create_stage(id = 'stage3', inputs = ['output1.1', 'output2.1', 'output2.2'], outputs = ['output3.1']),
+            ]
+        )
+        self.configs = [task.create_config() for task in self.tasks]
+                
+    def _write_digests(self):
+        for task, config in zip(self.tasks, self.configs):
+            with task.resolve_path('.sha.json').open('w') as digest_sha_file:
+                json.dump(
+                    dict(
+                        stages = dict(
+                            stage1 = self.pipeline.stages[0].sha,
+                            stage2 = self.pipeline.stages[1].sha,
+                            stage3 = self.pipeline.stages[2].sha,
+                        ),
+                        task = task.compute_sha(config),
+                    ),
+                    digest_sha_file,
+                )
+            with task.resolve_path('.task.json').open('w') as digest_task_file:
+                json.dump(
+                    task.get_full_spec_with_config(config),
+                    digest_task_file,
+            )
+
+    def tearDown(self):
+        for tempdir in self.tempdirs:
+            tempdir.cleanup()
+
+    def test_task1_nothing_to_pickup_from(self):
+        self.assertEqual(self.tasks[0].find_pickup_task(self.pipeline, self.configs[0]), dict(
+            task = None,
+            first_diverging_stage = self.pipeline.stages[0],
+        ))
+
+    def test_task2_nothing_to_pickup_from(self):
+        self.configs[0]['stage1/key'] = 'value1.1'
+        self._write_digests()
+        self.configs[1]['stage1/key'] = 'value2.1'
+        self.assertEqual(self.tasks[1].find_pickup_task(self.pipeline, self.configs[1]), dict(
+            task = None,
+            first_diverging_stage = self.pipeline.stages[0],
+        ))
+
+    def test_task1_pickup_from_task1(self):
+        self.configs[0]['stage1/key'] = 'value1.1'
+        self.configs[0]['stage2/key'] = 'value2.1'
+        self._write_digests()
+        self.configs[0]['stage2/key'] = 'value2.2'
+        self.assertEqual(self.tasks[0].find_pickup_task(self.pipeline, self.configs[0]), dict(
+            task = self.tasks[0],
+            first_diverging_stage = self.pipeline.stages[1],
+        ))
+
+    def test_task1_pickup_from_task1_without_changes(self):
+        self.configs[0]['stage1/key'] = 'value1.1'
+        self.configs[0]['stage2/key'] = 'value2.1'
+        self._write_digests()
+        self.assertEqual(self.tasks[0].find_pickup_task(self.pipeline, self.configs[0]), dict(
+            task = self.tasks[0],
+            first_diverging_stage = None,
+        ))
+
+    def test_task2_pickup_from_task1(self):
+        self.configs[0]['stage1/key'] = 'value1.1'
+        self._write_digests()
+        self.configs[1]['stage1/key'] = 'value1.1'
+        self.configs[1]['stage2/key'] = 'value2.1'
+        self.assertEqual(self.tasks[1].find_pickup_task(self.pipeline, self.configs[1]), dict(
+            task = self.tasks[0],
+            first_diverging_stage = self.pipeline.stages[1],
+        ))
+
+    def test_task2_pickup_from_task1_without_changes(self):
+        self.configs[0]['stage1/key'] = 'value1.1'
+        self._write_digests()
+        self.configs[1]['stage1/key'] = 'value1.1'
+        self.assertEqual(self.tasks[1].find_pickup_task(self.pipeline, self.configs[1]), dict(
+            task = self.tasks[0],
+            first_diverging_stage = None,
+        ))
+
+    def test_task3_pickup_from_task1(self):
+        self.configs[0]['stage1/key'] = 'value1.1'
+        self._write_digests()
+        self.configs[2]['stage1/key'] = 'value1.1'
+        self.configs[2]['stage2/key'] = 'value2.1'
+        self.assertEqual(self.tasks[2].find_pickup_task(self.pipeline, self.configs[2]), dict(
+            task = self.tasks[0],
+            first_diverging_stage = self.pipeline.stages[1],
+        ))
+
+    def test_task3_pickup_from_task2(self):
+        self.configs[0]['stage1/key'] = 'value1.1'
+        self.configs[0]['stage2/key'] = 'value2.1'
+        self.configs[1]['stage1/key'] = 'value1.2'
+        self.configs[1]['stage2/key'] = 'value2.2'
+        self._write_digests()
+        self.configs[2]['stage1/key'] = 'value1.2'
+        self.configs[2]['stage2/key'] = 'value2.3'
+        self.assertEqual(self.tasks[2].find_pickup_task(self.pipeline, self.configs[2]), dict(
+            task = self.tasks[1],
+            first_diverging_stage = self.pipeline.stages[1],
+        ))
 
 
 def create_task_file(task_path, spec_yaml):

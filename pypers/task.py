@@ -335,6 +335,10 @@ class Task:
             json.dump(hashes, digest_sha_file)
 
     def find_first_diverging_stage(self, pipeline: pypers.pipeline.Pipeline, config: pypers.config.Config) -> Optional[pypers.pipeline.Stage]:
+        # If the task is not completed, the first diverging stage is the first stage of the pipeline
+        if not self.digest_sha_filepath.is_file():
+            return pipeline.stages[0]
+
         # Load the stages and corresponding hashes which were used to complete the task
         with self.digest_sha_filepath.open('r') as digest_sha_file:
             digest_sha = json.load(digest_sha_file)
@@ -359,27 +363,34 @@ class Task:
         return None
             
     def find_pickup_task(self, pipeline: pypers.pipeline.Pipeline, config: pypers.config.Config) -> Dict:
-        first_diverging_stages = {task: task.find_first_diverging_stage(pipeline) for task in self.parents}
+        candidates = list(self.parents) + [self]
+        first_diverging_stages = {task: task.find_first_diverging_stage(pipeline, config) for task in candidates}
 
-        # There are no previous tasks to pick up from, so return None
+        # There are no previous tasks to pick up from
         if len(first_diverging_stages) == 0:
-            return None
+            return dict(
+                task = None,
+                first_diverging_stage = pipeline.stages[0],
+            )
 
         # If there is any task without a diverging stage, return that one
         for pickup_task, first_diverging_stage in first_diverging_stages.items():
             if first_diverging_stage is None:
+                print('***', pickup_task.digest['config'], config.entries)
                 return dict(
                     task = pickup_task,
-                    first_divering_stage = None,
+                    first_diverging_stage = None,
                 )
         
         # Find the task with the latest diverging stage
         pickup_task = max(first_diverging_stages, key = lambda task: pipeline.find(first_diverging_stages[task].id))
-        
-        # Return the determined task and the corresponding latest diverging stage
+
+        # If the latest diverging stage is the first stage of the pipeline, then there is nothing to pick up from
+        # Otherwise, return the determined task and the corresponding latest diverging stage
+        first_diverging_stage = first_diverging_stages[pickup_task]
         return dict(
-            task = pickup_task,
-            first_divering_stage = first_diverging_stages[pickup_task],
+            task = None if first_diverging_stage is pipeline.stages[0] else pickup_task,
+            first_diverging_stage = first_diverging_stage,
         )
     
     def __repr__(self):
