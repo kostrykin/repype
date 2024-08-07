@@ -124,7 +124,7 @@ class Task:
         return self.resolve_path('.sha.json')
 
     @property
-    def stored_full_spec(self):  # FIXME: Rename to digest_full_spec
+    def digest(self):
         """
         Immutable full specification which this task was previously completed with (or None).
         """
@@ -324,20 +324,19 @@ class Task:
             json.dump(hashes, digest_sha_file)
 
     def find_first_diverging_stage(self, pipeline: pypers.pipeline.Pipeline, config: pypers.config.Config) -> MultiDataDictionary:
-        previous_full_spec = self.stored_full_spec
-        previous_stage_ids = previous_full_spec['stages'].keys()
+        digest_stage_ids = self.digest['stages'].keys()
         for stage in pipeline.stages:
 
             # Check if the stage is new
-            if stage.id not in previous_stage_ids:
+            if stage.id not in digest_stage_ids:
                 return stage.id
             
             # Check if the stage implementation has changed
-            if stage.sha != previous_full_spec['stages'][stage.id]:
+            if stage.sha != self.digest['stages'][stage.id]:
                 return stage.id
             
             # Check if the stage configuration has changed
-            if previous_full_spec['config'].get(stage.id) != config.get(stage.id):
+            if self.digest['config'].get(stage.id) != config.get(stage.id):
                 return stage.id
     
     def __repr__(self):
