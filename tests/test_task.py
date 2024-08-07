@@ -670,6 +670,52 @@ class Task__load(unittest.TestCase):
         self.assertEqual(data, self.data_without_marginals)
 
 
+class Task__find_first_diverging_stage(unittest.TestCase):
+
+    def setUp(self):
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.task = pypers.task.Task(
+            path = pathlib.Path(self.tempdir.name),
+            parent = None,
+            spec = dict(
+                runnable = True,
+                file_ids = ['file-0'],
+                marginal_stages = [
+                    'stage2',
+                ],
+            ),
+        )
+        self.pipeline = pypers.pipeline.create_pipeline(
+            [
+                testsuite.create_stage(id = 'stage1', outputs = ['output1.1']),
+                testsuite.create_stage(id = 'stage2', inputs = ['output1.1'], outputs = ['output2.1', 'output2.2']),
+                testsuite.create_stage(id = 'stage3', inputs = ['output1.1', 'output2.1', 'output2.2'], outputs = ['output3.1']),
+            ]
+        )
+        self.data_without_marginals = {
+            'file-0': {
+                'output1.1': 'value1.1',
+                'output3.1': 'value3.1',
+            },
+        }
+        with gzip.open(self.task.data_filepath, 'wb') as data_file:
+            dill.dump(self.data_without_marginals, data_file, byref=True)
+
+    def tearDown(self):
+        self.tempdir.cleanup()
+
+    def test_changed_config(self):
+        config = self.task.create_config()
+        config['stage2/key'] = 'value'
+        self.assertIs(
+            self.task.find_first_diverging_stage(pipeline = self.pipeline, config = config),
+            self.pipeline.stages[1],
+        )
+
+    def test_changed_pipeline(self):
+        pass  # FIXME: implement
+
+
 def create_task_file(task_path, spec_yaml):
     task_path = pathlib.Path(task_path)
     task_filepath = task_path / 'task.yml'
