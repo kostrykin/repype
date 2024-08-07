@@ -334,8 +334,12 @@ class Task:
         with self.digest_sha_filepath.open('w') as digest_sha_file:
             json.dump(hashes, digest_sha_file)
 
-    def find_first_diverging_stage(self, pipeline: pypers.pipeline.Pipeline, config: pypers.config.Config) -> pypers.pipeline.Stage:
-        digest_stage_ids = self.digest['stages'].keys()
+    def find_first_diverging_stage(self, pipeline: pypers.pipeline.Pipeline, config: pypers.config.Config) -> Optional[pypers.pipeline.Stage]:
+        # Load the stages and corresponding hashes which were used to complete the task
+        with self.digest_sha_filepath.open('r') as digest_sha_file:
+            digest_sha = json.load(digest_sha_file)
+        digest_stage_ids = digest_sha['stages'].keys()
+
         for stage in pipeline.stages:
 
             # Check if the stage is new
@@ -343,12 +347,15 @@ class Task:
                 return stage
             
             # Check if the stage implementation has changed
-            if stage.sha != self.digest['stages'][stage.id]:
+            if stage.sha != digest_sha['stages'][stage.id]:
                 return stage
             
             # Check if the stage configuration has changed
-            if self.digest['config'].get(stage.id) != config.get(stage.id):
+            if self.digest['config'].get(stage.id, dict()) != config.get(stage.id, dict()).entries:
                 return stage
+            
+        # There is no diverging stage
+        return None
             
     def pickup_previous_task(self, pipeline: pypers.pipeline.Pipeline, config: pypers.config.Config) -> Dict:
         first_diverging_stages = {task: task.find_first_diverging_stage(pipeline) for task in self.parents}
