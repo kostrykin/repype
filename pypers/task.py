@@ -1,5 +1,6 @@
 import dill
 import gzip
+import hashlib
 import importlib
 import json
 import os
@@ -17,6 +18,7 @@ from typing import (
 )
 
 from deprecated import deprecated
+import frozendict
 import pypers.pipeline
 import pypers.config
 import yaml
@@ -114,25 +116,30 @@ class Task:
         return self.resolve_path('data.dill.gz')
         
     @property
-    def digest_json_filepath(self):
-        return self.resolve_path('.digest.json')
+    def digest_json_filepath(self):  # FIXME: Rename to digest_task_filepath
+        return self.resolve_path('.task.json')
         
     @property
     def digest_sha_filepath(self):
-        return self.resolve_path('.digest.sha')
+        return self.resolve_path('.sha.json')
 
     @property
-    def config(self):
+    def stored_full_spec(self):
         """
-        Hyperparemeters which this task was previously completed with.
-
-        Returns:
-            Config: The hyperparameters or None if the task was not fully run yet.
+        Immutable full specification which this task was previously completed with (or None).
         """
         if not self.digest_json_filepath.is_file():
             return None
         with self.digest_json_filepath.open('r') as digest_json_file:
-            return pypers.config.Config(json.safe(digest_json_file))  # FIXME: This should be immutable
+            return frozendict.deepfreeze(json.load(digest_json_file))
+        
+
+    def get_full_spec_with_config(self, config: pypers.config.Config) -> dict:
+        return self.full_spec | dict(config = config.entries)
+    
+    def compute_sha(self, config: Optional[pypers.config.Config] = None) -> str:
+        full_spec = self.full_spec if config is None else self.get_full_spec_with_config(config)
+        return hashlib.sha1(json.dumps(full_spec).encode('utf8')).hexdigest()
     
     def create_config(self) -> pypers.config.Config:
         """
@@ -212,11 +219,21 @@ class Task:
                 stages.append(stage_class())
             return pypers.pipeline.create_pipeline(stages, *args, **kwargs)
     
-    def pending(self, config: pypers.config.Config) -> bool:
+    def pending(self, pipeline: pypers.pipeline.Pipeline, config: pypers.config.Config) -> bool:
         """
         True if the task needs to run, and False if the task is completed or not runnable.
         """
-        return self.runnable and not (self.digest_sha_filepath.exists() and self.digest_sha_filepath.read_text() == config.sha.hexdigest())
+        if not self.runnable:
+            return False
+        
+        with self.digest_sha_filepath.open('r') as digest_sha_file:
+            hashes = json.load(digest_sha_file)
+
+        for stage in pipeline.stages:
+            if hash(stage) != hashes['stages'][stage.id]:
+                return True
+            
+        return hashes['sha'] == self.compute_sha(config)
     
     def get_marginal_fields(self, pipeline: pypers.pipeline.Pipeline) -> FrozenSet[str]:
         """
@@ -287,18 +304,33 @@ class Task:
         with gzip.open(self.data_filepath, 'wb') as data_file:
             dill.dump(data_without_marginals, data_file, byref=True)
 
-        # Store the digest config
+        # Store the task digest
         with self.digest_json_filepath.open('w') as digest_json_file:
-            config.dump_json(digest_json_file)
+            json.dump(self.get_full_spec_with_config(config), digest_json_file)
 
-        # Store the digest hash
+        # Store the hashes
+        hashes = dict(
+            stages = {stage.id: hash(stage) for stage in pipeline.stages},
+            sha = self.compute_sha(config),
+        )
         with self.digest_sha_filepath.open('w') as digest_sha_file:
-            digest_sha_file.write(config.sha.hexdigest())
+            json.dump(hashes, digest_sha_file)
 
     def find_first_diverging_stage(self, pipeline: pypers.pipeline.Pipeline, config: pypers.config.Config) -> MultiDataDictionary:
-        previous_config = self.config
+        previous_full_spec = self.stored_full_spec
+        previous_stage_ids = previous_full_spec['stages'].keys()
         for stage in pipeline.stages:
-            if previous_config.get(stage.id) != config.get(stage.id):
+
+            # Check if the stage is new
+            if stage.id not in previous_stage_ids:
+                return stage.id
+            
+            # Check if the stage implementation has changed
+            if hash(stage) != previous_full_spec['stages'][stage.id]:
+                return stage.id
+            
+            # Check if the stage configuration has changed
+            if previous_full_spec['config'].get(stage.id) != config.get(stage.id):
                 return stage.id
     
     def __repr__(self):

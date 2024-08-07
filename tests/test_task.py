@@ -393,6 +393,13 @@ class Task__resolve_path(unittest.TestCase):
 
 class Task__pending(unittest.TestCase):
 
+    def setUp(self):
+        self.pipeline = pypers.pipeline.create_pipeline(
+            [
+                testsuite.create_stage(id = 'stage1', outputs = ['output1.1']),
+            ]
+        )
+
     @testsuite.with_temporary_paths(1)
     def test_not_runnable(self, path):
         task = pypers.task.Task(
@@ -401,7 +408,7 @@ class Task__pending(unittest.TestCase):
             spec = dict(),
         )
         config = task.create_config()
-        self.assertFalse(task.pending(config))
+        self.assertFalse(task.pending(self.pipeline, config))
 
     @testsuite.with_temporary_paths(1)
     def test_without_digest(self, path):
@@ -411,7 +418,7 @@ class Task__pending(unittest.TestCase):
             spec = dict(runnable = True),
         )
         config = task.create_config()
-        self.assertTrue(task.pending(config))
+        self.assertTrue(task.pending(self.pipeline, config))
 
     @testsuite.with_temporary_paths(1)
     def test_with_digest(self, path):
@@ -422,7 +429,7 @@ class Task__pending(unittest.TestCase):
         )
         config = task.create_config()
         task.resolve_path('.digest.sha').write_text(config.sha.hexdigest())
-        self.assertFalse(task.pending(config))
+        self.assertFalse(task.pending(self.pipeline, config))
 
     @testsuite.with_temporary_paths(1)
     def test_with_wrong_digest(self, path):
@@ -434,7 +441,9 @@ class Task__pending(unittest.TestCase):
         config = task.create_config()
         task.resolve_path('.digest.sha').write_text(config.sha.hexdigest())
         config['key'] = 'value'
-        self.assertTrue(task.pending(config))
+        self.assertTrue(task.pending(self.pipeline, config))
+
+    # FIXME: Add test case for modified pipeline
 
 
 class Task__marginal_states(unittest.TestCase):
@@ -568,7 +577,7 @@ class Task__store(unittest.TestCase):
         with task.digest_json_filepath.open('r') as digest_json_file:
             stored_config = pypers.config.Config(json.load(digest_json_file))
 
-        self.assertFalse(task.pending(config))
+        self.assertFalse(task.pending(pipeline, config))
         self.assertEqual(
             stored_data,
             {
