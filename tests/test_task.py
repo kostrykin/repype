@@ -4,7 +4,10 @@ import json
 import pathlib
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import (
+    patch,
+    PropertyMock,
+)
 
 import pypers.pipeline
 import pypers.task
@@ -152,6 +155,15 @@ class Task__full_spec(unittest.TestCase):
 
 
 class Task__create_pipeline(unittest.TestCase):
+
+    def test_undefined(self):
+        task = pypers.task.Task(
+            path = '',
+            parent = None,
+            spec = dict(),
+        )
+        with self.assertRaises(AssertionError):
+            task.create_pipeline()
 
     @testsuite.with_temporary_paths(1)
     def test_from_spec(self, path):
@@ -876,6 +888,79 @@ class Task__find_pickup_task(unittest.TestCase):
             task = self.tasks[1],
             first_diverging_stage = self.pipeline.stages[1],
         ))
+
+
+@patch.object(pypers.task.Task, 'store')
+@patch.object(pypers.task.Task, 'load')
+@patch.object(pypers.task.Task, 'create_pipeline')
+class Task__run(unittest.TestCase):
+
+    def setUp(self):
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.task = pypers.task.Task(
+            path = pathlib.Path(self.tempdir.name),
+            parent = None,
+            spec = dict(
+                runnable = True,
+                file_ids = ['file-0', 'file-1'],
+            ),
+        )
+        self.config = self.task.create_config()
+
+    def tearDown(self):
+        self.tempdir.cleanup()
+
+    @patch.object(pypers.task.Task, 'runnable', return_value = False, new_callable = PropertyMock)
+    def test_not_runnable(self, *args):
+        with self.assertRaises(AssertionError):
+            self.task.run(self.config)
+
+    def test_nothing_to_pickup(self, mock_create_pipeline, mock_load, mock_store):
+        self.task.run(self.config)
+        mock_load.assert_not_called()
+        mock_create_pipeline.assert_called_once_with()
+        mock_create_pipeline.return_value.process.assert_any_call(
+            input = 'file-0',
+            data = dict(),
+            cfg = self.config,
+            first_stage = None,
+        )
+        mock_create_pipeline.return_value.process.assert_any_call(
+            input = 'file-1',
+            data = dict(),
+            cfg = self.config,
+            first_stage = None,
+        )
+        self.assertEqual(mock_create_pipeline.return_value.process.call_count, 2)
+        mock_store.assert_called_once()
+
+    def test_with_pickup(self, mock_create_pipeline, mock_load, mock_store):
+        mock_load.return_value = {
+            'file-0': dict(output = 'value1'),
+            'file-1': dict(output = 'value2'),
+        }
+        with patch.object(pypers.task.Task, 'find_pickup_task', return_value = dict(task = self.task, first_diverging_stage = 'stage-1')) as mock_find_pickup_task:
+            self.task.run(self.config)
+        mock_find_pickup_task.assert_called_once_with(
+            mock_create_pipeline.return_value,
+            self.config,
+        )
+        mock_load.assert_called_once()
+        mock_create_pipeline.assert_called_once_with()
+        mock_create_pipeline.return_value.process.assert_any_call(
+            input = 'file-0',
+            data = dict(output = 'value1'),
+            cfg = self.config,
+            first_stage = 'stage-1',
+        )
+        mock_create_pipeline.return_value.process.assert_any_call(
+            input = 'file-1',
+            data = dict(output = 'value2'),
+            cfg = self.config,
+            first_stage = 'stage-1',
+        )
+        self.assertEqual(mock_create_pipeline.return_value.process.call_count, 2)
+        mock_store.assert_called_once()
 
 
 def create_task_file(task_path, spec_yaml):

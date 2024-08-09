@@ -404,24 +404,29 @@ class Task:
         )
     
     def run(self, config: pypers.config.Config, pickup: bool = True, strip_marginals: bool = True) -> MultiDataDictionary:
+        assert self.runnable
         pipeline = self.create_pipeline()
 
         # Find a task and stage to pick up from
         if pickup:
             pickup = self.find_pickup_task(pipeline, config)
-            data = pickup['task'].load(pipeline)
-            first_stage = pickup['first_diverging_stage']
+            if pickup['task'] is not None:
+                data = pickup['task'].load(pipeline)
+                first_stage = pickup['first_diverging_stage']
+            else:
+                pickup = False
 
         # If there is no task to pick up from, run the pipeline from the beginning
-        else:
+        if not pickup:
             data = dict()
             first_stage = None
 
         # Run the pipeline for all file IDs
-        for file_id in enumerate(self.file_ids):
+        for file_id in self.file_ids:
+            data_chunk = data.get(file_id, dict())
             data_chunk = pipeline.process(
                 input = file_id,
-                data = data,
+                data = data_chunk,
                 cfg = config,
                 first_stage = first_stage,
             )
