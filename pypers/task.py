@@ -6,17 +6,30 @@ import json
 import os
 import pathlib
 import re
-from types import SimpleNamespace
-from typing import (
-    Any,
-    Dict,
-    FrozenSet,
-    List,
-    Optional,
-    Self,
-    TypeVar,
-    Union,
-)
+import sys
+
+if sys.version_info < (3, 11):
+    from typing_extensions import (
+        Any,
+        Dict,
+        FrozenSet,
+        List,
+        Optional,
+        Self,
+        TypeVar,
+        Union,
+    )
+else:
+    from typing import (
+        Any,
+        Dict,
+        FrozenSet,
+        List,
+        Optional,
+        Self,
+        TypeVar,
+        Union,
+    )
 
 from deprecated import deprecated
 import frozendict
