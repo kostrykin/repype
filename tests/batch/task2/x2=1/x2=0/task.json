@@ -1,9 +1,0 @@
-{
-    "runnable": true,
-
-    "config": {
-        "stage2": {
-            "x2": 0
-        }
-    }
-}
