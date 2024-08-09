@@ -1,20 +1,21 @@
-from collections.abc import Sequence, Iterable
 import hashlib
 import json
 import os
 import re
 import time
 import weakref
-from typing import (
-    Any,
-    Optional,
-    Union,
-)
 
-from .config import Config
-from .output import (
+from pypers.config import Config
+from pypers.output import (
     get_output,
     Output,
+)
+from pypers.typing import (
+    Any,
+    Iterable,
+    Optional,
+    Sequence,
+    Union,
 )
 
 

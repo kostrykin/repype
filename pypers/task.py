@@ -6,35 +6,21 @@ import json
 import os
 import pathlib
 import re
-import sys
-
-if sys.version_info < (3, 11):
-    from typing_extensions import (
-        Any,
-        Dict,
-        FrozenSet,
-        List,
-        Optional,
-        Self,
-        TypeVar,
-        Union,
-    )
-else:
-    from typing import (
-        Any,
-        Dict,
-        FrozenSet,
-        List,
-        Optional,
-        Self,
-        TypeVar,
-        Union,
-    )
 
 from deprecated import deprecated
 import frozendict
 import pypers.pipeline
 import pypers.config
+from pypers.typing import (
+    Any,
+    Dict,
+    FrozenSet,
+    List,
+    Optional,
+    Self,
+    TypeVar,
+    Union,
+)
 import yaml
 
 
