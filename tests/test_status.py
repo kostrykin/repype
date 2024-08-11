@@ -3,9 +3,10 @@ import io
 import json
 import os
 import tempfile
+import time
 from unittest import TestCase
 
-from pypers.status import Status
+from pypers.status import Status, StatusReader
 from . import testsuite
 
 
@@ -63,31 +64,41 @@ class Status__filepath(TestCase):
         self.assertEqual(status2.filepath, path / f'{status2.id}.json')
 
 
-class Status__update(TestCase):
+class Status__write_intermediate(TestCase):
 
     @testsuite.with_temporary_paths(1)
-    def test__no_intermediate(self, path):
+    def test_write(self, path):
         status = Status(path = path)
-        status.write('test')
-        status.update()
+        status.write('test1')
+        status.write('test2')
         with open(status.filepath) as file:
             data = json.load(file)
-            self.assertEqual(data, ['test'])
+            self.assertEqual(data, ['test1', 'test2'])
 
     @testsuite.with_temporary_paths(1)
-    def test__with_intermediate(self, path):
+    def test_write_intermediate(self, path):
         status = Status(path = path)
         status.write('write')
         status.intermediate('intermediate')
-        status.update()
         with open(status.filepath) as file:
             data = json.load(file)
             self.assertEqual(len(data), 2)
             self.assertEqual(data[0], 'write')
-            self.assertEqual(list(data[1].keys()), ['expand'])
+            self.assertEqual(list(data[1].keys()), ['expand', 'scope'])
+            self.assertEqual(data[1]['scope'], 'intermediate')
         with open(data[1]['expand']) as file:
             data = json.load(file)
             self.assertEqual(data, ['intermediate'])
+
+    @testsuite.with_temporary_paths(1)
+    def test_write_intermediate_write(self, path):
+        status = Status(path = path)
+        status.write('write1')
+        status.intermediate('intermediate')
+        status.write('write2')
+        with open(status.filepath) as file:
+            data = json.load(file)
+            self.assertEqual(data, ['write1', 'write2'])
 
 
 class Status__derive(TestCase):
@@ -127,3 +138,59 @@ class Status__get(TestCase):
         status.update()
         self.assertEqual(os.listdir('.'), ['.status'])
         self.assertEqual(os.listdir('.status'), [f'{status.id}.json'])
+
+
+class StatusReader__init(TestCase):
+
+    @testsuite.with_temporary_paths(1)
+    def test(self, path):
+        status1 = Status(path = path)
+        status1.write('write1')
+        status2 = status1.derive()
+        status2.write('write2')
+
+        with StatusReader(status1.filepath) as status:
+            self.assertEqual(status, ['write1', ['write2']])
+
+            status2.write('write3')
+            time.sleep(0.1)
+            self.assertEqual(status, ['write1', ['write2', 'write3']])
+
+            status2.intermediate('interm1')
+            time.sleep(0.1)
+            self.assertEqual(
+                status,
+                [
+                    'write1',
+                    [
+                        'write2',
+                        'write3',
+                        dict(
+                            scope = 'intermediate',
+                            content = ['interm1'],
+                        ),
+                    ],
+                ],
+            )
+
+            status2.intermediate('interm2')
+            time.sleep(0.1)
+            self.assertEqual(
+                status,
+                [
+                    'write1',
+                    [
+                        'write2',
+                        'write3',
+                        dict(
+                            scope = 'intermediate',
+                            content = ['interm2'],
+                        ),
+                    ],
+                ],
+            )
+
+            status3 = status1.derive()
+            status3.write('write4')
+            time.sleep(0.1)
+            self.assertEqual(status, ['write1', ['write2', 'write3'], ['write4']])

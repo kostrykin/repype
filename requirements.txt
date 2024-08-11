@@ -6,3 +6,4 @@ Deprecated~=1.2
 frozendict~=2.4
 setuptools>=24.2.0
 pip>=9.0.0
+watchdog~=4.0.2
