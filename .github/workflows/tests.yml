@@ -25,6 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     
     strategy:
+      fail-fast: false
       matrix:
         python-version:
         - "pypy3.9"
@@ -59,4 +60,4 @@ jobs:
         gist-filename: pypers.json
       env:
         PYPERS_WATCHDOG_OBSERVER: polling
-        PYPERS_WATCHDOG_TIMEOUT: 2
+        PYPERS_WATCHDOG_TIMEOUT: 3

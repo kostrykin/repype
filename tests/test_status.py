@@ -221,6 +221,7 @@ class Statur__progress(TestCase):
 
         # Required when using PyPy, see https://stackoverflow.com/a/50091605/1444073
         if platform.python_implementation() == 'PyPy':
+            print('+++ PyPy detected +++')
             generator.close()
 
         # Verify that there has been one iterations, i.e. `item_idx = 0`
