@@ -1,6 +1,8 @@
 import json
 import pathlib
 from .typing import (
+    Iterable,
+    Iterator,
     Optional,
     PathLike,
     Self,
@@ -61,13 +63,33 @@ class Status:
         self.data.append(status)
         self.update()
 
-    def intermediate(self, status: str) -> None:
+    def intermediate(self, status: Optional[str] = None) -> None:
         if self._intermediate is None:
             self._intermediate = Status(self)
-        self._intermediate.data.clear()
-        self._intermediate.write(status)
-        self._intermediate.update()
+        if status is not None:
+            self._intermediate.data.clear()
+            self._intermediate.write(status)
+            self._intermediate.update()
+        else:
+            self._intermediate = None
         self.update()
+
+    def progress(self, description: str, iterable: Iterable, len_override: Optional[int] = None) -> Iterator[dict]:
+        max_steps = len_override or len(iterable)
+        try:
+            for step, item in enumerate(iterable):
+                assert step < max_steps
+                self.intermediate(
+                    dict(
+                        description = description,
+                        progress = step / max_steps,
+                        step = step,
+                        max_steps = max_steps,
+                    )
+                )
+                yield item
+        finally:
+            self.intermediate(None)
 
     @staticmethod
     def get(status: Optional[Self] = None) -> Self:

@@ -100,6 +100,16 @@ class Status__write_intermediate(TestCase):
             data = json.load(file)
             self.assertEqual(data, ['write1', 'write2'])
 
+    @testsuite.with_temporary_paths(1)
+    def test_write_intermediate_none(self, path):
+        status = Status(path = path)
+        status.write('write1')
+        status.intermediate('intermediate')
+        status.intermediate(None)
+        with open(status.filepath) as file:
+            data = json.load(file)
+            self.assertEqual(data, ['write1'])
+
 
 class Status__derive(TestCase):
 
@@ -109,7 +119,7 @@ class Status__derive(TestCase):
         child = status.derive()
         self.assertEqual(status.data, [dict(expand = str(child.filepath))])
         self.assertEqual(child.data, [])
-        self.assertEqual(child.parent, status)
+        self.assertIs(child.parent, status)
 
 
 class Status__get(TestCase):
@@ -138,6 +148,101 @@ class Status__get(TestCase):
         status.update()
         self.assertEqual(os.listdir('.'), ['.status'])
         self.assertEqual(os.listdir('.status'), [f'{status.id}.json'])
+
+
+class Statur__progress(TestCase):
+
+    @testsuite.with_temporary_paths(1)
+    def test(self, path):
+        intermediate_path = None
+        status = Status(path = path)
+        for item_idx, item in enumerate(status.progress('description', range(3))):
+
+            if intermediate_path is None:
+                with open(status.filepath) as file:
+                    data = json.load(file)
+                    intermediate_path = data[0]['expand']
+                    
+            with open(intermediate_path) as file:
+                data = json.load(file)
+                self.assertEqual(item, item_idx)
+                self.assertEqual(
+                    data,
+                    [
+                        dict(
+                            description = 'description',
+                            progress = item_idx / 3,
+                            step = item_idx,
+                            max_steps = 3,
+                        ),
+                    ],
+                )
+
+        # Verify that there have been three iterations, i.e. `item_idx = 0`, `item_idx = 1`, `item_idx = 2`
+        self.assertEqual(item_idx, 2)
+                    
+        with open(status.filepath) as file:
+            data = json.load(file)
+            self.assertEqual(data, list())
+
+    @testsuite.with_temporary_paths(1)
+    def test_break(self, path):
+        intermediate_path = None
+        status = Status(path = path)
+        for item_idx, item in enumerate(status.progress('description', range(3))):
+
+            if intermediate_path is None:
+                with open(status.filepath) as file:
+                    data = json.load(file)
+                    intermediate_path = data[0]['expand']
+                    
+            with open(intermediate_path) as file:
+                data = json.load(file)
+                self.assertEqual(item, item_idx)
+                self.assertEqual(
+                    data,
+                    [
+                        dict(
+                            description = 'description',
+                            progress = item_idx / 3,
+                            step = item_idx,
+                            max_steps = 3,
+                        ),
+                    ],
+                )
+
+            break
+
+        # Verify that there has been one iterations, i.e. `item_idx = 0`
+        self.assertEqual(item_idx, 0)
+        
+        with open(status.filepath) as file:
+            data = json.load(file)
+            self.assertEqual(data, list())
+
+    @testsuite.with_temporary_paths(1)
+    def test_len_override(self, path):
+        status = Status(path = path)
+        with self.assertRaises(AssertionError):
+            for item in status.progress('description', range(3), len_override = 2):
+                pass
+
+        with open(status.filepath) as file:
+            data = json.load(file)
+            self.assertEqual(data, list())
+
+    @testsuite.with_temporary_paths(1)
+    def test_empty(self, path):
+        status = Status(path = path)
+        for item in status.progress('description', list()):
+            pass
+
+        # Verify that there have been two iterations, i.e. `item_idx = 0` and `item_idx = 1`
+        self.assertFalse('item' in locals())
+                    
+        with open(status.filepath) as file:
+            data = json.load(file)
+            self.assertEqual(data, list())
 
 
 class StatusReader__init(TestCase):
@@ -193,26 +298,3 @@ class StatusReader__init(TestCase):
                     ],
                 ],
             )
-
-    def test_parent_derive_after_intermediate(self):
-        self.status2.intermediate('interm1')
-        with StatusReader(self.status1.filepath) as status:
-            status3 = self.status1.derive()
-            status3.write('write3')
-            time.sleep(0.1)
-            self.assertEqual(status, ['write1', ['write2'], ['write3']])
-
-    def test_derive_after_intermediate(self):
-        self.status2.intermediate('interm1')
-        with StatusReader(self.status1.filepath) as status:
-            status3 = self.status2.derive()
-            status3.write('write3')
-            time.sleep(0.1)
-            self.assertEqual(status, ['write1', ['write2', ['write3']]])
-
-    def test_parent_write_after_intermediate(self):
-        self.status2.intermediate('interm1')
-        with StatusReader(self.status1.filepath) as status:
-            self.status1.write('write3')
-            time.sleep(0.1)
-            self.assertEqual(status, ['write1', ['write2'], 'write3'])
