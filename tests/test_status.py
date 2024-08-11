@@ -125,7 +125,7 @@ class Status__get(TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_instance(self, path):
-        status1 = Status(path)
+        status1 = Status(path = path)
         status2 = Status.get(status1)
         self.assertIs(status1, status2)
 
@@ -142,21 +142,25 @@ class Status__get(TestCase):
 
 class StatusReader__init(TestCase):
 
-    @testsuite.with_temporary_paths(1)
-    def test(self, path):
-        status1 = Status(path = path)
-        status1.write('write1')
-        status2 = status1.derive()
-        status2.write('write2')
+    def setUp(self):
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.status1 = Status(path = self.tempdir.name)
+        self.status1.write('write1')
+        self.status2 = self.status1.derive()
+        self.status2.write('write2')
 
-        with StatusReader(status1.filepath) as status:
+    def tearDown(self):
+        self.tempdir.cleanup()
+
+    def test_intermediates(self):
+        with StatusReader(self.status1.filepath) as status:
             self.assertEqual(status, ['write1', ['write2']])
 
-            status2.write('write3')
+            self.status2.write('write3')
             time.sleep(0.1)
             self.assertEqual(status, ['write1', ['write2', 'write3']])
 
-            status2.intermediate('interm1')
+            self.status2.intermediate('interm1')
             time.sleep(0.1)
             self.assertEqual(
                 status,
@@ -173,7 +177,7 @@ class StatusReader__init(TestCase):
                 ],
             )
 
-            status2.intermediate('interm2')
+            self.status2.intermediate('interm2')
             time.sleep(0.1)
             self.assertEqual(
                 status,
@@ -190,7 +194,25 @@ class StatusReader__init(TestCase):
                 ],
             )
 
-            status3 = status1.derive()
-            status3.write('write4')
+    def test_parent_derive_after_intermediate(self):
+        self.status2.intermediate('interm1')
+        with StatusReader(self.status1.filepath) as status:
+            status3 = self.status1.derive()
+            status3.write('write3')
             time.sleep(0.1)
-            self.assertEqual(status, ['write1', ['write2', 'write3'], ['write4']])
+            self.assertEqual(status, ['write1', ['write2'], ['write3']])
+
+    def test_derive_after_intermediate(self):
+        self.status2.intermediate('interm1')
+        with StatusReader(self.status1.filepath) as status:
+            status3 = self.status2.derive()
+            status3.write('write3')
+            time.sleep(0.1)
+            self.assertEqual(status, ['write1', ['write2', ['write3']]])
+
+    def test_parent_write_after_intermediate(self):
+        self.status2.intermediate('interm1')
+        with StatusReader(self.status1.filepath) as status:
+            self.status1.write('write3')
+            time.sleep(0.1)
+            self.assertEqual(status, ['write1', ['write2'], 'write3'])

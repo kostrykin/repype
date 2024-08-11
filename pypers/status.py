@@ -26,14 +26,14 @@ class Status:
         self._intermediate = None
 
     @property
-    def root(self):
+    def root(self) -> Optional[pathlib.Path]:
         return self.parent.root if self.parent else self
 
     @property
-    def filepath(self):
+    def filepath(self) -> pathlib.Path:
         return self.root.path / f'{self.id}.json'
     
-    def update(self):
+    def update(self) -> None:
         if self._intermediate:
             data = self.data + [
                 dict(
@@ -56,12 +56,12 @@ class Status:
         self.update()
         return child
     
-    def write(self, status: Union[str, dict, list]):
+    def write(self, status: Union[str, dict, list]) -> None:
         self._intermediate = None
         self.data.append(status)
         self.update()
 
-    def intermediate(self, status: str):
+    def intermediate(self, status: str) -> None:
         if self._intermediate is None:
             self._intermediate = Status(self)
         self._intermediate.data.clear()
@@ -88,17 +88,17 @@ class StatusReader(FileSystemEventHandler):
         self.data_frames = {self.filepath: self.data}
         self.update(self.filepath)
 
-    def __enter__(self):
+    def __enter__(self) -> dict:
         self.observer = Observer()
         self.observer.schedule(self, self.filepath.parent, recursive = False)
         self.observer.start()
         return self.data
     
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         self.observer.stop()
         self.observer.join()
 
-    def update(self, filepath):
+    def update(self, filepath: pathlib.Path) -> None:
         data_frame = self.data_frames.get(filepath)
 
         if data_frame is None:
@@ -128,7 +128,7 @@ class StatusReader(FileSystemEventHandler):
                         data_frame[item_idx] = child_data_frame
                     self.update(filepath)
 
-    def on_modified(self, event):
+    def on_modified(self, event) -> None:
         if isinstance(event, FileModifiedEvent):
             filepath = pathlib.Path(event.src_path).resolve()
             self.update(filepath)
