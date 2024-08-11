@@ -111,6 +111,7 @@ class StatusReader(FileSystemEventHandler):
         self.update(self.filepath)
 
     def __enter__(self) -> dict:
+        self.observer = Observer()
         self.observer.schedule(self, self.filepath.parent, recursive = False)
         self.observer.start()
         return self.data
