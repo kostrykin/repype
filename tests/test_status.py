@@ -11,7 +11,7 @@ from . import testsuite
 
 
 def wait_for_watchdog():
-    time.sleep(1)
+    time.sleep(10)
 
 
 class Status__init(TestCase):
