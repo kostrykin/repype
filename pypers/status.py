@@ -160,3 +160,18 @@ class StatusReader(FileSystemEventHandler):
         if isinstance(event, FileModifiedEvent):
             filepath = pathlib.Path(event.src_path).resolve()
             self.update(filepath)
+    
+
+# Define some shortcuts
+
+def write(status, **kwargs):
+    if status is not None:
+        status.write(dict(**kwargs))
+
+def derive(status):
+    if status is not None:
+        return status.derive()
+    
+def intermediate(status, value):
+    if status is not None:
+        status.intermediate(value)

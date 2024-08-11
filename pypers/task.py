@@ -11,6 +11,7 @@ from deprecated import deprecated
 import frozendict
 import pypers.pipeline
 import pypers.config
+import pypers.status
 from pypers.typing import (
     Any,
     Dict,
@@ -402,16 +403,23 @@ class Task:
             first_diverging_stage = first_diverging_stage,
         )
     
-    def run(self, config: pypers.config.Config, pickup: bool = True, strip_marginals: bool = True) -> MultiDataDictionary:
+    def run(
+            self,
+            config: pypers.config.Config,
+            pickup: bool = True,
+            strip_marginals: bool = True,
+            status: Optional[pypers.status.Status] = None,
+        ) -> MultiDataDictionary:
+
         assert self.runnable
         pipeline = self.create_pipeline()
 
         # Find a task and stage to pick up from
         if pickup:
-            pickup = self.find_pickup_task(pipeline, config)
-            if pickup['task'] is not None:
-                data = pickup['task'].load(pipeline)
-                first_stage = pickup['first_diverging_stage']
+            pickup_info = self.find_pickup_task(pipeline, config)
+            if pickup_info['task'] is not None:
+                data = pickup_info['task'].load(pipeline)
+                first_stage = pickup_info['first_diverging_stage']
             else:
                 pickup = False
 
@@ -420,8 +428,30 @@ class Task:
             data = dict()
             first_stage = None
 
+        # Announce the status of the task
+        pypers.status.write(
+            status,
+            info = 'start',
+            status = status,
+            task = self.path.resolve(),
+            pickup = pickup_info['task'].path.resolve() if pickup else None,
+            first_stage = first_stage,
+        )
+
         # Run the pipeline for all file IDs
-        for file_id in self.file_ids:
+        for file_idx, file_id in enumerate(self.file_ids):
+            
+            # Announce the status of the task
+            pypers.status.write(
+                status,
+                info = 'process',
+                task = self.path.resolve(),
+                file_id = file_id,
+                step = file_idx,
+                step_count = len(self.file_ids),
+            )
+
+            # Process the file ID
             data_chunk = data.get(file_id, dict())
             data_chunk = pipeline.process(
                 input = file_id,
@@ -436,7 +466,14 @@ class Task:
             data[file_id] = data_chunk
 
         # Store the results for later pick up
+        pypers.status.write(status, '')
+        pypers.status.intermediate(status, info = 'storing')
         self.store(pipeline, data, config)
+        pypers.status.write(
+            status,
+            info = 'completed',
+            path = self.data_filepath.resolve(),
+        )
         return data
     
     def __repr__(self):
