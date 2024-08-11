@@ -118,6 +118,7 @@ class StatusReader(FileSystemEventHandler):
         if os.environ.get('PYPERS_WATCHDOG_OBSERVER') == 'polling':
             from watchdog.observers.polling import PollingObserver
             self.observer = PollingObserver()
+            print('+++ Using PollingObserver +++')
         else:
             self.observer = Observer()
         # ================================================================================== #
