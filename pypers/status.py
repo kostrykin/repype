@@ -1,5 +1,4 @@
 import json
-import os
 import pathlib
 from .typing import (
     Iterable,
@@ -112,15 +111,6 @@ class StatusReader(FileSystemEventHandler):
         self.update(self.filepath)
 
     def __enter__(self) -> dict:
-        # ================================================================================== #
-        # There is an issue with WatchDog on GitHub Actions, for which this is a workaround. #
-        # Details: https://github.com/kostrykin/pypers/pull/8#issuecomment-2282883353        #
-        if os.environ.get('PYPERS_WATCHDOG_OBSERVER') == 'polling':
-            from watchdog.observers.polling import PollingObserver
-            self.observer = PollingObserver()
-        else:
-            self.observer = Observer()
-        # ================================================================================== #
         self.observer.schedule(self, self.filepath.parent, recursive = False)
         self.observer.start()
         return self.data
@@ -136,6 +126,8 @@ class StatusReader(FileSystemEventHandler):
             return
         
         else:
+            # Load the data from the file, and revert in case of JSON decoding errors
+            # These can occur due to the file being written to while being read, or unfavorable buffer sizes
             try:
                 with open(filepath) as file:
                     data_frame_backup = data_frame.copy()
