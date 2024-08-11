@@ -195,34 +195,63 @@ class Status__progress(TestCase):
     def test_break(self, path):
         intermediate_path = None
         status = Status(path = path)
-        for item_idx, item in (enumerate(generator := status.progress('description', range(3)))):
+        # ================================================================================== #
+        # PyPy requires closing the generator explicitly, but assigning it to a variable
+        # somehow changes the behaviour of the garbage collector in CPython. We thus use two
+        # separate versions of the code, depending on the Python implementation.
+        if platform.python_implementation() == 'PyPy':
 
-            if intermediate_path is None:
-                with open(status.filepath) as file:
+            for item_idx, item in (enumerate(generator := status.progress('description', range(3)))):
+
+                if intermediate_path is None:
+                    with open(status.filepath) as file:
+                        data = json.load(file)
+                        intermediate_path = data[0]['expand']
+                        
+                with open(intermediate_path) as file:
                     data = json.load(file)
-                    intermediate_path = data[0]['expand']
-                    
-            with open(intermediate_path) as file:
-                data = json.load(file)
-                self.assertEqual(item, item_idx)
-                self.assertEqual(
-                    data,
-                    [
-                        dict(
-                            description = 'description',
-                            progress = item_idx / 3,
-                            step = item_idx,
-                            max_steps = 3,
-                        ),
-                    ],
-                )
+                    self.assertEqual(item, item_idx)
+                    self.assertEqual(
+                        data,
+                        [
+                            dict(
+                                description = 'description',
+                                progress = item_idx / 3,
+                                step = item_idx,
+                                max_steps = 3,
+                            ),
+                        ],
+                    )
 
-            break
+                break
+            generator.close()
 
-        # Required when using PyPy, see https://stackoverflow.com/a/50091605/1444073
-        #if platform.python_implementation() == 'PyPy':
-        #    print('+++ PyPy detected +++')
-        #    generator.close()
+        else:
+
+            for item_idx, item in (enumerate(status.progress('description', range(3)))):
+
+                if intermediate_path is None:
+                    with open(status.filepath) as file:
+                        data = json.load(file)
+                        intermediate_path = data[0]['expand']
+                        
+                with open(intermediate_path) as file:
+                    data = json.load(file)
+                    self.assertEqual(item, item_idx)
+                    self.assertEqual(
+                        data,
+                        [
+                            dict(
+                                description = 'description',
+                                progress = item_idx / 3,
+                                step = item_idx,
+                                max_steps = 3,
+                            ),
+                        ],
+                    )
+
+                break
+        # ================================================================================== #
 
         # Verify that there has been one iterations, i.e. `item_idx = 0`
         self.assertEqual(item_idx, 0)
