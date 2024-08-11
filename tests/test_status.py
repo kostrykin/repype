@@ -10,6 +10,10 @@ from pypers.status import Status, StatusReader
 from . import testsuite
 
 
+def wait_for_watchdog():
+    time.sleep(1)
+
+
 class Status__init(TestCase):
 
     def test__parent_path_none(self):
@@ -262,11 +266,11 @@ class StatusReader__init(TestCase):
             self.assertEqual(status, ['write1', ['write2']])
 
             self.status2.write('write3')
-            time.sleep(0.1)
+            wait_for_watchdog()
             self.assertEqual(status, ['write1', ['write2', 'write3']])
 
             self.status2.intermediate('interm1')
-            time.sleep(0.1)
+            wait_for_watchdog()
             self.assertEqual(
                 status,
                 [
@@ -283,7 +287,7 @@ class StatusReader__init(TestCase):
             )
 
             self.status2.intermediate('interm2')
-            time.sleep(0.1)
+            wait_for_watchdog()
             self.assertEqual(
                 status,
                 [
