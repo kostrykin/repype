@@ -156,7 +156,7 @@ class Status__get(TestCase):
         self.assertEqual(os.listdir('.status'), [f'{status.id}.json'])
 
 
-class Statur__progress(TestCase):
+class Status__progress(TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test(self, path):
@@ -220,9 +220,9 @@ class Statur__progress(TestCase):
             break
 
         # Required when using PyPy, see https://stackoverflow.com/a/50091605/1444073
-        if platform.python_implementation() == 'PyPy':
-            print('+++ PyPy detected +++')
-            generator.close()
+        #if platform.python_implementation() == 'PyPy':
+        #    print('+++ PyPy detected +++')
+        #    generator.close()
 
         # Verify that there has been one iterations, i.e. `item_idx = 0`
         self.assertEqual(item_idx, 0)
