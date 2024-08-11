@@ -11,7 +11,8 @@ from . import testsuite
 
 
 def wait_for_watchdog():
-    time.sleep(10)
+    timeout = float(os.environ.get('PYPERS_WATCHDOG_TIMEOUT', 0.1))
+    time.sleep(timeout)
 
 
 class Status__init(TestCase):
