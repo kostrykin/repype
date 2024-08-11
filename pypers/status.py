@@ -136,9 +136,13 @@ class StatusReader(FileSystemEventHandler):
             return
         
         else:
-            with open(filepath) as file:
-                data_frame.clear()
-                data_frame.extend(json.load(file))
+            try:
+                with open(filepath) as file:
+                    data_frame_backup = data_frame.copy()
+                    data_frame.clear()
+                    data_frame.extend(json.load(file))
+            except json.decoder.JSONDecodeError:
+                data_frame.extend(data_frame_backup)
 
             for item_idx, item in enumerate(data_frame):
                 if isinstance(item, dict) and 'expand' in item:
