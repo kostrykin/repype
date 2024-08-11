@@ -17,6 +17,7 @@ from pypers.typing import (
     FrozenSet,
     List,
     Optional,
+    PathLike,
     Self,
     TypeVar,
     Union,
@@ -24,7 +25,6 @@ from pypers.typing import (
 import yaml
 
 
-PathLike = TypeVar('PathLike', str, pathlib.Path)
 FileID = TypeVar('FileID', int, str)
 DataDictionary = Dict[str, Any]
 MultiDataDictionary = Dict[FileID, DataDictionary]
