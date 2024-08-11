@@ -58,6 +58,3 @@ jobs:
         github-auth: ${{ secrets.GITHUB_TOKEN }}
         gist-auth: ${{ secrets.GIST_SECRET }}
         gist-filename: pypers.json
-      env:
-        PYPERS_WATCHDOG_OBSERVER: polling
-        PYPERS_WATCHDOG_TIMEOUT: 3
