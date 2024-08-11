@@ -2,6 +2,7 @@ import contextlib
 import io
 import json
 import os
+import platform
 import tempfile
 import time
 from unittest import TestCase
@@ -194,7 +195,7 @@ class Statur__progress(TestCase):
     def test_break(self, path):
         intermediate_path = None
         status = Status(path = path)
-        for item_idx, item in enumerate(status.progress('description', range(3))):
+        for item_idx, item in (enumerate(generator := status.progress('description', range(3)))):
 
             if intermediate_path is None:
                 with open(status.filepath) as file:
@@ -217,6 +218,10 @@ class Statur__progress(TestCase):
                 )
 
             break
+
+        # Required when using PyPy, see https://stackoverflow.com/a/50091605/1444073
+        if platform.python_implementation() == 'PyPy':
+            generator.close()
 
         # Verify that there has been one iterations, i.e. `item_idx = 0`
         self.assertEqual(item_idx, 0)
