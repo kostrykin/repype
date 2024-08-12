@@ -429,8 +429,8 @@ class Task:
             first_stage = None
 
         # Announce the status of the task
-        pypers.status.write(
-            status,
+        pypers.status.update(
+            status = status,
             info = 'start',
             task = self.path.resolve(),
             pickup = pickup_info['task'].path.resolve() if pickup else None,
@@ -441,8 +441,8 @@ class Task:
         for file_idx, file_id in enumerate(self.file_ids):
             
             # Announce the status of the task
-            pypers.status.write(
-                status,
+            pypers.status.update(
+                status = status,
                 info = 'process',
                 task = self.path.resolve(),
                 file_id = file_id,
@@ -465,11 +465,10 @@ class Task:
             data[file_id] = data_chunk
 
         # Store the results for later pick up
-        pypers.status.write(status, '')
-        pypers.status.intermediate(status, info = 'storing')
+        pypers.status.update(status, info = 'storing', intermediate = True)
         self.store(pipeline, data, config)
-        pypers.status.write(
-            status,
+        pypers.status.update(
+            status = status,
             info = 'completed',
             path = self.data_filepath.resolve(),
         )
