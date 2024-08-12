@@ -1,4 +1,5 @@
 import dill
+import glob
 import gzip
 import hashlib
 import importlib
@@ -485,6 +486,9 @@ class Batch:
         self.tasks = dict()
 
     def task(self, path: PathLike, spec: Optional[dict] = None) -> Optional[Task]:
+        """
+        Retrieve a task by its path.
+        """
         path = pathlib.Path(path)
         task = self.tasks.get(path)
 
@@ -512,3 +516,12 @@ class Batch:
         else:
             assert task.spec == spec, f'{path}: Requested specification {spec} does not match previously loaded specification {task.spec}'
             return task
+        
+    def load(self, root_path: PathLike) -> None:
+        """
+        Load all tasks from a directory tree.
+        """
+        root_path = pathlib.Path(root_path)
+        assert root_path.is_dir()
+        for path in glob.glob(str(root_path / '**/task.yml'), recursive = True):
+            self.task(pathlib.Path(path).parent)

@@ -963,7 +963,7 @@ class Task__run(unittest.TestCase):
         mock_store.assert_called_once()
 
 
-def create_task_file(task_path, spec_yaml):
+def create_task_file(task_path: pypers.task.PathLike, spec_yaml: str) -> None:
     task_path = pathlib.Path(task_path)
     task_filepath = task_path / 'task.yml'
     if not task_path.is_dir():
@@ -1051,3 +1051,32 @@ class Batch__task(unittest.TestCase):
         # Verify task3
         self.assertIs(task3.parent, task2)
         self.assertEqual(task3.full_spec, dict(pipeline = 'pypers.pipeline.Pipeline', field1 = 'value1', field2 = 'value2'))
+
+
+class Batch__load(unittest.TestCase):
+
+    def setUp(self):
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.root_path = pathlib.Path(self.tempdir.name)
+        create_task_file(self.root_path, 'pipeline: pypers.pipeline.Pipeline')
+        create_task_file(self.root_path / 'task-2', 'field1: value1')
+        create_task_file(self.root_path / 'task-2' / 'task-3', 'field2: value2')
+        self.batch = pypers.task.Batch()
+
+    def tearDown(self):
+        self.tempdir.cleanup()
+
+    def test(self):
+        self.batch.load(self.root_path)
+        self.assertEqual(
+            [task.path for task in self.batch.tasks.values()],
+            [
+                self.root_path,
+                self.root_path / 'task-2',
+                self.root_path / 'task-2' / 'task-3',
+            ],
+        )
+
+    def test_illegal_path(self):
+        with self.assertRaises(AssertionError):
+            self.batch.load(self.root_path / 'task-3')
