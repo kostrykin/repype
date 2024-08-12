@@ -432,7 +432,6 @@ class Task:
         pypers.status.write(
             status,
             info = 'start',
-            status = status,
             task = self.path.resolve(),
             pickup = pickup_info['task'].path.resolve() if pickup else None,
             first_stage = first_stage,
