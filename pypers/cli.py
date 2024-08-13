@@ -9,6 +9,7 @@ from pypers.typing import (
     List,
     Optional,
     PathLike,
+    Type,
     Union,
 )
 
@@ -24,7 +25,7 @@ class StatusReaderConsoleAdapter(pypers.status.StatusReader):
         line = line.replace('\n', ' ')
         return line + ' ' * max((0, self._intermediate_line_length - len(line)))
 
-    def handle_new_data(self, parents: List[Union[str, dict]], positions: List[int], element: Optional[Union[str, dict]]):
+    def handle_new_status(self, parents: List[Union[str, dict]], positions: List[int], element: Optional[Union[str, dict]]):
         margin = ' ' * self.indent * len(positions)
         if element is not None:
 
@@ -44,8 +45,13 @@ class StatusReaderConsoleAdapter(pypers.status.StatusReader):
             print(self._clear_line(''), end='\r')
             self._intermediate_line_length = 0
 
+    def format(self, status: Union[str, dict]) -> str:
+        pass
 
-def run_cli() -> bool:
+
+def run_cli(
+        status_reader_cls: Type[pypers.status.StatusReader] = StatusReaderConsoleAdapter,
+    ) -> bool:
 
     if parser is None:
         import argparse
@@ -65,7 +71,14 @@ def run_cli() -> bool:
     )
 
 
-def run_cli_ex(path: PathLike, run: bool = False, tasks: List[PathLike] = list(), task_dirs: List[PathLike] = list()) -> bool:
+def run_cli_ex(
+        path: PathLike,
+        run: bool = False,
+        tasks: List[PathLike] = list(),
+        task_dirs: List[PathLike] = list(),
+        status_reader_cls: Type[pypers.status.StatusReader] = StatusReaderConsoleAdapter,
+    ) -> bool:
+
     path  = pathlib.Path(path).resolve()
     batch = pypers.batch.Batch()
     batch.load(path)
@@ -89,7 +102,7 @@ def run_cli_ex(path: PathLike, run: bool = False, tasks: List[PathLike] = list()
             run = run,
         )
 
-        with StatusReaderConsoleAdapter(status.filepath):
+        with status_reader_cls(status.filepath):
 
             if run:
                 return batch.run(contexts, status = status)
