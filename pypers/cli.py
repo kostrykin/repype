@@ -16,9 +16,9 @@ from pypers.typing import (
 class StatusReaderConsoleAdapter(pypers.status.StatusReader):
 
     def __init__(self, *args, indent: int = 2, **kwargs):
-        super().__init__(*args, **kwargs)
         self.indent = indent
         self._intermediate_line_length = 0
+        super().__init__(*args, **kwargs)
 
     def _clear_line(self, line: str) -> str:
         line = line.replace('\n', ' ')
@@ -29,7 +29,7 @@ class StatusReaderConsoleAdapter(pypers.status.StatusReader):
         if element is not None:
 
             # Print an intermediate line
-            if isinstance(element, dict) and element['content_type'] == 'intermediate':
+            if isinstance(element, dict) and element.get('content_type') == 'intermediate':
                 line = margin + str(element['content'])  # FIXME: Handle `Status.progress`
                 print(self._clear_line(line), end='\r')
                 self._intermediate_line_length = len(line)
