@@ -274,56 +274,56 @@ class StatusReader__init(TestCase):
     def tearDown(self):
         self.tempdir.cleanup()
 
-    @patch.object(StatusReader, 'handle_new_data')
-    def test_without_intermediates(self, mock_handle_new_data):
+    @patch.object(StatusReader, 'handle_new_status')
+    def test_without_intermediates(self, mock_handle_new_status):
         with StatusReader(self.status1.filepath) as status:
             self.assertEqual(status, ['write1', ['write2']])
 
             wait_for_watchdog()
             self.assertEqual(
-                mock_handle_new_data.call_args_list,
+                mock_handle_new_status.call_args_list,
                 [
                     call([['write1', ['write2']]], [0], 'write1'),
                     call([['write1', ['write2']], ['write2']], [1, 0], 'write2'),
                 ]
             )
 
-            mock_handle_new_data.reset_mock()
+            mock_handle_new_status.reset_mock()
             self.status2.write('write3')
             wait_for_watchdog()
             self.assertEqual(status, ['write1', ['write2', 'write3']])
             self.assertEqual(
-                mock_handle_new_data.call_args_list,
+                mock_handle_new_status.call_args_list,
                 [
                     call([['write1', ['write2', 'write3']], ['write2', 'write3']], [1, 1], 'write3'),
                 ]
             )
 
-            mock_handle_new_data.reset_mock()
+            mock_handle_new_status.reset_mock()
             status3 = self.status1.derive()
             status3.write('write4')
             wait_for_watchdog()
             self.assertEqual(status, ['write1', ['write2', 'write3'], ['write4']])
             self.assertEqual(
-                mock_handle_new_data.call_args_list,
+                mock_handle_new_status.call_args_list,
                 [
                     call([['write1', ['write2', 'write3'], ['write4']], ['write4']], [2, 0], 'write4'),
                 ]
             )
 
-            mock_handle_new_data.reset_mock()
+            mock_handle_new_status.reset_mock()
             self.status1.write('write5')
             wait_for_watchdog()
             self.assertEqual(status, ['write1', ['write2', 'write3'], ['write4'], 'write5'])
             self.assertEqual(
-                mock_handle_new_data.call_args_list,
+                mock_handle_new_status.call_args_list,
                 [
                     call([['write1', ['write2', 'write3'], ['write4'], 'write5']], [3], 'write5'),
                 ]
             )
 
-    @patch.object(StatusReader, 'handle_new_data')
-    def test_with_intermediates(self, mock_handle_new_data):
+    @patch.object(StatusReader, 'handle_new_status')
+    def test_with_intermediates(self, mock_handle_new_status):
         with StatusReader(self.status1.filepath) as status:
             self.assertEqual(status, ['write1', ['write2']])
 
@@ -331,7 +331,7 @@ class StatusReader__init(TestCase):
             wait_for_watchdog()
             self.assertEqual(status, ['write1', ['write2', 'write3']])
 
-            mock_handle_new_data.reset_mock()
+            mock_handle_new_status.reset_mock()
             self.status2.intermediate('interm1')
             wait_for_watchdog()
             self.assertEqual(
@@ -349,7 +349,7 @@ class StatusReader__init(TestCase):
                 ],
             )
             self.assertEqual(
-                mock_handle_new_data.call_args_list,
+                mock_handle_new_status.call_args_list,
                 [
                     call(
                         [
@@ -382,7 +382,7 @@ class StatusReader__init(TestCase):
                 ]
             )
 
-            mock_handle_new_data.reset_mock()
+            mock_handle_new_status.reset_mock()
             self.status2.intermediate('interm2')
             wait_for_watchdog()
             self.assertEqual(
@@ -400,7 +400,7 @@ class StatusReader__init(TestCase):
                 ],
             )
             self.assertEqual(
-                mock_handle_new_data.call_args_list,
+                mock_handle_new_status.call_args_list,
                 [
                     call(
                         [
@@ -433,7 +433,7 @@ class StatusReader__init(TestCase):
                 ]
             )
 
-            mock_handle_new_data.reset_mock()
+            mock_handle_new_status.reset_mock()
             self.status2.intermediate(None)
             wait_for_watchdog()
             self.assertEqual(
@@ -447,7 +447,7 @@ class StatusReader__init(TestCase):
                 ],
             )
             self.assertEqual(
-                mock_handle_new_data.call_args_list,
+                mock_handle_new_status.call_args_list,
                 [
                     call(
                         [
@@ -472,11 +472,11 @@ class StatusReader__init(TestCase):
                 ]
             )
 
-            mock_handle_new_data.reset_mock()
+            mock_handle_new_status.reset_mock()
             self.status2.write('write4')
             wait_for_watchdog()
             self.assertEqual(
-                mock_handle_new_data.call_args_list,
+                mock_handle_new_status.call_args_list,
                 [
                     call(
                         [

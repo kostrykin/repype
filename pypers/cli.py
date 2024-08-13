@@ -15,38 +15,67 @@ from pypers.typing import (
 
 
 class StatusReaderConsoleAdapter(pypers.status.StatusReader):
+    """
+    Writes status updates to stdout.
+    """
 
     def __init__(self, *args, indent: int = 2, **kwargs):
         self.indent = indent
         self._intermediate_line_length = 0
         super().__init__(*args, **kwargs)
 
-    def _clear_line(self, line: str) -> str:
+    def clear_line(self, line: str) -> str:
         line = line.replace('\n', ' ')
         return line + ' ' * max((0, self._intermediate_line_length - len(line)))
 
     def handle_new_status(self, parents: List[Union[str, dict]], positions: List[int], element: Optional[Union[str, dict]]):
-        margin = ' ' * self.indent * len(positions)
         if element is not None:
 
             # Print an intermediate line
             if isinstance(element, dict) and element.get('content_type') == 'intermediate':
-                line = margin + str(element['content'])  # FIXME: Handle `Status.progress`
-                print(self._clear_line(line), end='\r')
+                line = self.format_line(parents, positions, element.get('content', ''), intermediate = True)
+                print(line, end='\r')
                 self._intermediate_line_length = len(line)
 
             # Print a regular line
             else:
-                print(self._clear_line(margin + str(element)), end='\r')
+                print(self.format_line(parents, positions, element, intermediate = False))
                 self._intermediate_line_length = 0
 
         # Clear the intermediate line
         else:
-            print(self._clear_line(''), end='\r')
+            print(self.clear_line(''), end='\r')
             self._intermediate_line_length = 0
 
-    def format(self, status: Union[str, dict]) -> str:
-        pass
+    def format_line(self, parents: List[Union[str, dict]], positions: List[int], status: Union[str, dict], intermediate: bool) -> str:
+        text = str(self.format(parents, positions, status, intermediate))
+
+        # Console output only supports single-line intermediates
+        if intermediate:
+            text = text.replace('\n', ' ')
+
+        # Indent all lines
+        margin = ' ' * self.indent * (len(positions) - 1)
+        lines = [margin + line for line in text.split('\n')]
+        lines[0] = self.clear_line(lines[0])
+        return '\n'.join(lines)
+
+    def format(self, parents: List[Union[str, dict]], positions: List[int], status: Union[str, dict], intermediate: bool) -> str:
+        if isinstance(status, dict):
+
+            text = None
+
+            if 'batch' in status:
+                 text = '\n' f'{len(status["batch"])} task(s) selected for running'
+                 if not status['run']:
+                     text += '\n' 'DRY RUN: use "--run" to run the tasks instead'
+
+            # FIXME: Handle `Status.progress` here
+
+            return text if text else status
+            
+        else:
+            return status
 
 
 def run_cli(
