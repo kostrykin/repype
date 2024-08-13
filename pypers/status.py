@@ -318,7 +318,7 @@ class StatusReader(FileSystemEventHandler):
             self.handle_new_data(*self._intermediate)
             self._intermediate = None
 
-    def handle_new_data(self, parents: List[Union[str, dict]], positions, element):
+    def handle_new_data(self, parents: List[Union[str, dict]], positions: List[int], element: Optional[Union[str, dict]]):
         pass
     
 
