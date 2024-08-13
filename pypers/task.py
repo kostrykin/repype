@@ -7,6 +7,7 @@ import json
 import os
 import pathlib
 import re
+import traceback
 
 from deprecated import deprecated
 import frozendict
@@ -407,13 +408,15 @@ class Task:
     def run(
             self,
             config: pypers.config.Config,
+            pipeline: Optional[pypers.pipeline.Pipeline] = None,
             pickup: bool = True,
             strip_marginals: bool = True,
             status: Optional[pypers.status.Status] = None,
         ) -> MultiDataDictionary:
 
         assert self.runnable
-        pipeline = self.create_pipeline()
+        if pipeline is None:
+            pipeline = self.create_pipeline()
 
         # Find a task and stage to pick up from
         if pickup:
@@ -480,6 +483,18 @@ class Task:
         return f'Task({self.path}, {config.sha.hexdigest()[:7]})'
     
 
+class RunContext:
+    """
+    The pipeline and the hyperparameters used to run a task.
+    """
+
+    def __init__(self, task):
+        assert task.runnable
+        self.task = task
+        self.pipeline = task.create_pipeline()
+        self.config = task.create_config()
+
+
 class Batch:
 
     def __init__(self):
@@ -525,3 +540,62 @@ class Batch:
         assert root_path.is_dir()
         for path in glob.glob(str(root_path / '**/task.yml'), recursive = True):
             self.task(pathlib.Path(path).parent)
+
+    @property
+    def contexts(self) -> List[RunContext]:
+        """
+        Get a list of run contexts for all tasks.
+        """
+        return [RunContext(task) for task in self.tasks.values() if task.runnable]
+    
+    @property
+    def pending(self) -> List[RunContext]:
+        """
+        Get a list of run contexts for all pending tasks.
+        """
+        return [rc for rc in self.run_contexts if rc.task.is_pending(rc.pipeline, rc.config)]
+
+    def run(self, status: Optional[pypers.status.Status] = None) -> bool:
+        """
+        Run all pending tasks.
+
+        Each task is run in a forked process.
+        This ensures that each task runs with a clean environment, and no memory is leaked in between of tasks.
+
+        Returns:
+            bool: True if all tasks were completed successfully, and False otherwise
+        """
+        for rc_idx, rc in enumerate(self.pending):
+            task_status = status.derive()
+
+            pypers.status.update(
+                status = task_status,
+                info = 'enter',
+                task = rc.task.path.resolve(),
+                step = rc_idx,
+                step_count = len(self.pending),
+            )
+
+            # Run the task in a forked process
+            newpid = os.fork()
+            if newpid == 0:
+
+                # Run the task
+                try:
+                    rc.task.run(rc.config, pipeline = rc.pipeline, status = task_status)
+
+                # If an exception occurs, update the status and re-raise the exception
+                except:
+                    pypers.status.update(
+                        status = task_status,
+                        info = 'error',
+                        traceback = traceback.format_exc(),
+                    )
+                    raise
+
+                # Exit the child process
+                os._exit(0)
+
+            # Wait for the child process to finish
+            else:
+                return os.waitpid(newpid, 0)[1] == 0
