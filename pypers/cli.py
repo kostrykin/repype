@@ -7,41 +7,42 @@ import pypers.batch
 import pypers.status
 from pypers.typing import (
     List,
+    Optional,
     PathLike,
+    Union,
 )
 
 
-class StdOutReader(pypers.status.StatusReader):
+class StatusReaderConsoleAdapter(pypers.status.StatusReader):
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args, indent: int = 2, **kwargs):
         super().__init__(*args, **kwargs)
-        self.cursor = []
+        self.indent = indent
+        self._intermediate_line_length = 0
 
-    def on_modified(self, event) -> None:
-        super().on_modified(event)
-        self.update_output()
+    def _clear_line(self, line: str) -> str:
+        line = line.replace('\n', ' ')
+        return line + ' ' * max((0, self._intermediate_line_length - len(line)))
 
-    # def get_data_element(self, cursor):
-    #     parents = list()
-    #     data = self.data
-    #     for c in cursor:
-    #         parents.append(data)
-    #         data = data[c]
-    #     return parents, data
+    def handle_new_data(self, parents: List[Union[str, dict]], positions: List[int], element: Optional[Union[str, dict]]):
+        margin = ' ' * self.indent * len(positions)
+        if element is not None:
 
-    def get_parents(self, cursor):
-        parents = list()
-        data = self.data
-        for c in cursor:
-            parents.append(data)
-            data = data[c]
-        return parents
+            # Print an intermediate line
+            if isinstance(element, dict) and element['content_type'] == 'intermediate':
+                line = margin + str(element['content'])  # FIXME: Handle `Status.progress`
+                print(self._clear_line(line), end='\r')
+                self._intermediate_line_length = len(line)
 
-    def update_output(self):
-        parents = self.get_parents(self.cursor)
-        if len(parents) > 0 and self.cursor[-1] + 1 < parents[-1]:
-            self.cursor[-1] += 1
-            self.explore(parents[-1][self.cursor[-1]])
+            # Print a regular line
+            else:
+                print(self._clear_line(margin + str(element)), end='\r')
+                self._intermediate_line_length = 0
+
+        # Clear the intermediate line
+        else:
+            print(self._clear_line(''), end='\r')
+            self._intermediate_line_length = 0
 
 
 def run_cli() -> bool:
@@ -88,7 +89,7 @@ def run_cli_ex(path: PathLike, run: bool = False, tasks: List[PathLike] = list()
             run = run,
         )
 
-        with StdOutReader(status.filepath):
+        with StatusReaderConsoleAdapter(status.filepath):
 
             if run:
                 return batch.run(contexts, status = status)
