@@ -6,6 +6,10 @@ import platform
 import tempfile
 import time
 from unittest import TestCase
+from unittest.mock import (
+    call,
+    patch,
+)
 
 from pypers.status import Status, StatusReader
 from . import testsuite
@@ -90,8 +94,8 @@ class Status__write_intermediate(TestCase):
             data = json.load(file)
             self.assertEqual(len(data), 2)
             self.assertEqual(data[0], 'write')
-            self.assertEqual(list(data[1].keys()), ['expand', 'scope'])
-            self.assertEqual(data[1]['scope'], 'intermediate')
+            self.assertEqual(list(data[1].keys()), ['expand', 'content_type'])
+            self.assertEqual(data[1]['content_type'], 'intermediate')
         with open(data[1]['expand']) as file:
             data = json.load(file)
             self.assertEqual(data, ['intermediate'])
@@ -270,7 +274,25 @@ class StatusReader__init(TestCase):
     def tearDown(self):
         self.tempdir.cleanup()
 
-    def test_intermediates(self):
+    @patch.object(StatusReader, 'handle_new_data')
+    def test_without_intermediates(self, mock_handle_new_data):
+        with StatusReader(self.status1.filepath) as status:
+            self.assertEqual(status, ['write1', ['write2']])
+
+            self.status2.write('write3')
+            wait_for_watchdog()
+            self.assertEqual(status, ['write1', ['write2', 'write3']])
+            self.assertEqual(
+                mock_handle_new_data.call_args_list,
+                [
+                    call([['write1', ['write2', 'write3']]], 0, 'write1'),
+                    call([['write1', ['write2', 'write3']], ['write2', 'write3']], 0, 'write2'),
+                    call([['write1', ['write2', 'write3']], ['write2', 'write3']], 1, 'write3'),
+                ]
+            )
+
+    @patch.object(StatusReader, 'handle_new_data')
+    def test_with_intermediates(self, mock_handle_new_data):
         with StatusReader(self.status1.filepath) as status:
             self.assertEqual(status, ['write1', ['write2']])
 
@@ -288,7 +310,7 @@ class StatusReader__init(TestCase):
                         'write2',
                         'write3',
                         dict(
-                            scope = 'intermediate',
+                            content_type = 'intermediate',
                             content = ['interm1'],
                         ),
                     ],
@@ -305,7 +327,7 @@ class StatusReader__init(TestCase):
                         'write2',
                         'write3',
                         dict(
-                            scope = 'intermediate',
+                            content_type = 'intermediate',
                             content = ['interm2'],
                         ),
                     ],

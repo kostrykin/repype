@@ -3,6 +3,7 @@ import pathlib
 from .typing import (
     Iterable,
     Iterator,
+    List,
     Optional,
     PathLike,
     Self,
@@ -40,7 +41,7 @@ class Status:
             data = self.data + [
                 dict(
                     expand = str(self._intermediate.filepath),
-                    scope = 'intermediate',
+                    content_type = 'intermediate',
                 ),
             ]
         else:
@@ -108,6 +109,7 @@ class StatusReader(FileSystemEventHandler):
         self.filepath = pathlib.Path(filepath).resolve()
         self.data = list()
         self.data_frames = {self.filepath: self.data}
+        self.cursor = [-1]
         self.update(self.filepath)
 
     def __enter__(self) -> dict:
@@ -146,10 +148,10 @@ class StatusReader(FileSystemEventHandler):
                         child_data_frame = list()
                         self.data_frames[filepath] = child_data_frame
 
-                    scope = item.get('scope')
-                    if scope is not None:
+                    content_type = item.get('content_type')
+                    if content_type is not None:
                         data_frame[item_idx] = dict(
-                            scope = scope,
+                            content_type = content_type,
                             content = child_data_frame,
                         )
                     else:
@@ -160,6 +162,32 @@ class StatusReader(FileSystemEventHandler):
         if isinstance(event, FileModifiedEvent):
             filepath = pathlib.Path(event.src_path).resolve()
             self.update(filepath)
+            for clen in range(len(self.cursor), 0, -1):
+                c = self.cursor[:clen]
+                self.check_new_data(c)
+                self.cursor[:clen] = c
+
+    def get_elements(self, cursor):
+        elements = [self.data]
+        for c in cursor:
+            elements.append(elements[-1][c])
+        return elements
+
+    def check_new_data(self, cursor):
+        parents = self.get_elements(cursor[:-1])
+        while cursor[-1] + 1 < len(parents[-1]):
+            cursor[-1] += 1
+            self.explore(cursor, parents, parents[-1][cursor[-1]])
+
+    def explore(self, cursor, parents, element):
+        if isinstance(element, list):
+            cursor.append(-1)
+            self.check_new_data(cursor)
+        else:
+            self.handle_new_data(parents, cursor[-1], element)
+
+    def handle_new_data(self, parents: List[Union[str, dict]], position, element):
+        pass
     
 
 # Define some shortcuts
