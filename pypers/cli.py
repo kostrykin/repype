@@ -65,10 +65,25 @@ class StatusReaderConsoleAdapter(pypers.status.StatusReader):
 
             text = None
 
-            if 'batch' in status:
+            if status.get('info') == 'batch':
                  text = '\n' f'{len(status["batch"])} task(s) selected for running'
                  if not status['run']:
                      text += '\n' 'DRY RUN: use "--run" to run the tasks instead'
+
+            if status.get('info') == 'enter':
+                text = f'\n\n({status["step"] + 1}/{status["step_count"] + 1}) Entering task: {status["task"]}'
+
+            if status.get('info') == 'start':
+                if status['pickup'] or status['first_stage']:
+                    text = f'Picking up from: {status["pickup"]} ({status["first_stage"]})'
+                else:
+                    text = 'Starting from scratch'
+
+            if status.get('info') == 'storing':
+                text = f'Storing results...'
+
+            if status.get('info') == 'completed':
+                text = f'Results have been stored'
 
             # FIXME: Handle `Status.progress` here
 
@@ -127,6 +142,7 @@ def run_cli_ex(
         status = pypers.status.Status(path = status_directory_path)
         pypers.status.update(
             status = status,
+            info = 'batch',
             batch = [str(rc.task.path.resolve()) for rc in contexts],
             run = run,
         )

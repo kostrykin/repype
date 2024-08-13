@@ -1,7 +1,16 @@
 import json
 import pathlib
 import hashlib
-from .typing import (
+import time
+import uuid
+
+from watchdog.observers import Observer
+from watchdog.events import (
+    FileModifiedEvent,
+    FileSystemEventHandler,
+)
+
+from pypers.typing import (
     Iterable,
     Iterator,
     List,
@@ -9,13 +18,6 @@ from .typing import (
     PathLike,
     Self,
     Union,
-)
-import uuid
-
-from watchdog.observers import Observer
-from watchdog.events import (
-    FileModifiedEvent,
-    FileSystemEventHandler,
 )
 
 
@@ -266,6 +268,7 @@ class StatusReader(FileSystemEventHandler):
         return self.data
     
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        time.sleep(1)  # Give the WatchDog observer some extra time
         self.observer.stop()
         self.observer.join()
 

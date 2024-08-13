@@ -138,6 +138,6 @@ class Batch:
 
                     # Interrupt task execution due to an error
                     return False
-                
+
         # All tasks were completed successfully
         return True
