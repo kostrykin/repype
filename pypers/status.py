@@ -104,6 +104,9 @@ class Status:
     
 
 class Cursor:
+    """
+    A cursor to navigate a nested list structures.
+    """
 
     def __init__(self, data: Optional[list] = None, other: Optional[Self] = None):
         assert (data is None) != (other is None)
@@ -114,14 +117,28 @@ class Cursor:
             self.data = other.data
             self.path = list(other.path)
 
-    def increment(self) -> Self:
+    def increment(self) -> Optional[Self]:
+        """
+        Move the cursor to the next sibling.
+
+        Returns:
+            Cursor: The cursor, if it points to a valid element, or None otherwise.
+        """
         self.path[-1] += 1
         if self.valid:
             return self
         else:
             return None
         
-    def find_next_child_or_sibling(self) -> Self:
+    def find_next_child_or_sibling(self) -> Optional[Self]:
+        """
+        Return a cursor to the next child or sibling.
+
+        This cursor is not changed, but a new cursor is returned.
+
+        Returns:
+            Cursor: The cursor to the next child or sibling, if such exists, or None otherwise.
+        """
         cursor = Cursor(other = self)
         if not cursor.increment():
             return None
@@ -135,7 +152,19 @@ class Cursor:
             else:
                 return cursor
             
-    def find_next_element(self) -> Self:
+    def find_next_element(self) -> Optional[Self]:
+        """
+        Return a cursor to the next element.
+
+        Precedentially, the next element is the next child or subling.
+        If no next child or subling exists, then the next element is the next sibling of the parent.
+        If no next sibling of the parent exists, then the next element is the next sibling of the grandparent, and so on.
+
+        This cursor is not changed, but a new cursor is returned.
+
+        Returns:
+            Cursor: The cursor to the next element, if such exists, or None otherwise.
+        """
         cursor = self.find_next_child_or_sibling()
         if cursor:
             return cursor
@@ -148,6 +177,12 @@ class Cursor:
         return None
 
     def get_elements(self) -> Optional[List[list]]:
+        """
+        Get the sequence of elements which represent the path to the element, that this cursor points to.
+
+        Returns:
+            List[list]: The sequence of elements, if the cursor points to a valid element, or None otherwise.
+        """
         elements = [self.data]
         for pos in self.path:
             try:
@@ -158,10 +193,16 @@ class Cursor:
     
     @property
     def valid(self) -> bool:
+        """
+        Check if the cursor points to a valid element.
+        """
         return self.get_elements() is not None
     
     @property
     def parent(self) -> Self:
+        """
+        Get the cursor to the parent element.
+        """
         if len(self.path) > 1:
             parent = Cursor(other = self)
             parent.path.pop()
@@ -171,6 +212,9 @@ class Cursor:
     
     @property
     def parents(self) -> Iterator[Self]:
+        """
+        List of cursors to the parent elements.
+        """
         cursor = self.parent
         while cursor is not None:
             yield cursor
