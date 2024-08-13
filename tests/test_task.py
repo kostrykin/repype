@@ -1,7 +1,9 @@
 import dill
 import gzip
 import json
+import os
 import pathlib
+import pprint
 import tempfile
 import unittest
 from unittest.mock import (
@@ -12,6 +14,7 @@ from unittest.mock import (
 import pypers.pipeline
 import pypers.task
 from . import testsuite
+import pypers.status
 
 
 class decode_file_ids(unittest.TestCase):
@@ -1080,3 +1083,43 @@ class Batch__load(unittest.TestCase):
     def test_illegal_path(self):
         with self.assertRaises(AssertionError):
             self.batch.load(self.root_path / 'task-3')
+
+
+class Batch__run(unittest.TestCase):
+
+    stage1_cls = testsuite.create_stage_class(id = 'stage1')
+    stage2_cls = testsuite.create_stage_class(id = 'stage2')
+
+    def setUp(self):
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.root_path = pathlib.Path(self.tempdir.name)
+        create_task_file(
+            self.root_path,
+            'runnable: true' '\n'
+            'pipeline:' '\n'
+            '- tests.test_task.Task__create_pipeline.stage1_cls' '\n'
+            '- tests.test_task.Task__create_pipeline.stage2_cls' '\n'
+        )
+        create_task_file(
+            self.root_path / 'task-2',
+            'stage1:' '\n'
+            '  key1: value1' '\n'
+        )
+        create_task_file(
+            self.root_path / 'task-3',
+            'stage2:' '\n'
+            '  key2: value2' '\n'
+        )
+        self.batch = pypers.task.Batch()
+        self.batch.load(self.root_path)
+        self.testsuite_pid = os.getpid()
+
+    def tearDown(self):
+        if os.getpid() == self.testsuite_pid:
+            self.tempdir.cleanup()
+
+    @testsuite.with_temporary_paths(1)
+    def test(self, path):
+        status = pypers.status.Status(path = path)
+        self.batch.run(status = status)
+        self.assertEqual([list(item.keys()) for item in status.data], [['expand']] * 3, '\n' + pprint.pformat(status.data))

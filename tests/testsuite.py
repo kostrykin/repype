@@ -1,5 +1,6 @@
-from collections.abc import Sequence
+import os
 import pathlib
+import shutil
 import tempfile
 
 import pypers.pipeline
@@ -8,12 +9,14 @@ import pypers.pipeline
 def with_temporary_paths(count: int):
     def decorator(test_func):
         def wrapper(self, *args, **kwargs):
-            paths = [tempfile.TemporaryDirectory() for _ in range(count)]
+            testsuite_pid = os.getpid()
+            paths = [tempfile.mkdtemp() for _ in range(count)]
             try:
-                ret = test_func(self, *[pathlib.Path(path.name) for path in paths], *args, **kwargs)
+                ret = test_func(self, *[pathlib.Path(path) for path in paths], *args, **kwargs)
             finally:
-                for path in paths:
-                    path.cleanup()
+                if os.getpid() == testsuite_pid:
+                    for path in paths:
+                        shutil.rmtree(path)
             return ret
         return wrapper
     return decorator

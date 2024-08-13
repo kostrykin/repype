@@ -436,8 +436,8 @@ class Task:
         pypers.status.update(
             status = status,
             info = 'start',
-            task = self.path.resolve(),
-            pickup = pickup_info['task'].path.resolve() if pickup else None,
+            task = str(self.path.resolve()),
+            pickup = str(pickup_info['task'].path.resolve()) if pickup else None,
             first_stage = first_stage,
         )
 
@@ -448,7 +448,7 @@ class Task:
             pypers.status.update(
                 status = status,
                 info = 'process',
-                task = self.path.resolve(),
+                task = str(self.path.resolve()),
                 file_id = file_id,
                 step = file_idx,
                 step_count = len(self.file_ids),
@@ -474,7 +474,7 @@ class Task:
         pypers.status.update(
             status = status,
             info = 'completed',
-            path = self.data_filepath.resolve(),
+            task = str(self.path.resolve()),
         )
         return data
     
@@ -553,7 +553,7 @@ class Batch:
         """
         Get a list of run contexts for all pending tasks.
         """
-        return [rc for rc in self.run_contexts if rc.task.is_pending(rc.pipeline, rc.config)]
+        return [rc for rc in self.contexts if rc.task.is_pending(rc.pipeline, rc.config)]
 
     def run(self, status: Optional[pypers.status.Status] = None) -> bool:
         """
@@ -571,7 +571,7 @@ class Batch:
             pypers.status.update(
                 status = task_status,
                 info = 'enter',
-                task = rc.task.path.resolve(),
+                task = str(rc.task.path.resolve()),
                 step = rc_idx,
                 step_count = len(self.pending),
             )
@@ -580,22 +580,31 @@ class Batch:
             newpid = os.fork()
             if newpid == 0:
 
-                # Run the task
+                # Run the task and exit the child process
                 try:
                     rc.task.run(rc.config, pipeline = rc.pipeline, status = task_status)
+                    os._exit(0)  # Indicate success to the parent process
 
                 # If an exception occurs, update the status and re-raise the exception
                 except:
                     pypers.status.update(
                         status = task_status,
                         info = 'error',
+                        task = str(rc.task.path.resolve()),
                         traceback = traceback.format_exc(),
                     )
-                    raise
-
-                # Exit the child process
-                os._exit(0)
+                    os._exit(1)  # Indicate a failure to the parent process
 
             # Wait for the child process to finish
             else:
-                return os.waitpid(newpid, 0)[1] == 0
+                if os.waitpid(newpid, 0)[1] != 0:
+                    pypers.status.update(
+                        status = status,
+                        info = 'interrupted',
+                    )
+
+                    # Interrupt task execution due to an error
+                    return False
+                
+        # All tasks were completed successfully
+        return True
