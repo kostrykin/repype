@@ -380,7 +380,7 @@ class StatusReader__init(TestCase):
                         ),
                     ),
                 ] * 2  # The update occurs twice, once triggered by the `status2` object, and once by the `_intermediate` object
-            )
+            ), str(mock_handle_new_data.call_args_list)
 
             mock_handle_new_data.reset_mock()
             self.status2.intermediate('interm2')
