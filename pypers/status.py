@@ -1,5 +1,6 @@
 import json
 import pathlib
+import hashlib
 from .typing import (
     Iterable,
     Iterator,
@@ -105,7 +106,7 @@ class Status:
 
 class Cursor:
     """
-    A cursor to navigate a nested list structures.
+    A cursor to navigate nested list structures.
     """
 
     def __init__(self, data: Optional[list] = None, other: Optional[Self] = None):
@@ -240,6 +241,7 @@ class StatusReader(FileSystemEventHandler):
         self.filepath = pathlib.Path(filepath).resolve()
         self.data = list()
         self.data_frames = {self.filepath: self.data}
+        self.file_hashes = dict()
         self.cursor = Cursor(self.data)
         self._intermediate = None
         self.update(self.filepath)
@@ -255,17 +257,25 @@ class StatusReader(FileSystemEventHandler):
         self.observer.stop()
         self.observer.join()
 
-    def update(self, filepath: pathlib.Path) -> None:
+    def update(self, filepath: pathlib.Path) -> bool:
         data_frame = self.data_frames.get(filepath)
 
         if data_frame is None:
-            return
+            return False  # No update has been performed
         
         else:
+            # Check the file hash, whether the content of the file changed at all
+            with filepath.open('rb') as file:
+                sha = hashlib.file_digest(file, hashlib.sha1).hexdigest()
+                if self.file_hashes.get(filepath) == sha:
+                    return False  # No update has been performed
+                else:
+                    self.file_hashes[filepath] = sha
+
             # Load the data from the file, and revert in case of JSON decoding errors
             # These can occur due to the file being written to while being read, or unfavorable buffer sizes
             try:
-                with open(filepath) as file:
+                with filepath.open('r') as file:
                     data_frame_backup = data_frame.copy()
                     data_frame.clear()
                     data_frame.extend(json.load(file))
@@ -290,12 +300,14 @@ class StatusReader(FileSystemEventHandler):
                     else:
                         data_frame[item_idx] = child_data_frame
                     self.update(filepath)
+            
+            return True
 
     def on_modified(self, event) -> None:
         if isinstance(event, FileModifiedEvent):
             filepath = pathlib.Path(event.src_path).resolve()
-            self.update(filepath)
-            self.check_new_data()
+            if self.update(filepath):
+                self.check_new_data()
 
     def check_new_data(self) -> None:
         new_data = False
