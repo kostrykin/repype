@@ -15,6 +15,7 @@ from pypers.typing import (
     Any,
     Dict,
     FrozenSet,
+    Iterator,
     List,
     Optional,
     PathLike,
@@ -134,7 +135,7 @@ class Task:
             return frozendict.deepfreeze(json.load(digest_task_file))
         
     @property
-    def parents(self):
+    def parents(self) -> Iterator[Self]:
         """
         Generator which yields all parent tasks of this task, starting with the immediate parent.
         """

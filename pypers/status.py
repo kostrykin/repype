@@ -103,14 +103,90 @@ class Status:
         return status
     
 
+class Cursor:
+
+    def __init__(self, data: Optional[list] = None, other: Optional[Self] = None):
+        assert (data is None) != (other is None)
+        if other is None:
+            self.data = data
+            self.path = [-1]
+        else:
+            self.data = other.data
+            self.path = list(other.path)
+
+    def increment(self) -> Self:
+        self.path[-1] += 1
+        if self.valid:
+            return self
+        else:
+            return None
+        
+    def find_next_child_or_sibling(self) -> Self:
+        cursor = Cursor(other = self)
+        if not cursor.increment():
+            return None
+        
+        else:
+            new_element = cursor.get_elements()[-1]
+            if isinstance(new_element, list):
+                cursor.path.append(-1)
+                return cursor.find_next_child_or_sibling()
+            
+            else:
+                return cursor
+            
+    def find_next_element(self) -> Self:
+        cursor = self.find_next_child_or_sibling()
+        if cursor:
+            return cursor
+        
+        for parent in self.parents:
+            cursor = parent.find_next_child_or_sibling()
+            if cursor:
+                return cursor
+            
+        return None
+
+    def get_elements(self) -> Optional[List[list]]:
+        elements = [self.data]
+        for pos in self.path:
+            try:
+                elements.append(elements[-1][pos])
+            except IndexError:
+                return None
+        return elements
+    
+    @property
+    def valid(self) -> bool:
+        return self.get_elements() is not None
+    
+    @property
+    def parent(self) -> Self:
+        if len(self.path) > 1:
+            parent = Cursor(other = self)
+            parent.path.pop()
+            return parent
+        else:
+            return None
+    
+    @property
+    def parents(self) -> Iterator[Self]:
+        cursor = self.parent
+        while cursor is not None:
+            yield cursor
+            cursor = cursor.parent
+
+    
+
 class StatusReader(FileSystemEventHandler):
 
     def __init__(self, filepath: PathLike):
         self.filepath = pathlib.Path(filepath).resolve()
         self.data = list()
         self.data_frames = {self.filepath: self.data}
-        self.cursor = [-1]
+        self.cursor = Cursor(self.data)
         self.update(self.filepath)
+        self.check_new_data()
 
     def __enter__(self) -> dict:
         self.observer = Observer()
@@ -162,31 +238,15 @@ class StatusReader(FileSystemEventHandler):
         if isinstance(event, FileModifiedEvent):
             filepath = pathlib.Path(event.src_path).resolve()
             self.update(filepath)
-            for clen in range(len(self.cursor), 0, -1):
-                c = self.cursor[:clen]
-                self.check_new_data(c)
-                self.cursor[:clen] = c
+            self.check_new_data()
 
-    def get_elements(self, cursor):
-        elements = [self.data]
-        for c in cursor:
-            elements.append(elements[-1][c])
-        return elements
+    def check_new_data(self) -> None:
+        while (cursor := self.cursor.find_next_element()):
+            self.cursor = cursor
+            elements = self.cursor.get_elements()
+            self.handle_new_data(elements[:-1], self.cursor.path, elements[-1])
 
-    def check_new_data(self, cursor):
-        parents = self.get_elements(cursor[:-1])
-        while cursor[-1] + 1 < len(parents[-1]):
-            cursor[-1] += 1
-            self.explore(cursor, parents, parents[-1][cursor[-1]])
-
-    def explore(self, cursor, parents, element):
-        if isinstance(element, list):
-            cursor.append(-1)
-            self.check_new_data(cursor)
-        else:
-            self.handle_new_data(parents, cursor[-1], element)
-
-    def handle_new_data(self, parents: List[Union[str, dict]], position, element):
+    def handle_new_data(self, parents: List[Union[str, dict]], positions, element):
         pass
     
 

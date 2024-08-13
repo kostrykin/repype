@@ -11,6 +11,39 @@ from pypers.typing import (
 )
 
 
+class StdOutReader(pypers.status.StatusReader):
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.cursor = []
+
+    def on_modified(self, event) -> None:
+        super().on_modified(event)
+        self.update_output()
+
+    # def get_data_element(self, cursor):
+    #     parents = list()
+    #     data = self.data
+    #     for c in cursor:
+    #         parents.append(data)
+    #         data = data[c]
+    #     return parents, data
+
+    def get_parents(self, cursor):
+        parents = list()
+        data = self.data
+        for c in cursor:
+            parents.append(data)
+            data = data[c]
+        return parents
+
+    def update_output(self):
+        parents = self.get_parents(self.cursor)
+        if len(parents) > 0 and self.cursor[-1] + 1 < parents[-1]:
+            self.cursor[-1] += 1
+            self.explore(parents[-1][self.cursor[-1]])
+
+
 def run_cli() -> bool:
 
     if parser is None:
@@ -55,11 +88,13 @@ def run_cli_ex(path: PathLike, run: bool = False, tasks: List[PathLike] = list()
             run = run,
         )
 
-        if run:
-            return batch.run(contexts, status = status)
-        
-        else:
-            return True
+        with StdOutReader(status.filepath):
+
+            if run:
+                return batch.run(contexts, status = status)
+            
+            else:
+                return True
 
 
 if __name__ == '__main__':
