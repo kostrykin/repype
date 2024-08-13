@@ -71,7 +71,7 @@ class StatusReaderConsoleAdapter(pypers.status.StatusReader):
                      text += '\n' 'DRY RUN: use "--run" to run the tasks instead'
 
             if status.get('info') == 'enter':
-                text = f'\n\n({status["step"] + 1}/{status["step_count"] + 1}) Entering task: {status["task"]}'
+                text = f'\n({status["step"] + 1}/{status["step_count"] + 1}) Entering task: {status["task"]}'
 
             if status.get('info') == 'start':
                 if status['pickup'] or status['first_stage']:
