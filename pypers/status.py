@@ -67,13 +67,13 @@ class Status:
     def intermediate(self, status: Optional[str] = None) -> None:
         if self._intermediate is None:
             self._intermediate = Status(self)
+            self.update()
         if status is not None:
             self._intermediate.data.clear()
             self._intermediate.write(status)
-            self._intermediate.update()
         else:
             self._intermediate = None
-        self.update()
+            self.update()
 
     def progress(self, description: str, iterable: Iterable, len_override: Optional[int] = None) -> Iterator[dict]:
         max_steps = len_override or len(iterable)
@@ -220,7 +220,19 @@ class Cursor:
             yield cursor
             cursor = cursor.parent
 
-    
+    @property
+    def intermediate(self) -> Optional[bool]:
+        """
+        Check if the cursor points to an intermediate element.
+
+        The value is None if the cursor is invalid, True if the cursor points to an intermediate element, and False otherwise.
+        """
+        if self.valid:
+            element = self.get_elements()[-1]
+            return isinstance(element, dict) and element.get('content_type') == 'intermediate'
+        else:
+            return None
+
 
 class StatusReader(FileSystemEventHandler):
 
@@ -286,9 +298,14 @@ class StatusReader(FileSystemEventHandler):
 
     def check_new_data(self) -> None:
         while (cursor := self.cursor.find_next_element()):
-            self.cursor = cursor
-            elements = self.cursor.get_elements()
-            self.handle_new_data(elements[:-1], self.cursor.path, elements[-1])
+            elements = cursor.get_elements()
+            self.handle_new_data(elements[:-1], cursor.path, elements[-1])
+
+            # If the element is an intermediate, leave the cursor on the last non-intermediate position
+            if cursor.intermediate:
+                break
+            else:
+                self.cursor = cursor
 
     def handle_new_data(self, parents: List[Union[str, dict]], positions, element):
         pass

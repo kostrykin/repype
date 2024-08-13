@@ -331,6 +331,7 @@ class StatusReader__init(TestCase):
             wait_for_watchdog()
             self.assertEqual(status, ['write1', ['write2', 'write3']])
 
+            mock_handle_new_data.reset_mock()
             self.status2.intermediate('interm1')
             wait_for_watchdog()
             self.assertEqual(
@@ -347,7 +348,41 @@ class StatusReader__init(TestCase):
                     ],
                 ],
             )
+            self.assertEqual(
+                mock_handle_new_data.call_args_list,
+                [
+                    call(
+                        [
+                            [
+                                'write1',
+                                [
+                                    'write2',
+                                    'write3',
+                                    dict(
+                                        content_type = 'intermediate',
+                                        content = ['interm1'],
+                                    ),
+                                ],
+                            ],
+                            [
+                                'write2',
+                                'write3',
+                                dict(
+                                    content_type = 'intermediate',
+                                    content = ['interm1'],
+                                ),
+                            ],
+                        ],
+                        [1, 2],
+                        dict(
+                            content_type = 'intermediate',
+                            content = ['interm1'],
+                        ),
+                    ),
+                ] * 2  # The update occurs twice, once triggered by the `status2` object, and once by the `_intermediate` object
+            )
 
+            mock_handle_new_data.reset_mock()
             self.status2.intermediate('interm2')
             wait_for_watchdog()
             self.assertEqual(
@@ -363,4 +398,37 @@ class StatusReader__init(TestCase):
                         ),
                     ],
                 ],
+            )
+            self.assertEqual(
+                mock_handle_new_data.call_args_list,
+                [
+                    call(
+                        [
+                            [
+                                'write1',
+                                [
+                                    'write2',
+                                    'write3',
+                                    dict(
+                                        content_type = 'intermediate',
+                                        content = ['interm2'],
+                                    ),
+                                ],
+                            ],
+                            [
+                                'write2',
+                                'write3',
+                                dict(
+                                    content_type = 'intermediate',
+                                    content = ['interm2'],
+                                ),
+                            ],
+                        ],
+                        [1, 2],
+                        dict(
+                            content_type = 'intermediate',
+                            content = ['interm2'],
+                        ),
+                    ),
+                ]
             )
