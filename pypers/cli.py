@@ -75,7 +75,7 @@ class StatusReaderConsoleAdapter(pypers.status.StatusReader):
 
             if status.get('info') == 'start':
                 if status['pickup'] or status['first_stage']:
-                    text = f'Picking up from: {status["pickup"]} ({status["first_stage"]})'
+                    text = f'Picking up from: {status["pickup"]} ({status["first_stage"] or "copy"})'
                 else:
                     text = 'Starting from scratch'
 
@@ -84,6 +84,12 @@ class StatusReaderConsoleAdapter(pypers.status.StatusReader):
 
             if status.get('info') == 'completed':
                 text = f'Results have been stored'
+
+            if status.get('info') == 'error':
+                text = f'An error occurred: interrupting\n' + \
+                    '-' * 80 + '\n' + \
+                    status['traceback'] + \
+                    '-' * 80
 
             # FIXME: Handle `Status.progress` here
 
