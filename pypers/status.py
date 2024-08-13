@@ -68,6 +68,7 @@ class Status:
                 expand = str(child.filepath),
             )
         )
+        child.update()
         self.update()
         return child
     
@@ -275,23 +276,28 @@ class StatusReader(FileSystemEventHandler):
             return False  # No update has been performed
         
         else:
-            # Check the file hash, whether the content of the file changed at all
-            with filepath.open('rb') as file:
-                sha = file_digest(file, hashlib.sha1).hexdigest()
-                if self.file_hashes.get(filepath) == sha:
-                    return False  # No update has been performed
-                else:
-                    self.file_hashes[filepath] = sha
-
-            # Load the data from the file, and revert in case of JSON decoding errors
-            # These can occur due to the file being written to while being read, or unfavorable buffer sizes
+            # Check the file hash, whether the content of the file has changed at all
+            # Opening the file can fail due to race conditions, so we need to handle that
             try:
-                with filepath.open('r') as file:
-                    data_frame_backup = data_frame.copy()
-                    data_frame.clear()
-                    data_frame.extend(json.load(file))
-            except json.decoder.JSONDecodeError:
-                data_frame.extend(data_frame_backup)
+                with filepath.open('rb') as file:
+                    sha = file_digest(file, hashlib.sha1).hexdigest()
+                    if self.file_hashes.get(filepath) == sha:
+                        return False  # No update has been performed
+                    else:
+                        self.file_hashes[filepath] = sha
+
+                    # Load the data from the file, and revert in case of JSON decoding errors
+                    # These can occur due to race conditions, or unfavorable buffer sizes
+                    try:
+                        file.seek(0)
+                        data_frame_backup = data_frame.copy()
+                        data_frame.clear()
+                        data_frame.extend(json.load(file))
+                    except json.decoder.JSONDecodeError:
+                        data_frame.extend(data_frame_backup)
+
+            except FileNotFoundError:
+                return False  # No update has been performed
 
             for item_idx, item in enumerate(data_frame):
                 if isinstance(item, dict) and 'expand' in item:

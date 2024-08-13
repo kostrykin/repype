@@ -100,7 +100,7 @@ class Batch:
         contexts = self.pending if contexts is None else contexts
         for rc_idx, rc in enumerate(contexts):
             task_status = status.derive()
-
+ 
             pypers.status.update(
                 status = task_status,
                 info = 'enter',

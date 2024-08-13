@@ -131,7 +131,8 @@ def run_cli_ex(
             run = run,
         )
 
-        with status_reader_cls(status.filepath):
+        status_reader = status_reader_cls(status.filepath)
+        with status_reader:
 
             if run:
                 return batch.run(contexts, status = status)

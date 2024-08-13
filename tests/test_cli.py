@@ -44,8 +44,11 @@ class run_cli_ex(unittest.TestCase):
 
     def tearDown(self):
         if os.getpid() == self.testsuite_pid:
+            import time
+            time.sleep(1)
             self.ctx.__exit__(None, None, None)
             self.tempdir.cleanup()
+            print(self.stdout)
 
     @property
     def stdout(self):
@@ -76,3 +79,12 @@ class run_cli_ex(unittest.TestCase):
             '\n'
             '3 task(s) selected for running' '\n',
         )
+
+    def test_run_integrated(self):
+        ret = pypers.cli.run_cli_ex(path = self.tempdir.name, run = True)
+        self.assertTrue(ret)
+        # self.assertEqual(
+        #     self.stdout,
+        #     '\n'
+        #     '3 task(s) selected for running' '\n',
+        # )
