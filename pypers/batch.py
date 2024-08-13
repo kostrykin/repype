@@ -87,7 +87,7 @@ class Batch:
         """
         return [rc for rc in self.contexts if rc.task.is_pending(rc.pipeline, rc.config)]
 
-    def run(self, status: Optional[pypers.status.Status] = None) -> bool:
+    def run(self, contexts: Optional[List[RunContext]] = None, status: Optional[pypers.status.Status] = None) -> bool:
         """
         Run all pending tasks.
 
@@ -97,7 +97,8 @@ class Batch:
         Returns:
             bool: True if all tasks were completed successfully, and False otherwise
         """
-        for rc_idx, rc in enumerate(self.pending):
+        contexts = self.pending if contexts is None else contexts
+        for rc_idx, rc in enumerate(contexts):
             task_status = status.derive()
 
             pypers.status.update(

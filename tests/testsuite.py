@@ -4,6 +4,9 @@ import shutil
 import tempfile
 
 import pypers.pipeline
+from pypers.typing import (
+    PathLike,
+)
 
 
 def with_temporary_paths(count: int):
@@ -64,3 +67,12 @@ assert isinstance(_stage.outputs, frozenset)
 assert _stage.inputs  == frozenset(['x1', 'x2'])
 assert _stage.outputs == frozenset(['y'])
 del _stage
+
+
+def create_task_file(task_path: PathLike, spec_yaml: str) -> None:
+    task_path = pathlib.Path(task_path)
+    task_filepath = task_path / 'task.yml'
+    if not task_path.is_dir():
+        task_path.mkdir(parents = True, exist_ok = True)
+    with task_filepath.open('w') as spec_file:
+        spec_file.write(spec_yaml)

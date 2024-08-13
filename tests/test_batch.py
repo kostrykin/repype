@@ -11,15 +11,6 @@ from . import testsuite
 import pypers.status
 
 
-def create_task_file(task_path: pypers.task.PathLike, spec_yaml: str) -> None:
-    task_path = pathlib.Path(task_path)
-    task_filepath = task_path / 'task.yml'
-    if not task_path.is_dir():
-        task_path.mkdir(parents = True, exist_ok = True)
-    with task_filepath.open('w') as spec_file:
-        spec_file.write(spec_yaml)
-
-
 class Batch__task(unittest.TestCase):
 
     def test_virtual_paths(self):
@@ -50,8 +41,8 @@ class Batch__task(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_spec_files(self, root):
-        create_task_file(root, 'pipeline: pypers.pipeline.Pipeline')
-        create_task_file(root / 'task-2', 'field1: value1')
+        testsuite.create_task_file(root, 'pipeline: pypers.pipeline.Pipeline')
+        testsuite.create_task_file(root / 'task-2', 'field1: value1')
 
         # Load the tasks
         batch = pypers.batch.Batch()
@@ -71,7 +62,7 @@ class Batch__task(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_spec_files_with_override(self, root):
-        create_task_file(root, 'pipeline: pypers.pipeline.Pipeline')
+        testsuite.create_task_file(root, 'pipeline: pypers.pipeline.Pipeline')
         batch = pypers.batch.Batch()
         task = batch.task(
             path = root,
@@ -82,8 +73,8 @@ class Batch__task(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_mixed_virtual_paths_and_spec_files(self, root):
-        create_task_file(root, 'pipeline: pypers.pipeline.Pipeline')
-        create_task_file(root / 'task-2', 'field1: value1')
+        testsuite.create_task_file(root, 'pipeline: pypers.pipeline.Pipeline')
+        testsuite.create_task_file(root / 'task-2', 'field1: value1')
 
         # Load the tasks
         batch = pypers.batch.Batch()
@@ -106,9 +97,9 @@ class Batch__load(unittest.TestCase):
     def setUp(self):
         self.tempdir = tempfile.TemporaryDirectory()
         self.root_path = pathlib.Path(self.tempdir.name)
-        create_task_file(self.root_path, 'pipeline: pypers.pipeline.Pipeline')
-        create_task_file(self.root_path / 'task-2', 'field1: value1')
-        create_task_file(self.root_path / 'task-2' / 'task-3', 'field2: value2')
+        testsuite.create_task_file(self.root_path, 'pipeline: pypers.pipeline.Pipeline')
+        testsuite.create_task_file(self.root_path / 'task-2', 'field1: value1')
+        testsuite.create_task_file(self.root_path / 'task-2' / 'task-3', 'field2: value2')
         self.batch = pypers.batch.Batch()
 
     def tearDown(self):
@@ -138,19 +129,19 @@ class Batch__run(unittest.TestCase):
     def setUp(self):
         self.tempdir = tempfile.TemporaryDirectory()
         self.root_path = pathlib.Path(self.tempdir.name)
-        create_task_file(
+        testsuite.create_task_file(
             self.root_path,
             'runnable: true' '\n'
             'pipeline:' '\n'
             '- tests.test_task.Task__create_pipeline.stage1_cls' '\n'
             '- tests.test_task.Task__create_pipeline.stage2_cls' '\n'
         )
-        create_task_file(
+        testsuite.create_task_file(
             self.root_path / 'task-2',
             'stage1:' '\n'
             '  key1: value1' '\n'
         )
-        create_task_file(
+        testsuite.create_task_file(
             self.root_path / 'task-3',
             'stage2:' '\n'
             '  key2: value2' '\n'
