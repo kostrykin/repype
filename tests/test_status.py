@@ -432,3 +432,70 @@ class StatusReader__init(TestCase):
                     ),
                 ]
             )
+
+            mock_handle_new_data.reset_mock()
+            self.status2.intermediate(None)
+            wait_for_watchdog()
+            self.assertEqual(
+                status,
+                [
+                    'write1',
+                    [
+                        'write2',
+                        'write3',
+                    ],
+                ],
+            )
+            self.assertEqual(
+                mock_handle_new_data.call_args_list,
+                [
+                    call(
+                        [
+                            [
+                                'write1',
+                                [
+                                    'write2',
+                                    'write3',
+                                ],
+                            ],
+                            [
+                                'write2',
+                                'write3',
+                            ],
+                        ],
+                        [1, 2],
+                        dict(
+                            content_type = 'intermediate',
+                            content = None,
+                        ),
+                    ),
+                ]
+            )
+
+            mock_handle_new_data.reset_mock()
+            self.status2.write('write4')
+            wait_for_watchdog()
+            self.assertEqual(
+                mock_handle_new_data.call_args_list,
+                [
+                    call(
+                        [
+                            [
+                                'write1',
+                                [
+                                    'write2',
+                                    'write3',
+                                    'write4',
+                                ],
+                            ],
+                            [
+                                'write2',
+                                'write3',
+                                'write4',
+                            ],
+                        ],
+                        [1, 2],
+                        'write4',
+                    ),
+                ]
+            )

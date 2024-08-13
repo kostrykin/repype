@@ -241,6 +241,7 @@ class StatusReader(FileSystemEventHandler):
         self.data = list()
         self.data_frames = {self.filepath: self.data}
         self.cursor = Cursor(self.data)
+        self._intermediate = None
         self.update(self.filepath)
         self.check_new_data()
 
@@ -297,15 +298,25 @@ class StatusReader(FileSystemEventHandler):
             self.check_new_data()
 
     def check_new_data(self) -> None:
+        new_data = False
         while (cursor := self.cursor.find_next_element()):
             elements = cursor.get_elements()
-            self.handle_new_data(elements[:-1], cursor.path, elements[-1])
+            self.handle_new_data(elements[:-1], list(cursor.path), elements[-1])
+            new_data = True
 
             # If the element is an intermediate, leave the cursor on the last non-intermediate position
             if cursor.intermediate:
+                self._intermediate = (elements[:-1], list(cursor.path), elements[-1])
                 break
             else:
+                self._intermediate = None
                 self.cursor = cursor
+
+        # If there was no new data, but there was supposed to be an intermediate, handle the closed intermediate
+        if not new_data and self._intermediate:
+            self._intermediate[-1]['content'] = None
+            self.handle_new_data(*self._intermediate)
+            self._intermediate = None
 
     def handle_new_data(self, parents: List[Union[str, dict]], positions, element):
         pass
