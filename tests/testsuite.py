@@ -80,3 +80,10 @@ def create_task_file(task_path: PathLike, spec_yaml: str) -> None:
         task_path.mkdir(parents = True, exist_ok = True)
     with task_filepath.open('w') as spec_file:
         spec_file.write(spec_yaml)
+
+
+class TestError(Exception):
+    
+    def __ini__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs

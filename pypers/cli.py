@@ -86,10 +86,13 @@ class StatusReaderConsoleAdapter(pypers.status.StatusReader):
                 text = f'Results have been stored'
 
             if status.get('info') == 'error':
-                text = f'An error occurred: interrupting\n' + \
+                text = f'An error occurred while processing task {status["task"]}:\n' + \
                     '-' * 80 + '\n' + \
                     status['traceback'] + \
                     '-' * 80
+                
+            if status.get('info') == 'interrupted':
+                text = f'\nBatch run interrupted'
 
             # FIXME: Handle `Status.progress` here
 

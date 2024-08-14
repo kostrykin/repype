@@ -110,3 +110,26 @@ class run_cli_ex(unittest.TestCase):
                 f'  Storing results...' '\r'
                 f'  Results have been stored' '\n'
             )
+
+    @patch.object(pypers.task.Task, 'store', side_effect = testsuite.TestError)
+    def test_internal_error(self, mock_task_store):
+        ret = pypers.cli.run_cli_ex(path = self.tempdir.name, run = True)
+        self.assertFalse(ret)
+        self.assertIn(
+            f'\n'
+            f'3 task(s) selected for running' '\n'
+            f'  \n'
+            f'  (1/3) Entering task: {self.root_path.resolve()}' '\n'
+            f'  Starting from scratch' '\n'
+            f'  An error occurred while processing task {self.root_path.resolve()}:' '\n'
+            f'  --------------------------------------------------------------------------------' '\n'
+            f'  Traceback (most recent call last):',
+            self.stdout,
+        )
+        self.assertIn(
+            f'  tests.testsuite.TestError' '\n'
+            f'  --------------------------------------------------------------------------------' '\n'
+            f'\n'
+            f'Batch run interrupted' '\n',
+            self.stdout,
+        )
