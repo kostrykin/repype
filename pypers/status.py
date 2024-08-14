@@ -22,14 +22,21 @@ from pypers.typing import (
 
 
 # hashlib.file_digest is available in Python 3.11+
-if hasattr(hashlib, 'file_digest'):
-    file_digest = hashlib.file_digest
-else:
-    def file_digest(file, hash_cls):
-        hash = hash_cls()
-        while (chunk := file.read(4096)):
-            hash.update(chunk)
-        return hash
+# if hasattr(hashlib, 'file_digest'):
+#     file_digest = hashlib.file_digest
+# else:
+#     def file_digest(file, hash_cls):
+#         hash = hash_cls()
+#         while (chunk := file.read(4096)):
+#             hash.update(chunk)
+#         return hash
+def file_digest(file, hash_cls, buf_size = 4096):
+    hash = hash_cls()
+    while (chunk := file.read(buf_size)):
+        if len(chunk) < buf_size:
+            chunk = chunk.decode('utf-8').strip().encode('utf-8')
+        hash.update(chunk)
+    return hash
 
 
 class Status:
