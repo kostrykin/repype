@@ -338,13 +338,13 @@ class StatusReader(FileSystemEventHandler):
 
             # If the element is an intermediate, but it didn't actually change, skip it
             if not (cursor.intermediate and self._intermediate is not None and self._intermediate[-1] == elements[-1]):
-                if self._intermediate is not None:
-                    print('***', self._intermediate[-1], elements[-1])
-                self.handle_new_status(elements[:-1], list(cursor.path), elements[-1])
+                #if self._intermediate is not None:
+                #    print('***', self._intermediate[-1], elements[-1])
+                print('*** handle_new_status:', elements[:-1], list(cursor.path), copy.deepcopy(elements[-1]))
+                self.handle_new_status(elements[:-1], list(cursor.path), copy.deepcopy(elements[-1]))
 
             # If the element is an intermediate, leave the cursor on the last non-intermediate position
             if cursor.intermediate:
-                #self._intermediate = (elements[:-1], list(cursor.path), elements[-1])
                 self._intermediate = (elements[:-1], list(cursor.path), copy.deepcopy(elements[-1]))
                 break
             else:
