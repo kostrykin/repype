@@ -33,7 +33,7 @@ class StatusReaderConsoleAdapter(pypers.status.StatusReader):
 
             # Print an intermediate line
             if isinstance(element, dict) and element.get('content_type') == 'intermediate':
-                line = self.format_line(parents, positions, element.get('content', ''), intermediate = True)
+                line = self.format_line(parents, positions, element.get('content', '')[0], intermediate = True)
                 print(line, end='\r')
                 self._intermediate_line_length = len(line)
 
@@ -71,7 +71,7 @@ class StatusReaderConsoleAdapter(pypers.status.StatusReader):
                      text += '\n' 'DRY RUN: use "--run" to run the tasks instead'
 
             if status.get('info') == 'enter':
-                text = f'\n({status["step"] + 1}/{status["step_count"] + 1}) Entering task: {status["task"]}'
+                text = f'\n({status["step"] + 1}/{status["step_count"]}) Entering task: {status["task"]}'
 
             if status.get('info') == 'start':
                 if status['pickup'] or status['first_stage']:

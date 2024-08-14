@@ -436,7 +436,7 @@ class Task:
             info = 'start',
             task = str(self.path.resolve()),
             pickup = str(pickup_info['task'].path.resolve()) if pickup else None,
-            first_stage = first_stage,
+            first_stage = first_stage.id if first_stage else None,
         )
 
         # Run the pipeline for all file IDs

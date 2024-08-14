@@ -4,6 +4,7 @@ import os
 import re
 import pathlib
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
@@ -13,8 +14,8 @@ from . import testsuite
 
 class run_cli_ex(unittest.TestCase):
 
-    stage1_cls = testsuite.create_stage_class(id = 'stage1')
-    stage2_cls = testsuite.create_stage_class(id = 'stage2')
+    stage1_cls = testsuite.create_stage_class(id = 'stage1', inputs = ['file_id'], outputs = ['output1'])
+    stage2_cls = testsuite.create_stage_class(id = 'stage2', inputs = ['output1'], outputs = ['output2'])
 
     def setUp(self):
         self.stdout_buf = io.StringIO()
@@ -32,23 +33,22 @@ class run_cli_ex(unittest.TestCase):
         )
         testsuite.create_task_file(
             self.root_path / 'task-2',
-            'stage1:' '\n'
-            '  key1: value1' '\n'
+            'config:' '\n'
+            '  stage1:' '\n'
+            '    key1: value1' '\n'
         )
         testsuite.create_task_file(
             self.root_path / 'task-3',
-            'stage2:' '\n'
-            '  key2: value2' '\n'
+            'config:' '\n'
+            '  stage2:' '\n'
+            '    key2: value2' '\n'
         )
         self.testsuite_pid = os.getpid()
 
     def tearDown(self):
         if os.getpid() == self.testsuite_pid:
-            import time
-            time.sleep(1)
             self.ctx.__exit__(None, None, None)
             self.tempdir.cleanup()
-            print(self.stdout)
 
     @property
     def stdout(self):
@@ -81,10 +81,32 @@ class run_cli_ex(unittest.TestCase):
         )
 
     def test_run_integrated(self):
-        ret = pypers.cli.run_cli_ex(path = self.tempdir.name, run = True)
-        self.assertTrue(ret)
-        # self.assertEqual(
-        #     self.stdout,
-        #     '\n'
-        #     '3 task(s) selected for running' '\n',
-        # )
+        # Patch Task.store to delay the storage of results by 1 second, so that intermediates don't collapse too quickly
+        _task_store = pypers.task.Task.store
+        def delayed_task_store(*args, **kwargs):
+            time.sleep(1)
+            return _task_store(*args, **kwargs)
+        with patch.object(pypers.task.Task, 'store', side_effect = delayed_task_store, autospec = True):
+
+            ret = pypers.cli.run_cli_ex(path = self.tempdir.name, run = True)
+            self.assertTrue(ret)
+            self.assertEqual(
+                self.stdout,
+                f'\n'
+                f'3 task(s) selected for running' '\n'
+                f'  \n'
+                f'  (1/3) Entering task: {self.root_path.resolve()}' '\n'
+                f'  Starting from scratch' '\n'
+                f'  Storing results...' '\r'
+                f'  Results have been stored' '\n'
+                f'  \n'
+                f'  (2/3) Entering task: {self.root_path.resolve()}/task-2' '\n'
+                f'  Starting from scratch' '\n'
+                f'  Storing results...' '\r'
+                f'  Results have been stored' '\n'
+                f'  \n'
+                f'  (3/3) Entering task: {self.root_path.resolve()}/task-3' '\n'
+                f'  Picking up from: {self.root_path.resolve()} (stage2)' '\n'
+                f'  Storing results...' '\r'
+                f'  Results have been stored' '\n'
+            )

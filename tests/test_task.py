@@ -940,7 +940,8 @@ class Task__run(unittest.TestCase):
             'file-0': dict(output = 'value1'),
             'file-1': dict(output = 'value2'),
         }
-        with patch.object(pypers.task.Task, 'find_pickup_task', return_value = dict(task = self.task, first_diverging_stage = 'stage-1')) as mock_find_pickup_task:
+        stage1 = testsuite.create_stage(id = 'stage-1')
+        with patch.object(pypers.task.Task, 'find_pickup_task', return_value = dict(task = self.task, first_diverging_stage = stage1)) as mock_find_pickup_task:
             self.task.run(self.config)
         mock_find_pickup_task.assert_called_once_with(
             mock_create_pipeline.return_value,
@@ -952,13 +953,13 @@ class Task__run(unittest.TestCase):
             input = 'file-0',
             data = dict(output = 'value1'),
             cfg = self.config,
-            first_stage = 'stage-1',
+            first_stage = stage1,
         )
         mock_create_pipeline.return_value.process.assert_any_call(
             input = 'file-1',
             data = dict(output = 'value2'),
             cfg = self.config,
-            first_stage = 'stage-1',
+            first_stage = stage1,
         )
         self.assertEqual(mock_create_pipeline.return_value.process.call_count, 2)
         mock_store.assert_called_once()

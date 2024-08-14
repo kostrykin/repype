@@ -121,6 +121,62 @@ class Batch__load(unittest.TestCase):
             self.batch.load(self.root_path / 'task-3')
 
 
+class Batch__contexts(unittest.TestCase):
+
+    stage1_cls = testsuite.create_stage_class(id = 'stage1')
+    stage2_cls = testsuite.create_stage_class(id = 'stage2')
+
+    def setUp(self):
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.root_path = pathlib.Path(self.tempdir.name)
+        testsuite.create_task_file(
+            self.root_path,
+            'runnable: true' '\n'
+            'pipeline:' '\n'
+            '- tests.test_task.Task__create_pipeline.stage1_cls' '\n'
+            '- tests.test_task.Task__create_pipeline.stage2_cls' '\n'
+        )
+        testsuite.create_task_file(
+            self.root_path / 'task-2',
+            'config:' '\n'
+            '  stage1:' '\n'
+            '    key1: value1' '\n'
+        )
+        testsuite.create_task_file(
+            self.root_path / 'task-3',
+            'config:' '\n'
+            '  stage2:' '\n'
+            '    key2: value2' '\n'
+        )
+        self.batch = pypers.batch.Batch()
+        self.batch.load(self.root_path)
+        self.testsuite_pid = os.getpid()
+
+    def tearDown(self):
+        if os.getpid() == self.testsuite_pid:
+            self.tempdir.cleanup()
+
+    def test(self):
+        contexts = self.batch.contexts
+        self.assertEqual(len(contexts), 3)
+        self.assertEqual(
+            [context.task.path for context in contexts],
+            [
+                self.root_path,
+                self.root_path / 'task-2',
+                self.root_path / 'task-3',
+            ],
+        )
+        self.assertEqual(
+            [context.config.entries for context in contexts],
+            [
+                dict(),
+                dict(stage1 = dict(key1 = 'value1')),
+                dict(stage2 = dict(key2 = 'value2')),
+            ],
+        )
+
+
 class Batch__run(unittest.TestCase):
 
     stage1_cls = testsuite.create_stage_class(id = 'stage1')

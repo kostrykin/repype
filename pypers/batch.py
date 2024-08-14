@@ -106,7 +106,7 @@ class Batch:
                 info = 'enter',
                 task = str(rc.task.path.resolve()),
                 step = rc_idx,
-                step_count = len(self.pending),
+                step_count = len(contexts),
             )
 
             # Run the task in a forked process
