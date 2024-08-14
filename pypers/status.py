@@ -22,24 +22,14 @@ from pypers.typing import (
 
 
 # hashlib.file_digest is available in Python 3.11+
-# if hasattr(hashlib, 'file_digest'):
-#     file_digest = hashlib.file_digest
-# else:
-#     def file_digest(file, hash_cls):
-#         hash = hash_cls()
-#         while (chunk := file.read(4096)):
-#             hash.update(chunk)
-#         return hash
-def file_digest(file, hash_cls, buf_size = 4096):
-    hash = hash_cls()
-    while (chunk := file.read(buf_size)):
-        if len(chunk) < buf_size:
-            len0 = len(chunk)
-            chunk = chunk.decode('utf-8').strip().encode('utf-8')
-            if len(chunk) < len0:
-                print('-- chunk length reduced --')
-        hash.update(chunk)
-    return hash
+if hasattr(hashlib, 'file_digest'):
+    file_digest = hashlib.file_digest
+else:
+    def file_digest(file, hash_cls):
+        hash = hash_cls()
+        while (chunk := file.read(4096)):
+            hash.update(chunk)
+        return hash
 
 
 class Status:
@@ -269,7 +259,7 @@ class StatusReader(FileSystemEventHandler):
         self.cursor = Cursor(self.data)
         self._intermediate = None
         self.update(self.filepath)
-        self.check_new_data()
+        self.check_new_status()
 
     def __enter__(self) -> dict:
         self.observer = Observer()
@@ -337,18 +327,26 @@ class StatusReader(FileSystemEventHandler):
         if isinstance(event, FileModifiedEvent):
             filepath = pathlib.Path(event.src_path).resolve()
             if self.update(filepath):
-                self.check_new_data()
+                self.check_new_status()
 
-    def check_new_data(self) -> None:
+    def check_new_status(self) -> None:
         new_data = False
         while (cursor := self.cursor.find_next_element()):
             elements = cursor.get_elements()
-            self.handle_new_status(elements[:-1], list(cursor.path), elements[-1])
             new_data = True
+
+            # If the element is an intermediate, but it didn't actually change, skip it
+            if not (cursor.intermediate and self._intermediate is not None and self._intermediate[-1] == elements[-1]):
+                self.handle_new_status(elements[:-1], list(cursor.path), elements[-1])
 
             # If the element is an intermediate, leave the cursor on the last non-intermediate position
             if cursor.intermediate:
-                self._intermediate = (elements[:-1], list(cursor.path), elements[-1])
+                #self._intermediate = (elements[:-1], list(cursor.path), elements[-1])
+                self._intermediate = (
+                    elements[:-1],
+                    list(cursor.path),
+                    json.loads(json.dumps(elements[-1]))  # Deep copy
+                )
                 break
             else:
                 self._intermediate = None
