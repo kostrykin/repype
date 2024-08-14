@@ -1,3 +1,4 @@
+import copy
 import json
 import pathlib
 import hashlib
@@ -344,11 +345,7 @@ class StatusReader(FileSystemEventHandler):
             # If the element is an intermediate, leave the cursor on the last non-intermediate position
             if cursor.intermediate:
                 #self._intermediate = (elements[:-1], list(cursor.path), elements[-1])
-                self._intermediate = (
-                    elements[:-1],
-                    list(cursor.path),
-                    json.loads(json.dumps(elements[-1]))  # Deep copy
-                )
+                self._intermediate = (elements[:-1], list(cursor.path), copy.deepcopy(elements[-1]))
                 break
             else:
                 self._intermediate = None

@@ -331,6 +331,7 @@ class StatusReader__init(TestCase):
             wait_for_watchdog()
             self.assertEqual(status, ['write1', ['write2', 'write3']])
 
+            print('--- test_with_intermediates ---')
             mock_handle_new_status.reset_mock()
             self.status2.intermediate('interm1')
             wait_for_watchdog()
