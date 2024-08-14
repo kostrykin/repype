@@ -81,29 +81,26 @@ class Status:
         self.update()
 
     def intermediate(self, status: Optional[str] = None) -> None:
-        # if self._intermediate is None:
-        #     self._intermediate = Status(self)
-        #     self.update()
-        # if status is not None:
-        #     self._intermediate.data.clear()
-        #     self._intermediate.write(status)
-        # else:
-        #     self._intermediate = None
-        #     self.update()
+        # An intermediate status object is created, and then linked within this status object
+        # The order of the two operations is crucial, because otherwise an empty intermediate object might be detected initially
         if status is not None:
 
+            # If the intermediate object doesn't exist yet, create it
             if self._intermediate is None:
                 self._intermediate = Status(self)
-                update_required = True
+                update_required = True  # The intermediate object needs to be linked in this status object
             else:
-                update_required = False
+                update_required = False  # The intermediate object is already linked
 
+            # Write the intermediate status to the intermediate status object
             self._intermediate.data.clear()
             self._intermediate.write(status)
 
+            # If the intermediate object was newly created, link it in this status object
             if update_required:
                 self.update()
 
+        # Clear the intermediate status
         else:
             self._intermediate = None
             self.update()
@@ -355,9 +352,6 @@ class StatusReader(FileSystemEventHandler):
 
             # If the element is an intermediate, but it didn't actually change, skip it
             if not (cursor.intermediate and self._intermediate is not None and self._intermediate[-1] == elements[-1]):
-                #if self._intermediate is not None:
-                #    print('***', self._intermediate[-1], elements[-1])
-                import sys; print('*** handle_new_status:', elements[:-1], list(cursor.path), copy.deepcopy(elements[-1]), file = sys.stderr)
                 self.handle_new_status(elements[:-1], list(cursor.path), copy.deepcopy(elements[-1]))
 
             # If the element is an intermediate, leave the cursor on the last non-intermediate position
