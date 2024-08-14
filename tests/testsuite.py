@@ -9,6 +9,10 @@ from pypers.typing import (
 )
 
 
+# Losen truncation limit for error messages
+__import__('sys').modules['unittest.util']._MAX_LENGTH = 1000
+
+
 def with_temporary_paths(count: int):
     def decorator(test_func):
         def wrapper(self, *args, **kwargs):
