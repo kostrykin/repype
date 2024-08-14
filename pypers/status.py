@@ -340,7 +340,7 @@ class StatusReader(FileSystemEventHandler):
             if not (cursor.intermediate and self._intermediate is not None and self._intermediate[-1] == elements[-1]):
                 #if self._intermediate is not None:
                 #    print('***', self._intermediate[-1], elements[-1])
-                print('*** handle_new_status:', elements[:-1], list(cursor.path), copy.deepcopy(elements[-1]))
+                import sys; print('*** handle_new_status:', elements[:-1], list(cursor.path), copy.deepcopy(elements[-1]), file = sys.stderr)
                 self.handle_new_status(elements[:-1], list(cursor.path), copy.deepcopy(elements[-1]))
 
             # If the element is an intermediate, leave the cursor on the last non-intermediate position
