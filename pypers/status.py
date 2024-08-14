@@ -81,12 +81,29 @@ class Status:
         self.update()
 
     def intermediate(self, status: Optional[str] = None) -> None:
-        if self._intermediate is None:
-            self._intermediate = Status(self)
-            self.update()
+        # if self._intermediate is None:
+        #     self._intermediate = Status(self)
+        #     self.update()
+        # if status is not None:
+        #     self._intermediate.data.clear()
+        #     self._intermediate.write(status)
+        # else:
+        #     self._intermediate = None
+        #     self.update()
         if status is not None:
+
+            if self._intermediate is None:
+                self._intermediate = Status(self)
+                update_required = True
+            else:
+                update_required = False
+
             self._intermediate.data.clear()
             self._intermediate.write(status)
+
+            if update_required:
+                self.update()
+
         else:
             self._intermediate = None
             self.update()
