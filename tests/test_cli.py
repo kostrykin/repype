@@ -112,7 +112,8 @@ class run_cli_ex(unittest.TestCase):
             )
 
     @patch.object(pypers.task.Task, 'store', side_effect = testsuite.TestError)
-    def test_internal_error(self, mock_task_store):
+    @patch.object(pypers.status.Status, 'intermediate')  # Suppress the `Storing results...` intermediate, sometimes not captured quickly enough
+    def test_internal_error(self, mock_task_store, mock_status_intermediate):
         ret = pypers.cli.run_cli_ex(path = self.tempdir.name, run = True)
         self.assertFalse(ret)
         self.assertIn(
