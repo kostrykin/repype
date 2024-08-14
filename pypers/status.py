@@ -34,7 +34,10 @@ def file_digest(file, hash_cls, buf_size = 4096):
     hash = hash_cls()
     while (chunk := file.read(buf_size)):
         if len(chunk) < buf_size:
+            len0 = len(chunk)
             chunk = chunk.decode('utf-8').strip().encode('utf-8')
+            if len(chunk) < len0:
+                print('-- chunk length reduced --')
         hash.update(chunk)
     return hash
 
