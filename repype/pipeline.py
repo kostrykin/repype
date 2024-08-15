@@ -8,7 +8,7 @@ import repype.status
 from repype.typing import (
     Any,
     Dict,
-    FileID,
+    Input,
     Iterable,
     List,
     Optional,
@@ -176,7 +176,7 @@ class Pipeline:
                 create_config_entry(config, f'{stage.id}/{key}', *spec[:2], **create_config_entry_kwargs)
         return config
     
-    def resolve(self, scope: str, input: Optional[FileID] = None) -> pathlib.Path:
+    def resolve(self, scope: str, input: Optional[Input] = None) -> pathlib.Path:
         """
         Resolves the path of a file based on the given scope and input.
         """

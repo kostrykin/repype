@@ -8,5 +8,5 @@ else:
 
 
 DataDictionary = Dict[str, Any]
-FileID = TypeVar('FileID', int, str)
+Input = TypeVar('Input', int, str)
 PathLike = TypeVar('PathLike', str, pathlib.Path)

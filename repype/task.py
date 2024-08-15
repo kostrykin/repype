@@ -16,8 +16,8 @@ from repype.typing import (
     Any,
     DataDictionary,
     Dict,
-    FileID,
     FrozenSet,
+    Input,
     Iterator,
     List,
     Optional,
@@ -29,10 +29,10 @@ from repype.typing import (
 import yaml
 
 
-MultiDataDictionary = Dict[FileID, DataDictionary]
+MultiDataDictionary = Dict[Input, DataDictionary]
 
 
-def decode_inputs(spec: Union[str, List[FileID]]) -> List[FileID]:
+def decode_inputs(spec: Union[str, List[Input]]) -> List[Input]:
     """
     Convert a string of comma-separated inputs (or ranges thereof) to a list of integers.
 
