@@ -10,6 +10,10 @@
     </h1>
   </div>
 
+⚠️ **This branch is currently not stable.** ⚠️
+
+----
+
 **Installation:**
 
 .. code::
