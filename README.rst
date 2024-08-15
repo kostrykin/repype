@@ -21,7 +21,6 @@
 
 **Development instructions:**
 
-
 - Use ``python -m unittest`` in the root directory of the repository to run the test suite.
 - Or use coverage.py instead to also produce a test coverage report::
 

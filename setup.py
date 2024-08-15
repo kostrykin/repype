@@ -24,6 +24,19 @@ def strip_raw(rst):
         # Fast-forward
         else:
             lines_out.append(line)
+
+    # Strip empty lines
+    while len(lines_out) > 0 and lines_out[0].strip() == '':
+        lines_out.pop(0)
+    while len(lines_out) > 0 and lines_out[-1].strip() == '':
+        lines_out.pop(-1)
+
+    # Strip trailing '----'
+    if lines_out[-1] == '----':
+        lines_out.pop(-1)
+    while len(lines_out) > 0 and lines_out[-1].strip() == '':
+        lines_out.pop(-1)
+
     return '\n'.join(lines_out)
 
 setup(
