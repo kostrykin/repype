@@ -37,6 +37,7 @@ jobs:
 
       - name: Check distribution files
         run: |
+          python -m pip install twine
           ls dist/
           python -m twine check dist/*
 
