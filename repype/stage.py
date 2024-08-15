@@ -120,6 +120,7 @@ class Stage:
 
     def __call__(
             self,
+            pipeline: 'repype.pipeline.Pipeline',
             data: DataDictionary,
             config: repype.config.Config,
             status: Optional[repype.status.Status] = None,
@@ -146,6 +147,7 @@ class Stage:
             # Run the stage and measure the run time
             t0 = time.time()
             output_data = self.process(
+                pipeline = pipeline,
                 config = clean_config,
                 log_root_dir = log_root_dir,
                 status = status,
@@ -179,7 +181,8 @@ class Stage:
 
     def process(
             self,
-            config: Optional[repype.config.Config] = None,
+            pipeline: 'repype.pipeline.Pipeline',
+            config: repype.config.Config,
             log_root_dir: Optional[pathlib.Path] = None,
             status: Optional[repype.status.Status] = None,
             **inputs,

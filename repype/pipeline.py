@@ -106,7 +106,7 @@ class Pipeline:
             if ctrl.step(stage.id) or stage.id in extra_stages:
                 stage_config = config.get(stage.id, {})
                 try:
-                    dt = stage(data, stage_config, status = repype.status.derive(status), log_root_dir = log_root_dir, **kwargs)
+                    dt = stage(self, data, stage_config, status = repype.status.derive(status), log_root_dir = log_root_dir, **kwargs)
                 except:
                     print(f'An error occured while executing the stage: {str(stage)}')
                     raise
