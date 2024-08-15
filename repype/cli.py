@@ -92,7 +92,7 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
                 text = f'Results have been stored'
 
             if status.get('info') == 'error':
-                parts = ['An error occurred while processing']
+                parts = ['\nAn error occurred while processing']
                 if status.get('stage') is not None:
                     parts.append(f'the stage "{status["stage"]} of')
                 parts.append(f'the task {status["task"]}:\n')

@@ -128,6 +128,7 @@ class run_cli_ex(unittest.TestCase):
             f'  \n'
             f'  (1/3) Entering task: {self.root_path.resolve()}' '\n'
             f'  Starting from scratch' '\n'
+            f'  ' '\n'
             f'  An error occurred while processing the task {self.root_path.resolve()}:' '\n'
             f'  --------------------------------------------------------------------------------' '\n'
             f'  Traceback (most recent call last):',
