@@ -34,11 +34,11 @@ class suggest_id(unittest.TestCase):
 class Stage(unittest.TestCase):
 
     def test_no_inputs_no_outputs(self):
-        stage = testsuite.create_stage(id = 'test')
-        data  = dict()
-        cfg   = repype.config.Config()
+        stage    = testsuite.create_stage(id = 'test')
+        data     = dict()
+        config   = repype.config.Config()
         pipeline = MagicMock()
-        dt = stage(pipeline, data, cfg)
+        dt = stage(pipeline, data, config)
         self.assertIsInstance(dt, float)
         self.assertEqual(data, dict())
 
@@ -54,17 +54,17 @@ class Stage(unittest.TestCase):
                     x1 * config.get('x1_factor', 0) + \
                     x2 * config.get('x2_factor', 0))
             )
-        cfg = repype.config.Config()
+        config = repype.config.Config()
         for x1_factor in [0, 1]:
             for x2_factor in [0, 1]:
                 x1, x2 = 10, 20
                 with self.subTest(x1_factor = x1_factor, x2_factor = x2_factor):
-                    cfg['x1_factor'] = x1_factor
-                    cfg['x2_factor'] = x2_factor
+                    config['x1_factor'] = x1_factor
+                    config['x2_factor'] = x2_factor
                     data = dict(x1 = x1, x2 = x2)
                     status_mock = MagicMock()
                     pipeline = MagicMock()
-                    dt = stage(pipeline, data, cfg, status = status_mock)
+                    dt = stage(pipeline, data, config, status = status_mock)
                     self.assertEqual(data, dict(x1 = x1, x2 = x2, y = x1 * x1_factor + x2 * x2_factor))
                     self.assertIsInstance(dt, float)
 

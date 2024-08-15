@@ -52,13 +52,13 @@ class ProcessingControl:
         return do_step
 
 
-def create_config_entry(cfg, key, factor, default_user_factor, type=None, min=None, max=None):
+def create_config_entry(config, key, factor, default_user_factor, type=None, min=None, max=None):
     keys = key.split('/')
     af_key = f'{"/".join(keys[:-1])}/AF_{keys[-1]}'
-    cfg.set_default(key, factor * cfg.get(af_key, default_user_factor), True)
-    if type is not None: cfg.update(key, func=type)
-    if  min is not None: cfg.update(key, func=lambda value: builtins.max((value, min)))
-    if  max is not None: cfg.update(key, func=lambda value: builtins.min((value, max)))
+    config.set_default(key, factor * config.get(af_key, default_user_factor), True)
+    if type is not None: config.update(key, func=type)
+    if  min is not None: config.update(key, func=lambda value: builtins.max((value, min)))
+    if  max is not None: config.update(key, func=lambda value: builtins.min((value, max)))
 
 
 class Pipeline:
@@ -110,7 +110,7 @@ class Pipeline:
             if ctrl.step(stage.id) or stage.id in extra_stages:
                 stage_config = config.get(stage.id, {})
                 try:
-                    dt = stage(self, data, stage_config, status = repype.status.derive(status), log_root_dir = log_root_dir, **kwargs)
+                    dt = stage(self, data, stage_config, status = status, log_root_dir = log_root_dir, **kwargs)
                 except:
                     print(f'An error occured while executing the stage: {str(stage)}')
                     raise

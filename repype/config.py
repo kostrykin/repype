@@ -15,9 +15,9 @@ class Config:
 
     .. code-block:: python
     
-       cfg = repype.config.Config()
-       cfg['stage1/param1'] = 1000
-       cfg['stage2/param2'] = 5
+       config = repype.config.Config()
+       config['stage1/param1'] = 1000
+       config['stage2/param2'] = 5
 
     A dictionary can be wrapped into a :py:class:`Config` object by passing it to the constructor (no copying occurs). If another :py:class:`Config` object is passed to the constructor, a deep copy is created.
     """

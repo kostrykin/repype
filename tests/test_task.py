@@ -935,13 +935,13 @@ class Task__run(unittest.TestCase):
         mock_create_pipeline.return_value.process.assert_any_call(
             input = 'file-0',
             data = dict(),
-            cfg = self.config,
+            config = self.config,
             first_stage = None,
         )
         mock_create_pipeline.return_value.process.assert_any_call(
             input = 'file-1',
             data = dict(),
-            cfg = self.config,
+            config = self.config,
             first_stage = None,
         )
         self.assertEqual(mock_create_pipeline.return_value.process.call_count, 2)
@@ -964,13 +964,13 @@ class Task__run(unittest.TestCase):
         mock_create_pipeline.return_value.process.assert_any_call(
             input = 'file-0',
             data = dict(output = 'value1'),
-            cfg = self.config,
+            config = self.config,
             first_stage = stage1,
         )
         mock_create_pipeline.return_value.process.assert_any_call(
             input = 'file-1',
             data = dict(output = 'value2'),
-            cfg = self.config,
+            config = self.config,
             first_stage = stage1,
         )
         self.assertEqual(mock_create_pipeline.return_value.process.call_count, 2)

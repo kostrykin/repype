@@ -450,10 +450,11 @@ class Task:
 
         # Run the pipeline for all inputs
         for input_idx, input in enumerate(self.inputs):
+            input_status = status.derive()
             
             # Announce the status of the task
             repype.status.update(
-                status = status,
+                status = input_status,
                 info = 'process',
                 task = str(self.path.resolve()),
                 input = input,
@@ -466,8 +467,9 @@ class Task:
             data_chunk = pipeline.process(
                 input = input,
                 data = data_chunk,
-                cfg = config,
+                config = config,
                 first_stage = first_stage,
+                status = input_status,
             )
 
             if strip_marginals:
