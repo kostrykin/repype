@@ -4,9 +4,9 @@ import pathlib
 import re
 import time
 
-import pypers.config
-import pypers.status
-from pypers.typing import (
+import repype.config
+import repype.status
+from repype.typing import (
     DataDictionary,
     Dict,
     Optional,
@@ -121,14 +121,14 @@ class Stage:
     def __call__(
             self,
             data: DataDictionary,
-            config: pypers.config.Config,
-            status: Optional[pypers.status.Status] = None,
+            config: repype.config.Config,
+            status: Optional[repype.status.Status] = None,
             log_root_dir: Optional[pathlib.Path] = None,
             **kwargs) -> float:
 
         # Run the stage if it is enabled
         if config.get('enabled', self.enabled_by_default):
-            pypers.status.update(
+            repype.status.update(
                 status = status,
                 info = 'start-stage',
                 stage = self.id,
@@ -169,7 +169,7 @@ class Stage:
             return 0.
         
     def skip(self, data, status = None, **kwargs):
-        pypers.status.update(
+        repype.status.update(
             status = status,
             info = 'skip-stage',
             stage = self.id,
@@ -179,9 +179,9 @@ class Stage:
 
     def process(
             self,
-            config: Optional[pypers.config.Config] = None,
+            config: Optional[repype.config.Config] = None,
             log_root_dir: Optional[pathlib.Path] = None,
-            status: Optional[pypers.status.Status] = None,
+            status: Optional[repype.status.Status] = None,
             **inputs,
         ) -> DataDictionary:
         """
@@ -190,9 +190,9 @@ class Stage:
         This method runs the current stage of the pipeline with the provided inputs, configuration parameters, and logging settings. It then returns the outputs produced by this stage.
 
         :param input_data: A dictionary containing the inputs required by this stage. Each key-value pair in the dictionary represents an input name and its corresponding value.
-        :param config: A :py:class:`~pypers.config.Config` object, containing the hyperparameters to be used by this stage.
+        :param config: A :py:class:`~repype.config.Config` object, containing the hyperparameters to be used by this stage.
         :param log_root_dir: The path to the directory where log files will be written. If this parameter is ``None``, no log files will be written.
-        :param status: A :py:class:`~pypers.status.Status` object.
+        :param status: A :py:class:`~repype.status.Status` object.
         :return: A dictionary containing the outputs produced by this stage. Each key-value pair in the dictionary represents an output name and its corresponding value.
         """
         raise NotImplementedError()

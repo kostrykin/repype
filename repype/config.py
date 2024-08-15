@@ -15,7 +15,7 @@ class Config:
 
     .. code-block:: python
     
-       cfg = pypers.config.Config()
+       cfg = repype.config.Config()
        cfg['stage1/param1'] = 1000
        cfg['stage2/param2'] = 5
 

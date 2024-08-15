@@ -3,11 +3,11 @@ import os
 import pathlib
 import traceback
 
-import pypers.pipeline
-import pypers.config
-import pypers.status
-import pypers.task
-from pypers.typing import (
+import repype.pipeline
+import repype.config
+import repype.status
+import repype.task
+from repype.typing import (
     List,
     Optional,
     PathLike,
@@ -32,7 +32,7 @@ class Batch:
     def __init__(self):
         self.tasks = dict()
 
-    def task(self, path: PathLike, spec: Optional[dict] = None) -> Optional[pypers.task.Task]:
+    def task(self, path: PathLike, spec: Optional[dict] = None) -> Optional[repype.task.Task]:
         """
         Retrieve a task by its path.
         """
@@ -54,7 +54,7 @@ class Batch:
         # Retrieve the parent task and instantiate the requested task
         if task is None:
             parent = self.task(path.parent) if path.parent else None
-            task = pypers.task.Task(path = path, spec = spec, parent = parent)
+            task = repype.task.Task(path = path, spec = spec, parent = parent)
             assert path not in self.tasks
             self.tasks[path] = task
             return task
@@ -87,7 +87,7 @@ class Batch:
         """
         return [rc for rc in self.contexts if rc.task.is_pending(rc.pipeline, rc.config)]
 
-    def run(self, contexts: Optional[List[RunContext]] = None, status: Optional[pypers.status.Status] = None) -> bool:
+    def run(self, contexts: Optional[List[RunContext]] = None, status: Optional[repype.status.Status] = None) -> bool:
         """
         Run all pending tasks.
 
@@ -101,7 +101,7 @@ class Batch:
         for rc_idx, rc in enumerate(contexts):
             task_status = status.derive()
  
-            pypers.status.update(
+            repype.status.update(
                 status = task_status,
                 info = 'enter',
                 task = str(rc.task.path.resolve()),
@@ -120,7 +120,7 @@ class Batch:
 
                 # If an exception occurs, update the status and re-raise the exception
                 except:
-                    pypers.status.update(
+                    repype.status.update(
                         status = task_status,
                         info = 'error',
                         task = str(rc.task.path.resolve()),
@@ -131,7 +131,7 @@ class Batch:
             # Wait for the child process to finish
             else:
                 if os.waitpid(newpid, 0)[1] != 0:
-                    pypers.status.update(
+                    repype.status.update(
                         status = status,
                         info = 'interrupted',
                     )

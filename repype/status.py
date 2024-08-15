@@ -11,7 +11,7 @@ from watchdog.events import (
     FileSystemEventHandler,
 )
 
-from pypers.typing import (
+from repype.typing import (
     Iterable,
     Iterator,
     List,

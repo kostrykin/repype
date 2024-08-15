@@ -3,8 +3,8 @@ import pathlib
 import shutil
 import tempfile
 
-import pypers.stage
-from pypers.typing import (
+import repype.stage
+from repype.typing import (
     PathLike,
 )
 
@@ -39,7 +39,7 @@ def create_stage_class(**kwargs):
     _process   = kwargs.get('process'  , None)
     _configure = kwargs.get('configure', None)
 
-    class DummyStage(pypers.stage.Stage):
+    class DummyStage(repype.stage.Stage):
 
         id       = kwargs['id']
         inputs   = kwargs['inputs']
@@ -65,7 +65,7 @@ def create_stage(**kwargs):
 # Test create_stage:
 
 _stage = create_stage(id = 'dummy', inputs = ['x1', 'x2'], outputs = ['y'])
-assert isinstance(_stage, pypers.stage.Stage)
+assert isinstance(_stage, repype.stage.Stage)
 assert isinstance(_stage.inputs , frozenset)
 assert isinstance(_stage.outputs, frozenset)
 assert _stage.inputs  == frozenset(['x1', 'x2'])

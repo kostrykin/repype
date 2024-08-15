@@ -4,24 +4,24 @@ import io
 import contextlib
 import re
 
-import pypers.output
+import repype.output
 
 
 class get_output_Test(unittest.TestCase):
 
     def test_get_output(self):
-        out1 = pypers.output.get_output(None)
-        self.assertIsInstance(out1, pypers.output.Output, f'Actual type: {type(out1)}')
+        out1 = repype.output.get_output(None)
+        self.assertIsInstance(out1, repype.output.Output, f'Actual type: {type(out1)}')
         self.assertFalse(out1.muted)
-        out2 = pypers.output.get_output(out1)
-        self.assertIsInstance(out2, pypers.output.Output, f'Actual type: {type(out2)}')
+        out2 = repype.output.get_output(out1)
+        self.assertIsInstance(out2, repype.output.Output, f'Actual type: {type(out2)}')
         self.assertIs(out1, out2)
-        out3 = pypers.output.get_output('muted')
-        self.assertIsInstance(out3, pypers.output.Output, f'Actual type: {type(out3)}')
+        out3 = repype.output.get_output('muted')
+        self.assertIsInstance(out3, repype.output.Output, f'Actual type: {type(out3)}')
         self.assertTrue(out3.muted)
 
 
-class DummyOutput(pypers.output.Output):
+class DummyOutput(repype.output.Output):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -114,7 +114,7 @@ class OutputTest(unittest.TestCase):
 class ConsoleOutputTest(unittest.TestCase):
 
     def setUp(self):
-        self.out = pypers.output.ConsoleOutput()
+        self.out = repype.output.ConsoleOutput()
         self.out_str_buf = io.StringIO()
         self.ctx = contextlib.redirect_stdout(self.out_str_buf)
         self.ctx.__enter__()

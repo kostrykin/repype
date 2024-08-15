@@ -1,7 +1,7 @@
-pypers.output
+repype.config
 =============
 
-.. automodule:: pypers.output
+.. automodule:: repype.config
     :members:
     :undoc-members:
     :show-inheritance:

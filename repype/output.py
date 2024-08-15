@@ -23,13 +23,13 @@ def get_output(out=None):
 
     .. runblock:: pycon
 
-       >>> import pypers.output
-       >>> out1 = pypers.output.get_output(None)
+       >>> import repype.output
+       >>> out1 = repype.output.get_output(None)
        >>> out1.muted
        >>> type(out1)
-       >>> out2 = pypers.output.get_output(out1)
+       >>> out2 = repype.output.get_output(out1)
        >>> out1 is out2
-       >>> out3 = pypers.output.get_output('muted')
+       >>> out3 = repype.output.get_output('muted')
        >>> type(out3)
        >>> out3.muted
     """

@@ -1,7 +1,7 @@
-pypers
+repype
 ======
 
-Powerful batch processing using pipelines for scientific computing.
+Reproducible batch processing using pipelines for scientific computing.
 
 Contents
 --------
@@ -14,4 +14,4 @@ Contents
 .. toctree::
    :maxdepth: 2
    
-   pypers
+   repype

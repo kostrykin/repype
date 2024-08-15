@@ -6,11 +6,11 @@ Quick start
 Installation
 ------------
 
-To use pypers, first install it using conda:
+To use repype, first install it from PyPI:
 
 .. code-block:: console
 
-   conda install -c bioconda pypers
+   pip install repype
 
 Usage
 -----
@@ -26,18 +26,18 @@ To use batch processing, create a file ``batch.py`` with the content,
 
 .. code-block:: python
 
-   import pypers.batch
-   import pypers.pipeline
+   import repype.batch
+   import repype.pipeline
 
-   class Task(pypers.batch.Task):
+   class Task(repype.batch.Task):
 
        def create_pipeline(self, dry):
-           return pypers.pipeline.create_pipeline([
+           return repype.pipeline.create_pipeline([
                # list of pipeline stages
            ])
 
    if __name__ == '__main__':
-       pypers.batch.run_cli(Task)
+       repype.batch.run_cli(Task)
 
 and then run from command line:
 

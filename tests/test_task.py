@@ -9,46 +9,46 @@ from unittest.mock import (
     PropertyMock,
 )
 
-import pypers.pipeline
-import pypers.task
+import repype.pipeline
+import repype.task
 from . import testsuite
-import pypers.status
+import repype.status
 
 
 class decode_inputs(unittest.TestCase):
 
     def test_empty(self):
-        self.assertEqual(pypers.task.decode_inputs(''), [])
+        self.assertEqual(repype.task.decode_inputs(''), [])
 
     def test_single(self):
-        self.assertEqual(pypers.task.decode_inputs('1'), [1])
+        self.assertEqual(repype.task.decode_inputs('1'), [1])
 
     def test_range(self):
-        self.assertEqual(pypers.task.decode_inputs('1-2'), [1, 2])
-        self.assertEqual(pypers.task.decode_inputs('1 - 3'), [1, 2, 3])
+        self.assertEqual(repype.task.decode_inputs('1-2'), [1, 2])
+        self.assertEqual(repype.task.decode_inputs('1 - 3'), [1, 2, 3])
 
     def test_invalid(self):
         with self.assertRaises(ValueError):
-            pypers.task.decode_inputs('1-')
+            repype.task.decode_inputs('1-')
         with self.assertRaises(ValueError):
-            pypers.task.decode_inputs('-1')
+            repype.task.decode_inputs('-1')
         with self.assertRaises(ValueError):
-            pypers.task.decode_inputs('-')
+            repype.task.decode_inputs('-')
         with self.assertRaises(ValueError):
-            pypers.task.decode_inputs('3-1')
+            repype.task.decode_inputs('3-1')
         with self.assertRaises(ValueError):
-            pypers.task.decode_inputs('1-1')
+            repype.task.decode_inputs('1-1')
 
     def test_mixed(self):
-        self.assertEqual(pypers.task.decode_inputs('1,2-3,4'), [1, 2, 3, 4])
-        self.assertEqual(pypers.task.decode_inputs('1, 2-3'), [1, 2, 3])
+        self.assertEqual(repype.task.decode_inputs('1,2-3,4'), [1, 2, 3, 4])
+        self.assertEqual(repype.task.decode_inputs('1, 2-3'), [1, 2, 3])
 
 
 class Task__init(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_with_path(self, path):
-        task = pypers.task.Task(
+        task = repype.task.Task(
             path = pathlib.Path(path),
             parent = None,
             spec = dict(),
@@ -57,7 +57,7 @@ class Task__init(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_with_str_path(self, path):
-        task = pypers.task.Task(
+        task = repype.task.Task(
             path = str(path),
             parent = None,
             spec = dict(),
@@ -66,7 +66,7 @@ class Task__init(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_without_parent(self, path):
-        task = pypers.task.Task(
+        task = repype.task.Task(
             path = path,
             parent = None,
             spec = dict(),
@@ -79,12 +79,12 @@ class Task__init(unittest.TestCase):
 
     @testsuite.with_temporary_paths(2)
     def test_with_parent(self, path1, path2):
-        parent = pypers.task.Task(
+        parent = repype.task.Task(
             path = path1,
             parent = None,
             spec = dict(),
         )
-        task = pypers.task.Task(
+        task = repype.task.Task(
             path = path2,
             parent = parent,
             spec = dict(),
@@ -96,7 +96,7 @@ class Task__full_spec(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_without_parent(self, path):
-        task = pypers.task.Task(
+        task = repype.task.Task(
             path = path,
             parent = None,
             spec = dict(
@@ -114,7 +114,7 @@ class Task__full_spec(unittest.TestCase):
 
     @testsuite.with_temporary_paths(3)
     def test_with_parent(self, path1, path2, path3):
-        task1 = pypers.task.Task(
+        task1 = repype.task.Task(
             path = path1,
             parent = None,
             spec = dict(
@@ -122,7 +122,7 @@ class Task__full_spec(unittest.TestCase):
                 field2 = 2,
             ),
         )
-        task2 = pypers.task.Task(
+        task2 = repype.task.Task(
             path = path2,
             parent = task1,
             spec = dict(
@@ -130,7 +130,7 @@ class Task__full_spec(unittest.TestCase):
                 field3 = 4,
             ),
         )
-        task3 = pypers.task.Task(
+        task3 = repype.task.Task(
             path = path3,
             parent = task2,
             spec = dict(
@@ -158,7 +158,7 @@ class Task__full_spec(unittest.TestCase):
 class Task__create_pipeline(unittest.TestCase):
 
     def test_undefined(self):
-        task = pypers.task.Task(
+        task = repype.task.Task(
             path = '',
             parent = None,
             spec = dict(),
@@ -168,26 +168,26 @@ class Task__create_pipeline(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_from_spec(self, path):
-        task = pypers.task.Task(
+        task = repype.task.Task(
             path = path,
             parent = None,
             spec = dict(
-                pipeline = 'pypers.pipeline.Pipeline',
+                pipeline = 'repype.pipeline.Pipeline',
             ),
         )
         self.assertIsInstance(
             task.create_pipeline(),
-            pypers.pipeline.Pipeline,
+            repype.pipeline.Pipeline,
         )
 
     @testsuite.with_temporary_paths(1)
-    @patch('pypers.pipeline.Pipeline')
+    @patch('repype.pipeline.Pipeline')
     def test_from_spec_args_and_kwargs(self, path, mock_Pipeline):
-        task = pypers.task.Task(
+        task = repype.task.Task(
             path = path,
             parent = None,
             spec = dict(
-                pipeline = 'pypers.pipeline.Pipeline',
+                pipeline = 'repype.pipeline.Pipeline',
             ),
         )
         task.create_pipeline(
@@ -205,7 +205,7 @@ class Task__create_pipeline(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_from_spec_missing(self, path):
-        task = pypers.task.Task(
+        task = repype.task.Task(
             path = path,
             parent = None,
             spec = dict(),
@@ -215,10 +215,10 @@ class Task__create_pipeline(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_override(self, path):
-        class DerivedTask(pypers.task.Task):
+        class DerivedTask(repype.task.Task):
 
             def create_pipeline(self, *args, **kwargs):
-                return pypers.pipeline.Pipeline(*args, **kwargs)
+                return repype.pipeline.Pipeline(*args, **kwargs)
         
         task = DerivedTask(
             path = path,
@@ -227,7 +227,7 @@ class Task__create_pipeline(unittest.TestCase):
         )
         self.assertIsInstance(
             task.create_pipeline(),
-            pypers.pipeline.Pipeline,
+            repype.pipeline.Pipeline,
         )
 
     stage1_cls = testsuite.create_stage_class(id = 'stage1')
@@ -235,7 +235,7 @@ class Task__create_pipeline(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_from_spec_with_stages(self, path):
-        task = pypers.task.Task(
+        task = repype.task.Task(
             path = path,
             parent = None,
             spec = dict(
@@ -245,7 +245,7 @@ class Task__create_pipeline(unittest.TestCase):
                 ],
             ),
         )
-        self.assertIsInstance(task.create_pipeline(), pypers.pipeline.Pipeline)
+        self.assertIsInstance(task.create_pipeline(), repype.pipeline.Pipeline)
         self.assertEqual(frozenset([stage.id for stage in task.create_pipeline().stages]), {'stage1', 'stage2'})
 
 
@@ -253,7 +253,7 @@ class Task__get_path_pattern(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_defined(self, path):
-        task = pypers.task.Task(
+        task = repype.task.Task(
             path = path,
             parent = None,
             spec = dict(cfg_pathpattern = 'cfg/%s.yml'),
@@ -262,7 +262,7 @@ class Task__get_path_pattern(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_undefined(self, path):
-        task = pypers.task.Task(
+        task = repype.task.Task(
             path = path,
             parent = None,
             spec = dict(),
@@ -271,7 +271,7 @@ class Task__get_path_pattern(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_undefined_with_default(self, path):
-        task = pypers.task.Task(
+        task = repype.task.Task(
             path = path,
             parent = None,
             spec = dict(),
@@ -284,7 +284,7 @@ class Task__create_config(unittest.TestCase):
     @testsuite.with_temporary_paths(1)
     def test(self, path):
         # Verify that changes to the config do not affect the spec or full spec (if a config is defined)
-        task = pypers.task.Task(
+        task = repype.task.Task(
             path = path,
             parent = None,
             spec = dict(
@@ -298,7 +298,7 @@ class Task__create_config(unittest.TestCase):
 
     @testsuite.with_temporary_paths(4)
     def test_with_base_config_path(self, task1_path, task2_path, task3_path, aux_path):
-        task1 = pypers.task.Task(
+        task1 = repype.task.Task(
             path = task1_path,
             parent = None,
             spec = dict(
@@ -311,7 +311,7 @@ class Task__create_config(unittest.TestCase):
                 'key1: value10' '\n'
                 'key2: value20'
             )
-        task2 = pypers.task.Task(
+        task2 = repype.task.Task(
             path = task2_path,
             parent = task1,
             spec = dict(
@@ -319,7 +319,7 @@ class Task__create_config(unittest.TestCase):
                 config = dict(key2 = 'value200'),
             ),
         )
-        task3 = pypers.task.Task(
+        task3 = repype.task.Task(
             path = task3_path,
             parent = task2,
             spec = dict(
@@ -327,14 +327,14 @@ class Task__create_config(unittest.TestCase):
             ),
         )
         config = task3.create_config()
-        self.assertEqual(config, pypers.config.Config(dict(key1 = 'value10', key2 = 'value200', key3 = 'value3', key4 = 'value4')))
+        self.assertEqual(config, repype.config.Config(dict(key1 = 'value10', key2 = 'value200', key3 = 'value3', key4 = 'value4')))
 
 
 class Task__inputs(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_str(self, path):
-        task = pypers.task.Task(
+        task = repype.task.Task(
             path = path,
             parent = None,
             spec = dict(
@@ -345,7 +345,7 @@ class Task__inputs(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_list(self, path):
-        task = pypers.task.Task(
+        task = repype.task.Task(
             path = path,
             parent = None,
             spec = dict(
@@ -362,17 +362,17 @@ class Task__root(unittest.TestCase):
 
     @testsuite.with_temporary_paths(3)
     def test(self, path1, path2, path3):
-        task1 = pypers.task.Task(
+        task1 = repype.task.Task(
             path = path1,
             parent = None,
             spec = dict(),
         )
-        task2 = pypers.task.Task(
+        task2 = repype.task.Task(
             path = path2,
             parent = task1,
             spec = dict(),
         )
-        task3 = pypers.task.Task(
+        task3 = repype.task.Task(
             path = path3,
             parent = task2,
             spec = dict(),
@@ -386,12 +386,12 @@ class Task__resolve_path(unittest.TestCase):
 
     @testsuite.with_temporary_paths(2)
     def test(self, path1, path2):
-        task1 = pypers.task.Task(
+        task1 = repype.task.Task(
             path = path1,
             parent = None,
             spec = dict(),
         )
-        task2 = pypers.task.Task(
+        task2 = repype.task.Task(
             path = path2 / 'subdir',
             parent = task1,
             spec = dict(),
@@ -407,7 +407,7 @@ class Task__resolve_path(unittest.TestCase):
 class Task__is_pending(unittest.TestCase):
 
     def setUp(self):
-        self.pipeline = pypers.pipeline.create_pipeline(
+        self.pipeline = repype.pipeline.create_pipeline(
             [
                 testsuite.create_stage(id = 'stage1', outputs = ['output1.1']),
             ]
@@ -415,7 +415,7 @@ class Task__is_pending(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_not_runnable(self, path):
-        task = pypers.task.Task(
+        task = repype.task.Task(
             path = path,
             parent = None,
             spec = dict(),
@@ -425,7 +425,7 @@ class Task__is_pending(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_without_digest(self, path):
-        task = pypers.task.Task(
+        task = repype.task.Task(
             path = path,
             parent = None,
             spec = dict(runnable = True),
@@ -435,7 +435,7 @@ class Task__is_pending(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_with_digest(self, path):
-        task = pypers.task.Task(
+        task = repype.task.Task(
             path = path,
             parent = None,
             spec = dict(runnable = True),
@@ -456,7 +456,7 @@ class Task__is_pending(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_with_changed_config(self, path):
-        task = pypers.task.Task(
+        task = repype.task.Task(
             path = path,
             parent = None,
             spec = dict(runnable = True),
@@ -477,7 +477,7 @@ class Task__is_pending(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_with_changed_pipeline(self, path):
-        task = pypers.task.Task(
+        task = repype.task.Task(
             path = path,
             parent = None,
             spec = dict(runnable = True),
@@ -500,7 +500,7 @@ class Task__marginal_states(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_from_spec_missing(self, path):
-        task = pypers.task.Task(
+        task = repype.task.Task(
             path = path,
             parent = None,
             spec = dict(),
@@ -509,7 +509,7 @@ class Task__marginal_states(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_from_spec(self, path):
-        task = pypers.task.Task(
+        task = repype.task.Task(
             path = path,
             parent = None,
             spec = dict(
@@ -523,7 +523,7 @@ class Task__marginal_states(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_override(self, path):
-        class DerivedTask(pypers.task.Task):
+        class DerivedTask(repype.task.Task):
 
             marginal_stages = [
                 'stage1',
@@ -542,16 +542,16 @@ class Task__get_marginal_fields(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_empty_pipeline(self, path):
-        task = pypers.task.Task(
+        task = repype.task.Task(
             path = '',
             parent = None,
-            spec = dict(pipeline = 'pypers.pipeline.Pipeline'),
+            spec = dict(pipeline = 'repype.pipeline.Pipeline'),
         )
         self.assertEqual(task.get_marginal_fields(task.create_pipeline()), frozenset())
 
     @testsuite.with_temporary_paths(1)
     def test(self, path):
-        class DerivedTask(pypers.task.Task):
+        class DerivedTask(repype.task.Task):
 
             marginal_stages = [
                 'stage1',
@@ -564,7 +564,7 @@ class Task__get_marginal_fields(unittest.TestCase):
                     testsuite.create_stage(id = 'stage2', outputs = ['output2.1', 'output2.2']),
                     testsuite.create_stage(id = 'stage3', outputs = ['output3']),
                 ]
-                return pypers.pipeline.create_pipeline(stages, *args, **kwargs)
+                return repype.pipeline.create_pipeline(stages, *args, **kwargs)
         
         task = DerivedTask(
             path = path,
@@ -587,7 +587,7 @@ class Task__store(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test(self, path):
-        task = pypers.task.Task(
+        task = repype.task.Task(
             path = path,
             parent = None,
             spec = dict(
@@ -601,7 +601,7 @@ class Task__store(unittest.TestCase):
                 ),
             ),
         )
-        pipeline = pypers.pipeline.create_pipeline(
+        pipeline = repype.pipeline.create_pipeline(
             [
                 testsuite.create_stage(id = 'stage1', outputs = ['output1.1']),
                 testsuite.create_stage(id = 'stage2', inputs = ['output1.1'], outputs = ['output2.1', 'output2.2']),
@@ -644,7 +644,7 @@ class Task__load(unittest.TestCase):
 
     def setUp(self):
         self.tempdir = tempfile.TemporaryDirectory()
-        self.task = pypers.task.Task(
+        self.task = repype.task.Task(
             path = pathlib.Path(self.tempdir.name),
             parent = None,
             spec = dict(
@@ -673,7 +673,7 @@ class Task__load(unittest.TestCase):
         self.assertEqual(data, self.data_without_marginals)
 
     def test_with_pipeline(self):
-        pipeline = pypers.pipeline.create_pipeline(
+        pipeline = repype.pipeline.create_pipeline(
             [
                 testsuite.create_stage(id = 'stage1', outputs = ['output1.1']),
                 testsuite.create_stage(id = 'stage2', inputs = ['output1.1'], outputs = ['output2.1', 'output2.2']),
@@ -688,14 +688,14 @@ class Task__find_first_diverging_stage(unittest.TestCase):
 
     def setUp(self):
         self.tempdir = tempfile.TemporaryDirectory()
-        self.task = pypers.task.Task(
+        self.task = repype.task.Task(
             path = pathlib.Path(self.tempdir.name),
             parent = None,
             spec = dict(
                 runnable = True,
             ),
         )
-        self.pipeline = pypers.pipeline.create_pipeline(
+        self.pipeline = repype.pipeline.create_pipeline(
             [
                 testsuite.create_stage(id = 'stage1', outputs = ['output1.1']),
                 testsuite.create_stage(id = 'stage2', inputs = ['output1.1'], outputs = ['output2.1', 'output2.2']),
@@ -773,7 +773,7 @@ class Task__find_pickup_task(unittest.TestCase):
         self.tempdirs = [tempfile.TemporaryDirectory() for _ in range(3)]
         self.tasks = list()
         for tempdir in self.tempdirs:
-            task = pypers.task.Task(
+            task = repype.task.Task(
                 path = pathlib.Path(tempdir.name),
                 parent = self.tasks[-1] if self.tasks else None,
                 spec = dict(
@@ -781,7 +781,7 @@ class Task__find_pickup_task(unittest.TestCase):
                 ),
             )
             self.tasks.append(task)
-        self.pipeline = pypers.pipeline.create_pipeline(
+        self.pipeline = repype.pipeline.create_pipeline(
             [
                 testsuite.create_stage(id = 'stage1', outputs = ['output1.1']),
                 testsuite.create_stage(id = 'stage2', inputs = ['output1.1'], outputs = ['output2.1', 'output2.2']),
@@ -891,14 +891,14 @@ class Task__find_pickup_task(unittest.TestCase):
         ))
 
 
-@patch.object(pypers.task.Task, 'store')
-@patch.object(pypers.task.Task, 'load')
-@patch.object(pypers.task.Task, 'create_pipeline')
+@patch.object(repype.task.Task, 'store')
+@patch.object(repype.task.Task, 'load')
+@patch.object(repype.task.Task, 'create_pipeline')
 class Task__run(unittest.TestCase):
 
     def setUp(self):
         self.tempdir = tempfile.TemporaryDirectory()
-        self.task = pypers.task.Task(
+        self.task = repype.task.Task(
             path = pathlib.Path(self.tempdir.name),
             parent = None,
             spec = dict(
@@ -911,7 +911,7 @@ class Task__run(unittest.TestCase):
     def tearDown(self):
         self.tempdir.cleanup()
 
-    @patch.object(pypers.task.Task, 'runnable', return_value = False, new_callable = PropertyMock)
+    @patch.object(repype.task.Task, 'runnable', return_value = False, new_callable = PropertyMock)
     def test_not_runnable(self, *args):
         with self.assertRaises(AssertionError):
             self.task.run(self.config)
@@ -941,7 +941,7 @@ class Task__run(unittest.TestCase):
             'file-1': dict(output = 'value2'),
         }
         stage1 = testsuite.create_stage(id = 'stage-1')
-        with patch.object(pypers.task.Task, 'find_pickup_task', return_value = dict(task = self.task, first_diverging_stage = stage1)) as mock_find_pickup_task:
+        with patch.object(repype.task.Task, 'find_pickup_task', return_value = dict(task = self.task, first_diverging_stage = stage1)) as mock_find_pickup_task:
             self.task.run(self.config)
         mock_find_pickup_task.assert_called_once_with(
             mock_create_pipeline.return_value,

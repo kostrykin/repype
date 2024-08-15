@@ -4,8 +4,8 @@ from unittest.mock import (
     MagicMock,
 )
 
-import pypers.stage
-import pypers.config
+import repype.stage
+import repype.config
 
 from . import testsuite
 
@@ -13,22 +13,22 @@ from . import testsuite
 class suggest_id(unittest.TestCase):
 
     def test(self):
-        self.assertEqual(pypers.stage.suggest_stage_id('TheGreatPCMapper'     ), 'the-great-pc-mapper'    )
-        self.assertEqual(pypers.stage.suggest_stage_id('TheGreat_PCMapper'    ), 'the-great-pc-mapper'    )
-        self.assertEqual(pypers.stage.suggest_stage_id('TheGreat__PCMapper'   ), 'the-great-pc-mapper'    )
-        self.assertEqual(pypers.stage.suggest_stage_id('TheGreat_123_PCMapper'), 'the-great-123-pc-mapper')
-        self.assertEqual(pypers.stage.suggest_stage_id('TheGreat123_PCMapper' ), 'the-great-123-pc-mapper')
-        self.assertEqual(pypers.stage.suggest_stage_id('TheGreat123PCMapper'  ), 'the-great-123-pc-mapper')
-        self.assertEqual(pypers.stage.suggest_stage_id('TheGreatMapperStage'  ), 'the-great-mapper'       )
-        self.assertEqual(pypers.stage.suggest_stage_id('Stage'                ), 'stage'                  )
+        self.assertEqual(repype.stage.suggest_stage_id('TheGreatPCMapper'     ), 'the-great-pc-mapper'    )
+        self.assertEqual(repype.stage.suggest_stage_id('TheGreat_PCMapper'    ), 'the-great-pc-mapper'    )
+        self.assertEqual(repype.stage.suggest_stage_id('TheGreat__PCMapper'   ), 'the-great-pc-mapper'    )
+        self.assertEqual(repype.stage.suggest_stage_id('TheGreat_123_PCMapper'), 'the-great-123-pc-mapper')
+        self.assertEqual(repype.stage.suggest_stage_id('TheGreat123_PCMapper' ), 'the-great-123-pc-mapper')
+        self.assertEqual(repype.stage.suggest_stage_id('TheGreat123PCMapper'  ), 'the-great-123-pc-mapper')
+        self.assertEqual(repype.stage.suggest_stage_id('TheGreatMapperStage'  ), 'the-great-mapper'       )
+        self.assertEqual(repype.stage.suggest_stage_id('Stage'                ), 'stage'                  )
 
     def test_illegal(self):
-        self.assertRaises(AssertionError, lambda: pypers.stage.suggest_stage_id(''))
-        self.assertRaises(AssertionError, lambda: pypers.stage.suggest_stage_id('_'))
-        self.assertRaises(AssertionError, lambda: pypers.stage.suggest_stage_id('_1'))
-        self.assertRaises(AssertionError, lambda: pypers.stage.suggest_stage_id('TheGreat PCMapper'))
-        self.assertRaises(AssertionError, lambda: pypers.stage.suggest_stage_id('TheGreat-PCMapper'))
-        self.assertRaises(AssertionError, lambda: pypers.stage.suggest_stage_id('1TheGreatPCMapper'))
+        self.assertRaises(AssertionError, lambda: repype.stage.suggest_stage_id(''))
+        self.assertRaises(AssertionError, lambda: repype.stage.suggest_stage_id('_'))
+        self.assertRaises(AssertionError, lambda: repype.stage.suggest_stage_id('_1'))
+        self.assertRaises(AssertionError, lambda: repype.stage.suggest_stage_id('TheGreat PCMapper'))
+        self.assertRaises(AssertionError, lambda: repype.stage.suggest_stage_id('TheGreat-PCMapper'))
+        self.assertRaises(AssertionError, lambda: repype.stage.suggest_stage_id('1TheGreatPCMapper'))
 
 
 class Stage(unittest.TestCase):
@@ -36,13 +36,13 @@ class Stage(unittest.TestCase):
     def test_no_inputs_no_outputs(self):
         stage = testsuite.create_stage(id = 'test')
         data  = dict()
-        cfg   = pypers.config.Config()
+        cfg   = repype.config.Config()
         dt    = stage(data, cfg)
         self.assertIsInstance(dt, float)
         self.assertEqual(data, dict())
 
     def test_init(self):
-        class Stage(pypers.stage.Stage):
+        class Stage(repype.stage.Stage):
             pass
         self.assertEqual(Stage().id, 'stage')
 
@@ -53,7 +53,7 @@ class Stage(unittest.TestCase):
                     x1 * config.get('x1_factor', 0) + \
                     x2 * config.get('x2_factor', 0))
             )
-        cfg = pypers.config.Config()
+        cfg = repype.config.Config()
         for x1_factor in [0, 1]:
             for x2_factor in [0, 1]:
                 x1, x2 = 10, 20
@@ -72,7 +72,7 @@ class Stage(unittest.TestCase):
                 dict(y = x)
             )
         data = dict(x = 0)
-        config = pypers.config.Config()
+        config = repype.config.Config()
         self.assertRaises(TypeError, lambda: stage(data, config))
 
     def test_missing_output(self):
@@ -81,7 +81,7 @@ class Stage(unittest.TestCase):
                 dict()
             )
         data = dict()
-        config = pypers.config.Config()
+        config = repype.config.Config()
         self.assertRaises(AssertionError, lambda: stage(data, config))
 
     def test_spurious_output(self):
@@ -90,7 +90,7 @@ class Stage(unittest.TestCase):
                 dict(y = 0)
             )
         data = dict()
-        config = pypers.config.Config()
+        config = repype.config.Config()
         self.assertRaises(AssertionError, lambda: stage(data, config))
 
     def test_missing_and_spurious_output(self):
@@ -99,7 +99,7 @@ class Stage(unittest.TestCase):
                 dict(z = 0)
             )
         data = dict()
-        config = pypers.config.Config()
+        config = repype.config.Config()
         self.assertRaises(AssertionError, lambda: stage(data, config))
 
     def test_consumes(self):
@@ -108,7 +108,7 @@ class Stage(unittest.TestCase):
                 dict()
             )
         data = dict(x = 0, y = 1)
-        config = pypers.config.Config()
+        config = repype.config.Config()
         stage(data, config)
         self.assertEqual(data, dict(y = 1))
 
@@ -118,7 +118,7 @@ class Stage(unittest.TestCase):
                 dict()
             )
         data = dict()
-        config = pypers.config.Config()
+        config = repype.config.Config()
         self.assertRaises(KeyError, lambda: stage(data, config))
 
 
@@ -131,7 +131,7 @@ class Stage__callback(unittest.TestCase):
         self.stage.add_callback('end'  , self.callback)
         self.stage.add_callback('skip' , self.callback)
         self.data = dict(key = 'data')
-        self.config = pypers.config.Config(
+        self.config = repype.config.Config(
             dict(key = 'config'),
         )
 

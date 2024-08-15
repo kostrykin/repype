@@ -1,7 +1,7 @@
-pypers.batch
-============
+repype.output
+=============
 
-.. automodule:: pypers.batch
+.. automodule:: repype.output
     :members:
     :undoc-members:
     :show-inheritance:

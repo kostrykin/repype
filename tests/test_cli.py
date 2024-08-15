@@ -8,7 +8,7 @@ import time
 import unittest
 from unittest.mock import patch
 
-import pypers.cli
+import repype.cli
 from . import testsuite
 
 
@@ -54,9 +54,9 @@ class run_cli_ex(unittest.TestCase):
     def stdout(self):
         return re.sub(r'\033\[K', '', self.stdout_buf.getvalue())
 
-    @patch.object(pypers.batch.Batch, 'run')
+    @patch.object(repype.batch.Batch, 'run')
     def test(self, mock_batch_run):
-        ret = pypers.cli.run_cli_ex(path = self.tempdir.name)
+        ret = repype.cli.run_cli_ex(path = self.tempdir.name)
         self.assertTrue(ret)
         mock_batch_run.assert_not_called()
         self.assertEqual(
@@ -66,14 +66,14 @@ class run_cli_ex(unittest.TestCase):
             'DRY RUN: use "--run" to run the tasks instead' '\n',
         )
 
-    @patch.object(pypers.batch.Batch, 'run')
+    @patch.object(repype.batch.Batch, 'run')
     def test_run(self, mock_batch_run):
-        ret = pypers.cli.run_cli_ex(path = self.tempdir.name, run = True)
+        ret = repype.cli.run_cli_ex(path = self.tempdir.name, run = True)
         self.assertTrue(ret)
         mock_batch_run.assert_called_once()
         self.assertIn('status', mock_batch_run.call_args_list[0].kwargs)
         self.assertEqual(len(mock_batch_run.call_args_list[0].args), 1)
-        self.assertEqual([type(rc) for rc in mock_batch_run.call_args_list[0].args[0]], [pypers.batch.RunContext] * 3)
+        self.assertEqual([type(rc) for rc in mock_batch_run.call_args_list[0].args[0]], [repype.batch.RunContext] * 3)
         self.assertEqual(
             self.stdout,
             '\n'
@@ -82,13 +82,13 @@ class run_cli_ex(unittest.TestCase):
 
     def test_run_integrated(self):
         # Patch Task.store to delay the storage of results by 1 second, so that intermediates don't collapse too quickly
-        _task_store = pypers.task.Task.store
+        _task_store = repype.task.Task.store
         def delayed_task_store(*args, **kwargs):
             time.sleep(1)
             return _task_store(*args, **kwargs)
-        with patch.object(pypers.task.Task, 'store', side_effect = delayed_task_store, autospec = True):
+        with patch.object(repype.task.Task, 'store', side_effect = delayed_task_store, autospec = True):
 
-            ret = pypers.cli.run_cli_ex(path = self.tempdir.name, run = True)
+            ret = repype.cli.run_cli_ex(path = self.tempdir.name, run = True)
             self.assertTrue(ret)
             self.assertEqual(
                 self.stdout,
@@ -111,10 +111,10 @@ class run_cli_ex(unittest.TestCase):
                 f'  Results have been stored' '\n'
             )
 
-    @patch.object(pypers.task.Task, 'store', side_effect = testsuite.TestError)
-    @patch.object(pypers.status.Status, 'intermediate')  # Suppress the `Storing results...` intermediate, sometimes not captured quickly enough
+    @patch.object(repype.task.Task, 'store', side_effect = testsuite.TestError)
+    @patch.object(repype.status.Status, 'intermediate')  # Suppress the `Storing results...` intermediate, sometimes not captured quickly enough
     def test_internal_error(self, mock_task_store, mock_status_intermediate):
-        ret = pypers.cli.run_cli_ex(path = self.tempdir.name, run = True)
+        ret = repype.cli.run_cli_ex(path = self.tempdir.name, run = True)
         self.assertFalse(ret)
         self.assertIn(
             f'\n'

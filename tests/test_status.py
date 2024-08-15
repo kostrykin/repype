@@ -11,12 +11,12 @@ from unittest.mock import (
     patch,
 )
 
-from pypers.status import Status, StatusReader
+from repype.status import Status, StatusReader
 from . import testsuite
 
 
 def wait_for_watchdog():
-    timeout = float(os.environ.get('PYPERS_WATCHDOG_TIMEOUT', 0.1))
+    timeout = float(os.environ.get('REPYPE_WATCHDOG_TIMEOUT', 0.1))
     time.sleep(timeout)
 
 

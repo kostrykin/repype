@@ -2,8 +2,9 @@
 
 from distutils.core import setup
 
-with open('pypers/version.py') as fin:
+with open('repype/version.py') as fin:
     exec(fin.read(), globals())
+
 
 def strip_raw(rst):
     lines_in = rst.split('\n')
@@ -39,6 +40,7 @@ def strip_raw(rst):
 
     return '\n'.join(lines_out)
 
+
 setup(
     name = 'repype',
     version = VERSION,
@@ -50,5 +52,5 @@ setup(
     author_email = 'leonid.kostrykin@bioquant.uni-heidelberg.de',
     url = 'https://github.com/kostrykin/pypers',
     license = 'MIT',
-    packages = ['pypers'],
+    packages = ['repype'],
 )

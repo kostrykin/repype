@@ -1,7 +1,7 @@
-pypers.config
-=============
+repype.batch
+============
 
-.. automodule:: pypers.config
+.. automodule:: repype.batch
     :members:
     :undoc-members:
     :show-inheritance:

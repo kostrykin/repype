@@ -3,9 +3,9 @@ import pathlib
 import sys
 import tempfile
 
-import pypers.batch
-import pypers.status
-from pypers.typing import (
+import repype.batch
+import repype.status
+from repype.typing import (
     List,
     Optional,
     PathLike,
@@ -14,7 +14,7 @@ from pypers.typing import (
 )
 
 
-class StatusReaderConsoleAdapter(pypers.status.StatusReader):
+class StatusReaderConsoleAdapter(repype.status.StatusReader):
     """
     Writes status updates to stdout.
     """
@@ -103,7 +103,7 @@ class StatusReaderConsoleAdapter(pypers.status.StatusReader):
 
 
 def run_cli(
-        status_reader_cls: Type[pypers.status.StatusReader] = StatusReaderConsoleAdapter,
+        status_reader_cls: Type[repype.status.StatusReader] = StatusReaderConsoleAdapter,
     ) -> bool:
 
     if parser is None:
@@ -121,6 +121,7 @@ def run_cli(
         args.run,
         args.task,
         args.task_dir,
+        status_reader_cls,
     )
 
 
@@ -129,11 +130,11 @@ def run_cli_ex(
         run: bool = False,
         tasks: List[PathLike] = list(),
         task_dirs: List[PathLike] = list(),
-        status_reader_cls: Type[pypers.status.StatusReader] = StatusReaderConsoleAdapter,
+        status_reader_cls: Type[repype.status.StatusReader] = StatusReaderConsoleAdapter,
     ) -> bool:
 
     path  = pathlib.Path(path).resolve()
-    batch = pypers.batch.Batch()
+    batch = repype.batch.Batch()
     batch.load(path)
     
     if tasks or task_dirs:
@@ -148,8 +149,8 @@ def run_cli_ex(
         contexts = batch.pending
 
     with tempfile.TemporaryDirectory() as status_directory_path:
-        status = pypers.status.Status(path = status_directory_path)
-        pypers.status.update(
+        status = repype.status.Status(path = status_directory_path)
+        repype.status.update(
             status = status,
             info = 'batch',
             batch = [str(rc.task.path.resolve()) for rc in contexts],

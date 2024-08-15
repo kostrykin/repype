@@ -8,11 +8,11 @@ import pathlib
 import re
 
 import frozendict
-import pypers.pipeline
-import pypers.config
-import pypers.stage
-import pypers.status
-from pypers.typing import (
+import repype.pipeline
+import repype.config
+import repype.stage
+import repype.status
+from repype.typing import (
     Any,
     DataDictionary,
     Dict,
@@ -150,14 +150,14 @@ class Task:
             yield task
             task = task.parent
 
-    def get_full_spec_with_config(self, config: pypers.config.Config) -> dict:
+    def get_full_spec_with_config(self, config: repype.config.Config) -> dict:
         return self.full_spec | dict(config = config.entries)
     
-    def compute_sha(self, config: Optional[pypers.config.Config] = None) -> str:
+    def compute_sha(self, config: Optional[repype.config.Config] = None) -> str:
         full_spec = self.full_spec if config is None else self.get_full_spec_with_config(config)
         return hashlib.sha1(json.dumps(full_spec).encode('utf8')).hexdigest()
     
-    def create_config(self) -> pypers.config.Config:
+    def create_config(self) -> repype.config.Config:
         """
         Creates object which represents the hyperparameters of this task.
 
@@ -168,14 +168,14 @@ class Task:
 
         Changes to the hyperparameters are not reflected in the spec of the task.
         """
-        config = pypers.config.Config(self.spec.get('config', dict())).copy()
+        config = repype.config.Config(self.spec.get('config', dict())).copy()
 
         # Load the base config file
         base_config_path = self.spec.get('base_config_path')
         if base_config_path:
             base_config_path = self.resolve_path(base_config_path)
             with base_config_path.open('r') as base_config_file:
-                base_config = pypers.config.Config(yaml.safe_load(base_config_file))
+                base_config = repype.config.Config(yaml.safe_load(base_config_file))
             
             # Merge the task config into the base config
             config = base_config.merge(config)
@@ -217,7 +217,7 @@ class Task:
         # Resolve symlinks
         return path.resolve()
 
-    def create_pipeline(self, *args, **kwargs) -> pypers.pipeline.Pipeline:
+    def create_pipeline(self, *args, **kwargs) -> repype.pipeline.Pipeline:
         pipeline = self.full_spec.get('pipeline')
         assert pipeline is not None
         assert isinstance(pipeline, (str, list))
@@ -233,9 +233,9 @@ class Task:
             for stage in pipeline:
                 stage_class = load_from_module(stage)
                 stages.append(stage_class())
-            return pypers.pipeline.create_pipeline(stages, *args, **kwargs)
+            return repype.pipeline.create_pipeline(stages, *args, **kwargs)
     
-    def is_pending(self, pipeline: pypers.pipeline.Pipeline, config: pypers.config.Config) -> bool:
+    def is_pending(self, pipeline: repype.pipeline.Pipeline, config: repype.config.Config) -> bool:
         """
         True if the task needs to run, and False if the task is completed or not runnable.
         """
@@ -259,7 +259,7 @@ class Task:
         # If the task is completed, but the configuration has changed, the task is pending
         return hashes['task'] != self.compute_sha(config)
     
-    def get_marginal_fields(self, pipeline: pypers.pipeline.Pipeline) -> FrozenSet[str]:
+    def get_marginal_fields(self, pipeline: repype.pipeline.Pipeline) -> FrozenSet[str]:
         """
         Get the marginal fields from a pipeline.
 
@@ -275,7 +275,7 @@ class Task:
         marginal_fields = sum((list(stage.outputs) for stage in pipeline.stages if stage.id in self.marginal_stages), list())
         return frozenset(marginal_fields)
     
-    def load(self, pipeline: Optional[pypers.pipeline.Pipeline] = None) -> MultiDataDictionary:
+    def load(self, pipeline: Optional[repype.pipeline.Pipeline] = None) -> MultiDataDictionary:
         """
         Load the previously computed data of the task.
 
@@ -307,7 +307,7 @@ class Task:
         # Return the loaded data
         return data
     
-    def strip_marginals(self, pipeline: pypers.pipeline.Pipeline, data_chunk: MultiDataDictionary) -> DataDictionary:
+    def strip_marginals(self, pipeline: repype.pipeline.Pipeline, data_chunk: MultiDataDictionary) -> DataDictionary:
         """
         Strip the marginal fields from the data.
 
@@ -323,7 +323,7 @@ class Task:
             field: data_chunk[field] for field in data_chunk if field not in marginal_fields
         }
         
-    def store(self, pipeline: pypers.pipeline.Pipeline, data: MultiDataDictionary, config: pypers.config.Config):
+    def store(self, pipeline: repype.pipeline.Pipeline, data: MultiDataDictionary, config: repype.config.Config):
         """
         Store the results of the task and the metadata.
         """
@@ -351,7 +351,7 @@ class Task:
         with self.digest_sha_filepath.open('w') as digest_sha_file:
             json.dump(hashes, digest_sha_file)
 
-    def find_first_diverging_stage(self, pipeline: pypers.pipeline.Pipeline, config: pypers.config.Config) -> Optional[pypers.stage.Stage]:
+    def find_first_diverging_stage(self, pipeline: repype.pipeline.Pipeline, config: repype.config.Config) -> Optional[repype.stage.Stage]:
         # If the task is not completed, the first diverging stage is the first stage of the pipeline
         if not self.digest_sha_filepath.is_file():
             return pipeline.stages[0]
@@ -379,7 +379,7 @@ class Task:
         # There is no diverging stage
         return None
             
-    def find_pickup_task(self, pipeline: pypers.pipeline.Pipeline, config: pypers.config.Config) -> Dict:
+    def find_pickup_task(self, pipeline: repype.pipeline.Pipeline, config: repype.config.Config) -> Dict:
         candidates = list(self.parents) + [self]
         first_diverging_stages = {task: task.find_first_diverging_stage(pipeline, config) for task in candidates}
 
@@ -411,11 +411,11 @@ class Task:
     
     def run(
             self,
-            config: pypers.config.Config,
-            pipeline: Optional[pypers.pipeline.Pipeline] = None,
+            config: repype.config.Config,
+            pipeline: Optional[repype.pipeline.Pipeline] = None,
             pickup: bool = True,
             strip_marginals: bool = True,
-            status: Optional[pypers.status.Status] = None,
+            status: Optional[repype.status.Status] = None,
         ) -> MultiDataDictionary:
 
         assert self.runnable
@@ -437,7 +437,7 @@ class Task:
             first_stage = None
 
         # Announce the status of the task
-        pypers.status.update(
+        repype.status.update(
             status = status,
             info = 'start',
             task = str(self.path.resolve()),
@@ -449,7 +449,7 @@ class Task:
         for input_idx, input in enumerate(self.inputs):
             
             # Announce the status of the task
-            pypers.status.update(
+            repype.status.update(
                 status = status,
                 info = 'process',
                 task = str(self.path.resolve()),
@@ -473,9 +473,9 @@ class Task:
             data[input] = data_chunk
 
         # Store the results for later pick up
-        pypers.status.update(status, info = 'storing', intermediate = True)
+        repype.status.update(status, info = 'storing', intermediate = True)
         self.store(pipeline, data, config)
-        pypers.status.update(
+        repype.status.update(
             status = status,
             info = 'completed',
             task = str(self.path.resolve()),

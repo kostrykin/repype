@@ -1,10 +1,10 @@
 import builtins
 import os
 
-import pypers.config
-import pypers.stage
-import pypers.status
-from pypers.typing import (
+import repype.config
+import repype.stage
+import repype.status
+from repype.typing import (
     Any,
     Iterable,
     Optional,
@@ -65,7 +65,7 @@ class Pipeline:
     Note that hyperparameters are *not* set automatically if the :py:meth:`~.process_image` method is used directly. Hyperparameters are only set automatically if the :py:mod:`~.configure` method or batch processing is used.
     """
     
-    def __init__(self, stages: Iterable[pypers.stage.Stage] = list()):
+    def __init__(self, stages: Iterable[repype.stage.Stage] = list()):
         self.stages = list(stages)
 
     def process(self, input, config, first_stage=None, last_stage=None, data=None, log_root_dir=None, status=None, **kwargs):
@@ -75,12 +75,12 @@ class Pipeline:
         The :py:meth:`~.Stage.process` methods of the stages of the pipeline are executed successively.
 
         :param input: The input to be processed (can be ``None`` if and only if ``data`` is not ``None``).
-        :param config: A :py:class:`~pypers.config.Config` object that represents the hyperparameters.
+        :param config: A :py:class:`~repype.config.Config` object that represents the hyperparameters.
         :param first_stage: The name of the first stage to be executed.
         :param last_stage: The name of the last stage to be executed.
         :param data: The results of a previous execution.
         :param log_root_dir: Path to a directory where log files should be written to.
-        :param status: A :py:class:`~pypers.status.Status` object.
+        :param status: A :py:class:`~repype.status.Status` object.
         :return: Tuple ``(data, cfg, timings)``, where ``data`` is the *pipeline data object* comprising all final and intermediate results, ``cfg`` are the finally used hyperparameters, and ``timings`` is a dictionary containing the execution time of each individual pipeline stage (in seconds).
 
         The parameter ``data`` is used if and only if ``first_stage`` is not ``None``. In this case, the outputs produced by the stages of the pipeline which are being skipped must be fed in using the ``data`` parameter obtained from a previous execution of this method.
@@ -100,7 +100,7 @@ class Pipeline:
             if ctrl.step(stage.id) or stage.id in extra_stages:
                 stage_config = config.get(stage.id, {})
                 try:
-                    dt = stage(data, stage_config, status = pypers.status.derive(status), log_root_dir = log_root_dir, **kwargs)
+                    dt = stage(data, stage_config, status = repype.status.derive(status), log_root_dir = log_root_dir, **kwargs)
                 except:
                     print(f'An error occured while executing the stage: {str(stage)}')
                     raise
@@ -128,7 +128,7 @@ class Pipeline:
             extra_stages.append(extra_stage.id)
         return extra_stages
 
-    def find(self, stage_id: str, not_found_dummy: Any = float('inf')) -> pypers.stage.Stage:
+    def find(self, stage_id: str, not_found_dummy: Any = float('inf')) -> repype.stage.Stage:
         """
         Returns the position of the stage identified by ``stage_id``.
 
@@ -143,7 +143,7 @@ class Pipeline:
         idx = self.find(stage_id, None)
         return self.stages[idx] if idx is not None else None
 
-    def append(self, stage: pypers.stage.Stage, after: Union[str, int] = None):
+    def append(self, stage: repype.stage.Stage, after: Union[str, int] = None):
         for stage2 in self.stages:
             if stage2 is stage: raise RuntimeError(f'stage {stage.id} already added')
             if stage2.id == stage.id: raise RuntimeError(f'stage with ID {stage.id} already added')
@@ -156,7 +156,7 @@ class Pipeline:
             self.stages.insert(after + 1, stage)
             return after + 1
 
-    def configure(self, base_config: pypers.config.Config, *args, **kwargs) -> pypers.config.Config:
+    def configure(self, base_config: repype.config.Config, *args, **kwargs) -> repype.config.Config:
         """
         Automatically configures hyperparameters.
         """
@@ -178,7 +178,7 @@ class Pipeline:
         return frozenset(fields)
 
 
-def create_pipeline(stages: Sequence[pypers.stage.Stage], *args, **kwargs) -> Pipeline:
+def create_pipeline(stages: Sequence[repype.stage.Stage], *args, **kwargs) -> Pipeline:
     """
     Creates and returns a new :py:class:`.Pipeline` object configured for the given stages.
 
