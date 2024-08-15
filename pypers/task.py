@@ -10,6 +10,7 @@ import re
 import frozendict
 import pypers.pipeline
 import pypers.config
+import pypers.stage
 import pypers.status
 from pypers.typing import (
     Any,
@@ -345,7 +346,7 @@ class Task:
         with self.digest_sha_filepath.open('w') as digest_sha_file:
             json.dump(hashes, digest_sha_file)
 
-    def find_first_diverging_stage(self, pipeline: pypers.pipeline.Pipeline, config: pypers.config.Config) -> Optional[pypers.pipeline.Stage]:
+    def find_first_diverging_stage(self, pipeline: pypers.pipeline.Pipeline, config: pypers.config.Config) -> Optional[pypers.stage.Stage]:
         # If the task is not completed, the first diverging stage is the first stage of the pipeline
         if not self.digest_sha_filepath.is_file():
             return pipeline.stages[0]
