@@ -15,17 +15,17 @@ class Pipeline(unittest.TestCase):
         for x1_pre_factor, x2_pre_factor in itertools.product(factors, factors):
             for x1_default_user_factor, x2_default_user_factor in itertools.product(factors, factors):
                 with self.subTest(x1_pre_factor = x1_pre_factor, x2_pre_factor = x2_pre_factor, x1_default_user_factor = x1_default_user_factor, x2_default_user_factor = x2_default_user_factor):
-                    base_cfg = original_base_cfg.copy()
-                    cfg = create_pipeline().test(
+                    base_config = original_base_cfg.copy()
+                    config = create_pipeline().test(
                             lambda x1_factor_specs, x2_factor_specs: dict(x1_factor = x1_factor_specs),
                             lambda x1_factor_specs, x2_factor_specs: dict(x2_factor = x2_factor_specs),
-                        ).configure(base_cfg,
+                        ).configure(base_config,
                             x1_factor_specs = (x1_pre_factor, x1_default_user_factor),
                             x2_factor_specs = (x2_pre_factor, x2_default_user_factor),
                         )
-                    self.assertEqual(base_cfg, original_base_cfg)
-                    self.assertEqual(cfg['stage1/x1_factor'], base_cfg.get('stage1/x1_factor', x1_pre_factor * base_cfg.get('stage1/AF_x1_factor', x1_default_user_factor)))
-                    self.assertEqual(cfg['stage2/x2_factor'], base_cfg.get('stage2/x2_factor', x2_pre_factor * base_cfg.get('stage2/AF_x2_factor', x2_default_user_factor)))
+                    self.assertEqual(base_config, original_base_cfg)
+                    self.assertEqual(config['stage1/x1_factor'], base_config.get('stage1/x1_factor', x1_pre_factor * base_config.get('stage1/AF_x1_factor', x1_default_user_factor)))
+                    self.assertEqual(config['stage2/x2_factor'], base_config.get('stage2/x2_factor', x2_pre_factor * base_config.get('stage2/AF_x2_factor', x2_default_user_factor)))
 
     def test_configure(self):
         cfg = pypers.config.Config()

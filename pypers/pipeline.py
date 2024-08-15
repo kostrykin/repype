@@ -46,51 +46,13 @@ class ProcessingControl:
         return do_step
 
 
-def _create_config_entry(cfg, key, factor, default_user_factor, type=None, min=None, max=None):
+def create_config_entry(cfg, key, factor, default_user_factor, type=None, min=None, max=None):
     keys = key.split('/')
     af_key = f'{"/".join(keys[:-1])}/AF_{keys[-1]}'
     cfg.set_default(key, factor * cfg.get(af_key, default_user_factor), True)
     if type is not None: cfg.update(key, func=type)
     if  min is not None: cfg.update(key, func=lambda value: __builtins__.max((value, min)))
     if  max is not None: cfg.update(key, func=lambda value: __builtins__.min((value, max)))
-
-
-class Configurator:
-    """
-    Automatically configures hyperparameters of a pipeline.
-    
-    :param pipeline: An instance of the `Pipeline` class.
-    :type pipeline: Pipeline
-    """
-
-    def __init__(self, pipeline: 'Pipeline'):
-        assert pipeline is not None
-        self._pipeline = weakref.ref(pipeline)
-
-    @property
-    def pipeline(self):
-        """
-        Get the pipeline associated with this configurator.
-        
-        :return: The pipeline instance.
-        :rtype: Pipeline
-        """
-        pipeline = self._pipeline()
-        assert pipeline is not None
-        return pipeline
-    
-    def configure(self, base_cfg, input):
-        """
-        Configure the hyperparameters of the pipeline.
-        
-        :param base_cfg: The base configuration.
-        :type base_cfg: Config
-        :param input: The input data.
-        :type input: Any
-        :return: The configured hyperparameters.
-        :rtype: Config
-        """
-        return self.pipeline.configure(base_cfg, input)
 
 
 class Pipeline:
@@ -100,14 +62,10 @@ class Pipeline:
     This class defines a processing pipeline that consists of multiple stages. Each stage performs a specific operation on the input data. The pipeline processes the input data by executing the `process` method of each stage successively.
 
     Note that hyperparameters are *not* set automatically if the :py:meth:`~.process_image` method is used directly. Hyperparameters are only set automatically if the :py:mod:`~.configure` method or batch processing is used.
-
-    :param configurator: An instance of the `Configurator` class used to automatically configure hyperparameters of the pipeline. If not provided, a default `Configurator` instance will be created.
-    :type configurator: Configurator, optional
     """
     
-    def __init__(self, configurator: Optional[Configurator] = None):
+    def __init__(self):
         self.stages = []
-        self.configurator = configurator if configurator else Configurator(self)
 
     def process(self, input, cfg, first_stage=None, last_stage=None, data=None, log_root_dir=None, status=None, **kwargs):  # TODO: Rename `cfg` to `config` and `input` to `file_id`
         """
@@ -196,18 +154,19 @@ class Pipeline:
             self.stages.insert(after + 1, stage)
             return after + 1
 
-    def configure(self, base_cfg, *args, **kwargs):
+    def configure(self, base_config: pypers.config.Config, *args, **kwargs) -> pypers.config.Config:
         """
         Automatically configures hyperparameters.
         """
-        cfg = base_cfg.copy()
+        config = base_config.copy()
         for stage in self.stages:
             specs = stage.configure(*args, **kwargs)
             for key, spec in specs.items():
-                assert len(spec) in (2,3), f'{type(stage).__name__}.configure returned tuple of unknown length ({len(spec)})'
-                _create_config_entry_kwargs = dict() if len(spec) == 2 else spec[-1]
-                _create_config_entry(cfg, f'{stage.id}/{key}', *spec[:2], **_create_config_entry_kwargs)
-        return cfg
+                assert len(spec) in (2,3), \
+                    f'{type(stage).__name__}.configure returned tuple of unsupported length: {len(spec)}'
+                create_config_entry_kwargs = dict() if len(spec) == 2 else spec[-1]
+                create_config_entry(config, f'{stage.id}/{key}', *spec[:2], **create_config_entry_kwargs)
+        return config
     
     @property
     def fields(self):
