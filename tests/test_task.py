@@ -166,18 +166,29 @@ class Task__create_pipeline(unittest.TestCase):
         with self.assertRaises(AssertionError):
             task.create_pipeline()
 
-    @testsuite.with_temporary_paths(1)
-    def test_from_spec(self, path):
+    @testsuite.with_temporary_paths(2)
+    def test_from_spec(self, path1, path2):
         task = repype.task.Task(
-            path = path,
+            path = path1,
             parent = None,
             spec = dict(
                 pipeline = 'repype.pipeline.Pipeline',
+                scopes = dict(
+                    inputs = str(path2 / 'inputs'),
+                    outputs1 = 'outputs1',
+                    outputs2 = '{ROOTDIR}/outputs2',
+                ),
             ),
         )
-        self.assertIsInstance(
-            task.create_pipeline(),
-            repype.pipeline.Pipeline,
+        pipeline = task.create_pipeline()
+        self.assertIsInstance(pipeline, repype.pipeline.Pipeline)
+        self.assertEqual(
+            pipeline.scopes,
+            dict(
+                inputs = path2.resolve() / 'inputs',
+                outputs1 = task.path.resolve() / 'outputs1',
+                outputs2 = task.root.path.resolve() / 'outputs2',
+            ),
         )
 
     @testsuite.with_temporary_paths(1)
@@ -199,6 +210,7 @@ class Task__create_pipeline(unittest.TestCase):
         mock_Pipeline.assert_called_once_with(
             'arg1',
             'arg2',
+            scopes = dict(),
             kwarg1 = 'kwarg1',
             kwarg2 = 'kwarg2',
         )

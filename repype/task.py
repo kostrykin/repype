@@ -23,7 +23,6 @@ from repype.typing import (
     Optional,
     PathLike,
     Self,
-    TypeVar,
     Union,
 )
 import yaml
@@ -219,13 +218,17 @@ class Task:
 
     def create_pipeline(self, *args, **kwargs) -> repype.pipeline.Pipeline:
         pipeline = self.full_spec.get('pipeline')
+        scopes = self.full_spec.get('scopes', dict())
         assert pipeline is not None
         assert isinstance(pipeline, (str, list))
+
+        # Resolve scopes
+        scopes = {key: self.resolve_path(value) for key, value in scopes.items()}
 
         # Load the pipeline from a module
         if isinstance(pipeline, str):
             pipeline_class = load_from_module(pipeline)
-            return pipeline_class(*args, **kwargs)
+            return pipeline_class(*args, scopes = scopes, **kwargs)
         
         # Create the pipeline from a list of stages
         if isinstance(pipeline, list):
@@ -233,7 +236,7 @@ class Task:
             for stage in pipeline:
                 stage_class = load_from_module(stage)
                 stages.append(stage_class())
-            return repype.pipeline.create_pipeline(stages, *args, **kwargs)
+            return repype.pipeline.create_pipeline(stages, *args, scopes = scopes, **kwargs)
     
     def is_pending(self, pipeline: repype.pipeline.Pipeline, config: repype.config.Config) -> bool:
         """

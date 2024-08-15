@@ -70,9 +70,13 @@ class Pipeline:
     Note that hyperparameters are *not* set automatically if the :py:meth:`~.process_image` method is used directly. Hyperparameters are only set automatically if the :py:mod:`~.configure` method or batch processing is used.
     """
     
-    def __init__(self, stages: Iterable[repype.stage.Stage] = list()):
+    def __init__(
+            self,
+            stages: Iterable[repype.stage.Stage] = list(),
+            scopes: Dict[str, pathlib.Path] = dict(),
+        ):
         self.stages: List[repype.stage.Stage] = list(stages)
-        self.scopes: Dict[str, pathlib.Path] = dict()
+        self.scopes: Dict[str, pathlib.Path] = dict(scopes)
 
     def process(self, input, config, first_stage=None, last_stage=None, data=None, log_root_dir=None, status=None, **kwargs):
         """
