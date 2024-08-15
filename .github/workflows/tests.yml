@@ -1,22 +1,16 @@
 name: Tests
 
 on:
-
   workflow_dispatch:
-
   push:
-    branches:
-      - master
-    
+    branches: ['master']
   pull_request:
     branches: [ "*" ]
-
 
 permissions:
   contents: read
   issues: write
   pull-requests: write
-
 
 jobs:
 
