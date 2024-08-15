@@ -35,15 +35,19 @@ def run_task_process(payload):
     # Run the task and exit the child process
     try:
         rc.task.run(rc.config, pipeline = rc.pipeline, status = status)
+        return
 
     # If an exception occurs, update the status and re-raise the exception
     except:
+        error = sys.exc_info()[0]
         repype.status.update(
             status = status,
             info = 'error',
             task = str(rc.task.path.resolve()),
             traceback = traceback.format_exc(),
+            stage = error.stage.id if isinstance(error, repype.pipeline.StageError) else None,
         )
+        print('***', error, file = sys.stderr)
         sys.exit(1)  # Indicate a failure to the parent process
 
 

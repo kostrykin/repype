@@ -286,6 +286,7 @@ class StatusReader(FileSystemEventHandler):
         time.sleep(1)  # Give the WatchDog observer some extra time
         self.observer.stop()
         self.observer.join()
+        import sys; print(self.data, file = sys.stderr)
 
     def update(self, filepath: pathlib.Path) -> bool:
         data_frame = self.data_frames.get(filepath)

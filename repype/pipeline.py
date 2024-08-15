@@ -61,6 +61,17 @@ def create_config_entry(config, key, factor, default_user_factor, type=None, min
     if  max is not None: config.update(key, func=lambda value: builtins.min((value, max)))
 
 
+class StageError(Exception):
+    """
+    An error raised when a stage fails to execute.
+    """
+    def __init__(self, stage: repype.stage.Stage):
+        super().__init__(
+            f'An error occured while executing the stage: {stage.id}'
+        )
+        self.stage = stage
+
+
 class Pipeline:
     """
     Defines a processing pipeline.
@@ -112,8 +123,7 @@ class Pipeline:
                 try:
                     dt = stage(self, data, stage_config, status = status, log_root_dir = log_root_dir, **kwargs)
                 except:
-                    print(f'An error occured while executing the stage: {str(stage)}')
-                    raise
+                    raise StageError(stage)
                 timings[stage.id] = dt
             else:
                 stage.skip(data, status = status, **kwargs)

@@ -1,5 +1,8 @@
+import contextlib
+import io
 import os
 import pathlib
+import re
 import tempfile
 import unittest
 import urllib.request
@@ -64,6 +67,9 @@ class repype_segmentation(unittest.TestCase):
         self.tempdir = tempfile.TemporaryDirectory()
         self.root_path = pathlib.Path(self.tempdir.name)
         self.testsuite_pid = os.getpid()
+        self.stdout_buf = io.StringIO()
+        self.ctx = contextlib.redirect_stdout(self.stdout_buf)
+        self.ctx.__enter__()
 
         testsuite.create_task_file(
             self.root_path / 'task',
@@ -83,6 +89,13 @@ class repype_segmentation(unittest.TestCase):
     def tearDown(self):
         if os.getpid() == self.testsuite_pid:
             self.tempdir.cleanup()
+            self.ctx.__exit__(None, None, None)
 
-    # def test(self):
-    #     repype.cli.run_cli_ex(self.root_path, run = True)
+    @property
+    def stdout(self):
+        return re.sub(r'\033\[K', '', self.stdout_buf.getvalue())
+
+    def test(self):
+        ret = repype.cli.run_cli_ex(self.root_path, run = True)
+        #import sys; print(self.stdout, file = sys.stderr)
+        self.assertTrue(ret)
