@@ -125,7 +125,6 @@ class Stage:
             status: Optional[pypers.status.Status] = None,
             log_root_dir: Optional[pathlib.Path] = None,
             **kwargs) -> float:
-        config = config.get(self.id, {})
 
         # Run the stage if it is enabled
         if config.get('enabled', self.enabled_by_default):

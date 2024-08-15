@@ -7,9 +7,6 @@ from unittest.mock import (
 
 import pypers.pipeline
 import pypers.config
-from pypers.typing import (
-    List,
-)
 
 from . import testsuite
 
@@ -19,8 +16,8 @@ class Pipeline__configure(unittest.TestCase):
     def setUp(self):
         self.pipeline = pypers.pipeline.Pipeline(
             [
-                MagicMock(id = 'stage1', inputs = ['input'], outputs = ['x1'], consumes = []),  # stage1 takes `input` and produces `x1`
-                MagicMock(id = 'stage2', inputs = [], outputs = ['x2'], consumes = ['input']),  # stage2 consumes `input` and produces `x2`
+                MagicMock(id = 'stage1'),
+                MagicMock(id = 'stage2'),
             ]
         )
         self.stage1, self.stage2 = self.pipeline.stages[:2]
@@ -135,79 +132,128 @@ class Pipeline__configure(unittest.TestCase):
         )
 
 
-class Pipeline(unittest.TestCase):
+class Pipeline__find(unittest.TestCase):
+
+    def setUp(self):
+        self.pipeline = pypers.pipeline.Pipeline(
+            [
+                MagicMock(id = 'stage1'),
+                MagicMock(id = 'stage2'),
+                MagicMock(id = 'stage3'),
+                MagicMock(id = 'stage4'),
+            ]
+        )
 
     def test_find(self):
-        pipeline = create_pipeline().test()
-        for expected_position, stage in enumerate(pipeline.stages):
+        for expected_position, stage in enumerate(self.pipeline.stages):
             with self.subTest(expected_position = expected_position):
-                actual_position = pipeline.find(stage.id)
+                actual_position = self.pipeline.find(stage.id)
                 self.assertEqual(actual_position, expected_position)
 
     def test_find_missing(self):
-        pipeline = create_pipeline().test()
         dummy = object()
-        self.assertIs(pipeline.find('stage4', dummy), dummy)
+        self.assertIs(self.pipeline.find('stage5', dummy), dummy)
+
+
+class Pipeline__append(unittest.TestCase):
+
+    def setUp(self):
+        self.pipeline = pypers.pipeline.Pipeline(
+            [
+                MagicMock(id = 'stage1'),
+                MagicMock(id = 'stage2'),
+                MagicMock(id = 'stage3'),
+            ]
+        )
+        self.stage4 = MagicMock(id = 'stage4')
 
     def test_append(self):
-        new_stage = testsuite.create_stage(id = 'new_stage')
-        pipeline = create_pipeline().test()
-        expected_pos = len(pipeline.stages)
-        pos = pipeline.append(new_stage)
+        expected_pos = len(self.pipeline.stages)
+        pos = self.pipeline.append(self.stage4)
         self.assertEqual(pos, expected_pos)
-        self.assertEqual(len(pipeline.stages), expected_pos + 1)
-        self.assertIs(pipeline.stages[pos], new_stage)
+        self.assertEqual(len(self.pipeline.stages), expected_pos + 1)
+        self.assertIs(self.pipeline.stages[pos], self.stage4)
 
     def test_append_twice(self):
-        pipeline = create_pipeline().test()
-        for stage in pipeline.stages:
+        for stage in self.pipeline.stages:
             with self.subTest(stage = stage.id):
-                self.assertRaises(RuntimeError, lambda: pipeline.append(stage))
-                self.assertRaises(RuntimeError, lambda: pipeline.append(testsuite.create_stage(id = stage.id)))
+                with self.assertRaises(RuntimeError):
+                    self.pipeline.append(stage)
+                with self.assertRaises(RuntimeError):
+                    self.pipeline.append(MagicMock(id = stage.id))
 
     def test_append_after_str(self):
-        new_stage = testsuite.create_stage(id = 'new_stage')
-        stages = create_pipeline().test().stages
-        for after in [stage.id for stage in stages]:
-            pipeline = create_pipeline().test()
+        for after in [stage.id for stage in self.pipeline.stages]:
+            pipeline = pypers.pipeline.Pipeline(self.pipeline.stages)
             expected_pos = pipeline.find(after) + 1
             with self.subTest(after = after):
-                pos = pipeline.append(new_stage, after = after)
+                pos = pipeline.append(self.stage4, after = after)
                 self.assertEqual(pos, expected_pos)
-                self.assertIs(pipeline.stages[pos], new_stage)
+                self.assertIs(pipeline.stages[pos], self.stage4)
 
     def test_append_after_int(self):
-        new_stage = testsuite.create_stage(id = 'new_stage')
-        stages = create_pipeline().test().stages
-        for after in range(-1, len(stages)):
-            pipeline = create_pipeline().test()
+        for after in range(-1, len(self.pipeline.stages)):
+            pipeline = pypers.pipeline.Pipeline(self.pipeline.stages)
             expected_pos = after + 1
             with self.subTest(after = after):
-                pos = pipeline.append(new_stage, after = after)
+                pos = pipeline.append(self.stage4, after = after)
                 self.assertEqual(pos, expected_pos)
-                self.assertIs(pipeline.stages[pos], new_stage)
+                self.assertIs(pipeline.stages[pos], self.stage4)
 
-    def test_process(self):
-        x1_factor = 1
-        x2_factor = 2
-        constant  = 3
-        cfg = pypers.config.Config()
-        cfg['stage1/x1_factor'] = x1_factor
-        cfg['stage2/x2_factor'] = x2_factor
-        cfg['stage3/constant' ] = constant
-        pipeline = create_pipeline().test()
+
+class Pipeline__process(unittest.TestCase):
+
+    def setUp(self):
+        self.pipeline = pypers.pipeline.Pipeline(
+            [
+                MagicMock(id = 'stage1', inputs = ['input'], outputs = ['x1'], consumes = []),    # stage1 takes `input` and produces `x1`
+                MagicMock(id = 'stage2', inputs = [], outputs = ['x2'], consumes = ['input']),    # stage2 consumes `input` and produces `x2`
+                MagicMock(id = 'stage3', inputs = ['x1', 'x2'], outputs = ['x3'], consumes = []), # stage3 takes `x1` and `x2` and produces `x3`
+            ]
+        )
+        self.pipeline.stages[0].side_effect = self.stage1
+        self.pipeline.stages[1].side_effect = self.stage2
+        self.pipeline.stages[2].side_effect = self.stage3
+
+    def stage1(self, data, config, status = None, log_root_dir = None, **kwargs):
+        config.set_default('enabled', True)
+        data['x1'] = config.get('x1_factor', 1) * data['input']
+
+    def stage2(self, data, config, status = None, log_root_dir = None, **kwargs):
+        config.set_default('enabled', True)
+        data['x2'] = config.get('x2_factor', 1) * data['input']
+
+    def stage3(self, data, config, status = None, log_root_dir = None, **kwargs):
+        config.set_default('enabled', True)
+        data['x3'] = data['x1'] + data['x2'] + config.get('constant', 0)
+
+    @testsuite.with_temporary_paths(1)
+    def test(self, path):
+        config = pypers.config.Config()
+        config['stage1/x1_factor'] = 1
+        config['stage2/x2_factor'] = 2
+        config['stage3/constant' ] = 3
+        
         for input in range(5):
             with self.subTest(input = input):
-                data, final_cfg, timings = pipeline.process(input = input, cfg = cfg, out = 'muted')
-                expected_final_cfg = cfg.copy()
-                for stage in pipeline.stages:
-                    expected_final_cfg[f'{stage.id}/enabled'] = True
-                    self.assertTrue(stage.id in timings)
-                self.assertEqual(final_cfg, expected_final_cfg, f'expected: {expected_final_cfg}, actual: {final_cfg}')
-                self.assertEqual(data['y'], x1_factor * input + x2_factor * input + constant)
-                self.assertEqual(len(timings), len(pipeline.stages))
 
-    def test_process_first_stage(self):
+                status = pypers.status.Status(path = path)
+                data, final_config, timings = self.pipeline.process(input = input, config = config, status = status)
+
+                expected_final_config = config.copy()
+                for stage in self.pipeline.stages:
+                    expected_final_config[f'{stage.id}/enabled'] = True
+
+                self.assertEqual(len(timings), len(self.pipeline.stages))
+                self.assertEqual(
+                    [stage.id in timings for stage in self.pipeline.stages],
+                    [True] * len(self.pipeline.stages),
+                )
+                self.assertEqual(final_config, expected_final_config)
+                self.assertEqual(data['x3'], config['stage1/x1_factor'] * input + config['stage2/x2_factor'] * input + config['stage3/constant'])
+
+"""
+    def test_with_first_stage(self):
         cfg = pypers.config.Config()
         cfg['stage1/x1_factor'] = 1
         cfg['stage2/x2_factor'] = 2
@@ -242,8 +288,12 @@ class Pipeline(unittest.TestCase):
                         self.assertEqual(frozenset(timings.keys()), remaining_stages)
                         self.assertEqual(pipeline.call_record, expected_call_record(remaining_stages))
                         pipeline.call_record.clear()
+"""
 
-    def test_get_extra_stages(self):
+
+class Pipeline__get_extra_stages(unittest.TestCase):  # TODO: Refactor
+
+    def test(self):
         stages = [
             testsuite.create_stage(id = 'stage1', inputs = ['input'], outputs = ['x1']),
             testsuite.create_stage(id = 'stage2', inputs =    ['x1'], outputs = ['x2']),

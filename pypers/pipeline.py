@@ -68,14 +68,14 @@ class Pipeline:
     def __init__(self, stages: Iterable[pypers.stage.Stage] = list()):
         self.stages = list(stages)
 
-    def process(self, input, cfg, first_stage=None, last_stage=None, data=None, log_root_dir=None, status=None, **kwargs):  # TODO: Rename `cfg` to `config` and `input` to `file_id`
+    def process(self, input, config, first_stage=None, last_stage=None, data=None, log_root_dir=None, status=None, **kwargs):
         """
         Processes the input.
 
         The :py:meth:`~.Stage.process` methods of the stages of the pipeline are executed successively.
 
         :param input: The input to be processed (can be ``None`` if and only if ``data`` is not ``None``).
-        :param cfg: A :py:class:`~pypers.config.Config` object which represents the hyperparameters.
+        :param config: A :py:class:`~pypers.config.Config` object that represents the hyperparameters.
         :param first_stage: The name of the first stage to be executed.
         :param last_stage: The name of the last stage to be executed.
         :param data: The results of a previous execution.
@@ -85,11 +85,11 @@ class Pipeline:
 
         The parameter ``data`` is used if and only if ``first_stage`` is not ``None``. In this case, the outputs produced by the stages of the pipeline which are being skipped must be fed in using the ``data`` parameter obtained from a previous execution of this method.
         """
-        cfg = cfg.copy()
+        config = config.copy()
         if log_root_dir is not None: os.makedirs(log_root_dir, exist_ok=True)
         if first_stage == self.stages[0].id and data is None: first_stage = None
         if first_stage is not None and first_stage.endswith('+'): first_stage = self.stages[1 + self.find(first_stage[:-1])].id
-        if first_stage is not None and last_stage is not None and self.find(first_stage) > self.find(last_stage): return data, cfg, {}
+        if first_stage is not None and last_stage is not None and self.find(first_stage) > self.find(last_stage): return data, config, {}
         if first_stage is not None and first_stage != self.stages[0].id and data is None: raise ValueError('data argument must be provided if first_stage is used')
         if data is None: data = dict()
         if input is not None: data['input'] = input
@@ -98,15 +98,16 @@ class Pipeline:
         timings = {}
         for stage in self.stages:
             if ctrl.step(stage.id) or stage.id in extra_stages:
+                stage_config = config.get(stage.id, {})
                 try:
-                    dt = stage(data, cfg, status=pypers.status.derive(status), log_root_dir=log_root_dir, **kwargs)
+                    dt = stage(data, stage_config, status=pypers.status.derive(status), log_root_dir=log_root_dir, **kwargs)
                 except:
                     print(f'An error occured while executing the stage: {str(stage)}')
                     raise
                 timings[stage.id] = dt
             else:
                 stage.skip(data, status = status, **kwargs)
-        return data, cfg, timings
+        return data, config, timings
     
     def get_extra_stages(self, first_stage, last_stage, available_inputs):
         required_inputs, available_inputs = set(), set(available_inputs) | {'input'}
@@ -116,14 +117,14 @@ class Pipeline:
         for stage in self.stages:
             stage_by_output.update({output: stage for output in stage.outputs})
             if ctrl.step(stage.id):
-                required_inputs  |= stage.inputs
-                available_inputs |= stage.outputs
+                required_inputs  |= frozenset(stage.inputs)
+                available_inputs |= frozenset(stage.outputs)
         while True:
             missing_inputs = required_inputs - available_inputs
             if len(missing_inputs) == 0: break
             extra_stage = stage_by_output[list(missing_inputs)[0]]
-            required_inputs  |= extra_stage.inputs
-            available_inputs |= extra_stage.outputs
+            required_inputs  |= frozenset(extra_stage.inputs)
+            available_inputs |= frozenset(extra_stage.outputs)
             extra_stages.append(extra_stage.id)
         return extra_stages
 
