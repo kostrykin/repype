@@ -252,14 +252,6 @@ class Pipeline__process(unittest.TestCase):
                 self.assertEqual(final_config, expected_final_config)
                 self.assertEqual(data['x3'], config['stage1/x1_factor'] * input + config['stage2/x2_factor'] * input + config['stage3/constant'])
 
-        # TODO: Move this to test_stage
-        #
-        # for stage in self.pipeline.stages:
-        #     callback = MagicMock()
-        #     stage.add_callback('start', callback)
-        #     stage.add_callback('end'  , callback)
-        #     stage.add_callback('skip' , callback)
-
     def test_with_first_stage(self):
         config = pypers.config.Config()
         config['stage1/x1_factor'] = 1

@@ -96,7 +96,7 @@ class Stage:
         assert not self.id.endswith('+'), 'The suffix "+" is reserved as an indication of "the stage after that stage"'
         self.event_callbacks: Dict[StageEvent, List[StageCallback]] = dict()
 
-    def trigger_event(self, event: StageEvent, *args, **kwargs) -> None:
+    def callback(self, event: StageEvent, *args, **kwargs) -> None:
         if event in self.event_callbacks:
             for callback in self.event_callbacks[event]:
                 callback(self, event, *args, **kwargs)
@@ -134,7 +134,7 @@ class Stage:
                 stage = self.id,
                 intermediate = True,
             )
-            self.trigger_event('start', data, status = status, **kwargs)
+            self.callback('start', data, status = status, config = config, **kwargs)
 
             # Extract the input data of the stage
             input_data = {key: data[key] for key in self.inputs}
@@ -160,12 +160,12 @@ class Stage:
                 del data[key]
 
             # Finish the stage
-            self.trigger_event('end', data, status = status, **kwargs)
+            self.callback('end', data, status = status, config = config, **kwargs)
             return dt
         
         # Skip the stage
         else:
-            self.skip(data, status = status, **kwargs)
+            self.skip(data, status = status, config = config, **kwargs)
             return 0.
         
     def skip(self, data, status = None, **kwargs):
@@ -175,7 +175,7 @@ class Stage:
             stage = self.id,
             intermediate = True,
         )
-        self.trigger_event('skip', data, status = status, **kwargs)
+        self.callback('skip', data, status = status, **kwargs)
 
     def process(
             self,

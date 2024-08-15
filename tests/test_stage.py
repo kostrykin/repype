@@ -1,5 +1,8 @@
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import (
+    call,
+    MagicMock,
+)
 
 import pypers.stage
 import pypers.config
@@ -117,3 +120,46 @@ class Stage(unittest.TestCase):
         data = dict()
         config = pypers.config.Config()
         self.assertRaises(KeyError, lambda: stage(data, config))
+
+
+class Stage__callback(unittest.TestCase):
+
+    def setUp(self):
+        self.stage = testsuite.create_stage(id = 'test')
+        self.callback = MagicMock()
+        self.stage.add_callback('start', self.callback)
+        self.stage.add_callback('end'  , self.callback)
+        self.stage.add_callback('skip' , self.callback)
+        self.data = dict(key = 'data')
+        self.config = pypers.config.Config(
+            dict(key = 'config'),
+        )
+
+    def test(self):
+        self.stage(data = self.data, config = self.config)
+        self.assertEqual(
+            self.callback.call_args_list,
+            [
+                call(self.stage, 'start', self.data, status = None, config = self.config),
+                call(self.stage, 'end', self.data, status = None, config = self.config),
+            ],
+        )
+
+    def test_skip(self):
+        self.stage.skip(data = self.data, config = self.config)
+        self.assertEqual(
+            self.callback.call_args_list,
+            [
+                call(self.stage, 'skip', self.data, status = None, config = self.config),
+            ],
+        )
+
+    def test_skip_disabled(self):
+        self.config['enabled'] = False
+        self.stage(data = self.data, config = self.config)
+        self.assertEqual(
+            self.callback.call_args_list,
+            [
+                call(self.stage, 'skip', self.data, status = None, config = self.config),
+            ],
+        )
