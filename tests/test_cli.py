@@ -12,6 +12,20 @@ import repype.cli
 from . import testsuite
 
 
+class DelayedTask(repype.task.Task):
+
+    def store(self, *args, **kwargs):
+        # Delay Task.store by 1 second, so that intermediates don't collapse too quickly
+        time.sleep(1)
+        return super().store(*args, **kwargs)
+    
+
+class DefectiveTask(repype.task.Task):
+
+    def store(self, *args, **kwargs):
+        raise testsuite.TestError()
+
+
 class run_cli_ex(unittest.TestCase):
 
     stage1_cls = testsuite.create_stage_class(id = 'stage1', inputs = ['input'  ], outputs = ['output1'])
@@ -81,40 +95,32 @@ class run_cli_ex(unittest.TestCase):
         )
 
     def test_run_integrated(self):
-        # Patch Task.store to delay the storage of results by 1 second, so that intermediates don't collapse too quickly
-        _task_store = repype.task.Task.store
-        def delayed_task_store(*args, **kwargs):
-            time.sleep(1)
-            return _task_store(*args, **kwargs)
-        with patch.object(repype.task.Task, 'store', side_effect = delayed_task_store, autospec = True):
+        ret = repype.cli.run_cli_ex(path = self.tempdir.name, run = True, task_cls = DelayedTask)
+        self.assertTrue(ret)
+        self.assertEqual(
+            self.stdout,
+            f'\n'
+            f'3 task(s) selected for running' '\n'
+            f'  \n'
+            f'  (1/3) Entering task: {self.root_path.resolve()}' '\n'
+            f'  Starting from scratch' '\n'
+            f'  Storing results...' '\r'
+            f'  Results have been stored' '\n'
+            f'  \n'
+            f'  (2/3) Entering task: {self.root_path.resolve()}/task-2' '\n'
+            f'  Starting from scratch' '\n'
+            f'  Storing results...' '\r'
+            f'  Results have been stored' '\n'
+            f'  \n'
+            f'  (3/3) Entering task: {self.root_path.resolve()}/task-3' '\n'
+            f'  Picking up from: {self.root_path.resolve()} (stage2)' '\n'
+            f'  Storing results...' '\r'
+            f'  Results have been stored' '\n'
+        )
 
-            ret = repype.cli.run_cli_ex(path = self.tempdir.name, run = True)
-            self.assertTrue(ret)
-            self.assertEqual(
-                self.stdout,
-                f'\n'
-                f'3 task(s) selected for running' '\n'
-                f'  \n'
-                f'  (1/3) Entering task: {self.root_path.resolve()}' '\n'
-                f'  Starting from scratch' '\n'
-                f'  Storing results...' '\r'
-                f'  Results have been stored' '\n'
-                f'  \n'
-                f'  (2/3) Entering task: {self.root_path.resolve()}/task-2' '\n'
-                f'  Starting from scratch' '\n'
-                f'  Storing results...' '\r'
-                f'  Results have been stored' '\n'
-                f'  \n'
-                f'  (3/3) Entering task: {self.root_path.resolve()}/task-3' '\n'
-                f'  Picking up from: {self.root_path.resolve()} (stage2)' '\n'
-                f'  Storing results...' '\r'
-                f'  Results have been stored' '\n'
-            )
-
-    @patch.object(repype.task.Task, 'store', side_effect = testsuite.TestError)
     @patch.object(repype.status.Status, 'intermediate')  # Suppress the `Storing results...` intermediate, sometimes not captured quickly enough
-    def test_internal_error(self, mock_task_store, mock_status_intermediate):
-        ret = repype.cli.run_cli_ex(path = self.tempdir.name, run = True)
+    def test_internal_error(self, mock_status_intermediate):
+        ret = repype.cli.run_cli_ex(path = self.tempdir.name, run = True, task_cls = DefectiveTask)
         self.assertFalse(ret)
         self.assertIn(
             f'\n'

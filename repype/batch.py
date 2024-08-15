@@ -1,6 +1,7 @@
 import glob
 import multiprocessing
 import pathlib
+import sys
 import traceback
 
 import dill
@@ -34,7 +35,6 @@ def run_task_process(payload):
     # Run the task and exit the child process
     try:
         rc.task.run(rc.config, pipeline = rc.pipeline, status = status)
-        return 0  # Indicate success to the parent process
 
     # If an exception occurs, update the status and re-raise the exception
     except:
@@ -44,13 +44,14 @@ def run_task_process(payload):
             task = str(rc.task.path.resolve()),
             traceback = traceback.format_exc(),
         )
-        return 1  # Indicate a failure to the parent process
+        sys.exit(1)  # Indicate a failure to the parent process
 
 
 class Batch:
 
-    def __init__(self):
+    def __init__(self, task_cls = repype.task.Task):
         self.tasks = dict()
+        self.task_cls = task_cls
 
     def task(self, path: PathLike, spec: Optional[dict] = None) -> Optional[repype.task.Task]:
         """
@@ -74,7 +75,7 @@ class Batch:
         # Retrieve the parent task and instantiate the requested task
         if task is None:
             parent = self.task(path.parent) if path.parent else None
-            task = repype.task.Task(path = path, spec = spec, parent = parent)
+            task = self.task_cls(path = path, spec = spec, parent = parent)
             assert path not in self.tasks
             self.tasks[path] = task
             return task

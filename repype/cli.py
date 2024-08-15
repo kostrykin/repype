@@ -136,11 +136,12 @@ def run_cli_ex(
         run: bool = False,
         tasks: List[PathLike] = list(),
         task_dirs: List[PathLike] = list(),
+        task_cls: Type[repype.task.Task] = repype.task.Task,
         status_reader_cls: Type[repype.status.StatusReader] = StatusReaderConsoleAdapter,
     ) -> bool:
 
     path  = pathlib.Path(path).resolve()
-    batch = repype.batch.Batch()
+    batch = repype.batch.Batch(task_cls)
     batch.load(path)
     
     if tasks or task_dirs:
