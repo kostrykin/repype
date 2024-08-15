@@ -32,37 +32,42 @@ FileID = TypeVar('FileID', int, str)
 MultiDataDictionary = Dict[FileID, DataDictionary]
 
 
-def decode_file_ids(spec: Union[str, List[FileID]]) -> List[FileID]:
-    # Convert a string of comma-separated file IDs (or ranges thereof) to a list of integers
+def decode_inputs(spec: Union[str, List[FileID]]) -> List[FileID]:
+    """
+    Convert a string of comma-separated inputs (or ranges thereof) to a list of integers.
+
+    If ``spec`` is a list already, it is returned as is.
+    """
+    # Convert a string of comma-separated inputs (or ranges thereof) to a list of integers
     if isinstance(spec, str):
 
         # Split the string by commas and remove whitespace
-        file_ids = list()
+        inputs = list()
         for token in spec.replace(' ', '').split(','):
             if token == '':
                 continue
 
-            # Check if the token is a range of file IDs
+            # Check if the token is a range of inputs
             m = re.match(r'^([0-9]+)-([0-9]+)$', token)
 
-            # If the token is a single file ID, add it to the list
+            # If the token is a single input, add it to the list
             if m is None and re.match(r'^[0-9]+$', token):
-                file_ids.append(int(token))
+                inputs.append(int(token))
                 continue
 
-            # If the token is a range of file IDs, add all file IDs in the range to the list
+            # If the token is a range of inputs, add all inputs in the range to the list
             elif m is not None:
                 first, last = int(m.group(1)), int(m.group(2))
                 if first < last:
-                    file_ids += list(range(first, last + 1))
+                    inputs += list(range(first, last + 1))
                     continue
             
-            # If the token is neither a single file ID nor a range of file IDs, raise an error
-            raise ValueError(f'Cannot parse file ID token "{token}"')
+            # If the token is neither a single input nor a range of inputs, raise an error
+            raise ValueError(f'Cannot parse input token "{token}"')
 
-        return sorted(frozenset(file_ids))
+        return sorted(frozenset(inputs))
     
-    # Otherwise, treat the input as a list of file IDs
+    # Otherwise, treat the input as a list of inputs
     else:
         return sorted(frozenset(spec))
     
@@ -99,8 +104,8 @@ class Task:
         return bool(self.full_spec.get('runnable'))
     
     @property
-    def file_ids(self):
-        return decode_file_ids(self.full_spec.get('file_ids', []))
+    def inputs(self):
+        return decode_inputs(self.full_spec.get('inputs', []))
     
     @property
     def root(self) -> Self:
@@ -274,7 +279,7 @@ class Task:
         """
         Load the previously computed data of the task.
 
-        To ensure consistency with the task specification, it is verified that the loaded data contains results for all file IDs, and no additional file IDs.
+        To ensure consistency with the task specification, it is verified that the loaded data contains results for all inputs of the task, and no additional inputs.
         If pipeline is not None, a check for consistency of the data with the pipeline is performed.
         The loaded data is consistent with the pipeline if the data contains all fields which are not marginal according to the :meth:`get_marginal_fields` method, and no additional fields.
 
@@ -290,13 +295,13 @@ class Task:
             data = dill.load(data_file)
 
         # Check if the data is consistent with the task specification
-        assert frozenset(data.keys()) == frozenset(self.file_ids), 'Loaded data is inconsistent with task specification.'
+        assert frozenset(data.keys()) == frozenset(self.inputs), 'Loaded data is inconsistent with task specification.'
 
         # Check if the data is consistent with the pipeline
         if pipeline is not None:
             required_fields = pipeline.fields - self.get_marginal_fields(pipeline)
             assert all(
-                (frozenset(data[file_id].keys()) == required_fields for file_id in data.keys())
+                (frozenset(data[input].keys()) == required_fields for input in data.keys())
             ), 'Loaded data is inconsistent with the pipeline.'
 
         # Return the loaded data
@@ -323,16 +328,16 @@ class Task:
         Store the results of the task and the metadata.
         """
         assert self.runnable
-        assert frozenset(data.keys()) == frozenset(self.file_ids)
+        assert frozenset(data.keys()) == frozenset(self.inputs)
 
         # Strip the marginal fields from the data
         data_without_marginals = {
-            file_id: self.strip_marginals(pipeline, data[file_id]) for file_id in data
+            input: self.strip_marginals(pipeline, data[input]) for input in data
         }
 
         # Store the stripped data
         with gzip.open(self.data_filepath, 'wb') as data_file:
-            dill.dump(data_without_marginals, data_file, byref=True)
+            dill.dump(data_without_marginals, data_file, byref = True)
 
         # Store the digest task specification
         with self.digest_task_filepath.open('w') as digest_task_file:
@@ -440,23 +445,23 @@ class Task:
             first_stage = first_stage.id if first_stage else None,
         )
 
-        # Run the pipeline for all file IDs
-        for file_idx, file_id in enumerate(self.file_ids):
+        # Run the pipeline for all inputs
+        for input_idx, input in enumerate(self.inputs):
             
             # Announce the status of the task
             pypers.status.update(
                 status = status,
                 info = 'process',
                 task = str(self.path.resolve()),
-                file_id = file_id,
-                step = file_idx,
-                step_count = len(self.file_ids),
+                input = input,
+                step = input_idx,
+                step_count = len(self.inputs),
             )
 
-            # Process the file ID
-            data_chunk = data.get(file_id, dict())
+            # Process the input
+            data_chunk = data.get(input, dict())
             data_chunk = pipeline.process(
-                input = file_id,
+                input = input,
                 data = data_chunk,
                 cfg = config,
                 first_stage = first_stage,
@@ -465,7 +470,7 @@ class Task:
             if strip_marginals:
                 data_chunk = self.strip_marginals(pipeline, data_chunk)
 
-            data[file_id] = data_chunk
+            data[input] = data_chunk
 
         # Store the results for later pick up
         pypers.status.update(status, info = 'storing', intermediate = True)

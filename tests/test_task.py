@@ -15,33 +15,33 @@ from . import testsuite
 import pypers.status
 
 
-class decode_file_ids(unittest.TestCase):
+class decode_inputs(unittest.TestCase):
 
     def test_empty(self):
-        self.assertEqual(pypers.task.decode_file_ids(''), [])
+        self.assertEqual(pypers.task.decode_inputs(''), [])
 
     def test_single(self):
-        self.assertEqual(pypers.task.decode_file_ids('1'), [1])
+        self.assertEqual(pypers.task.decode_inputs('1'), [1])
 
     def test_range(self):
-        self.assertEqual(pypers.task.decode_file_ids('1-2'), [1, 2])
-        self.assertEqual(pypers.task.decode_file_ids('1 - 3'), [1, 2, 3])
+        self.assertEqual(pypers.task.decode_inputs('1-2'), [1, 2])
+        self.assertEqual(pypers.task.decode_inputs('1 - 3'), [1, 2, 3])
 
     def test_invalid(self):
         with self.assertRaises(ValueError):
-            pypers.task.decode_file_ids('1-')
+            pypers.task.decode_inputs('1-')
         with self.assertRaises(ValueError):
-            pypers.task.decode_file_ids('-1')
+            pypers.task.decode_inputs('-1')
         with self.assertRaises(ValueError):
-            pypers.task.decode_file_ids('-')
+            pypers.task.decode_inputs('-')
         with self.assertRaises(ValueError):
-            pypers.task.decode_file_ids('3-1')
+            pypers.task.decode_inputs('3-1')
         with self.assertRaises(ValueError):
-            pypers.task.decode_file_ids('1-1')
+            pypers.task.decode_inputs('1-1')
 
     def test_mixed(self):
-        self.assertEqual(pypers.task.decode_file_ids('1,2-3,4'), [1, 2, 3, 4])
-        self.assertEqual(pypers.task.decode_file_ids('1, 2-3'), [1, 2, 3])
+        self.assertEqual(pypers.task.decode_inputs('1,2-3,4'), [1, 2, 3, 4])
+        self.assertEqual(pypers.task.decode_inputs('1, 2-3'), [1, 2, 3])
 
 
 class Task__init(unittest.TestCase):
@@ -330,7 +330,7 @@ class Task__create_config(unittest.TestCase):
         self.assertEqual(config, pypers.config.Config(dict(key1 = 'value10', key2 = 'value200', key3 = 'value3', key4 = 'value4')))
 
 
-class Task__file_ids(unittest.TestCase):
+class Task__inputs(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_str(self, path):
@@ -338,10 +338,10 @@ class Task__file_ids(unittest.TestCase):
             path = path,
             parent = None,
             spec = dict(
-                file_ids = '1, 2-3, 4',
+                inputs = '1, 2-3, 4',
             ),
         )
-        self.assertEqual(task.file_ids, [1, 2, 3, 4])
+        self.assertEqual(task.inputs, [1, 2, 3, 4])
 
     @testsuite.with_temporary_paths(1)
     def test_list(self, path):
@@ -349,13 +349,13 @@ class Task__file_ids(unittest.TestCase):
             path = path,
             parent = None,
             spec = dict(
-                file_ids = [
+                inputs = [
                     'id-1',
                     'id-2',
                 ],
             ),
         )
-        self.assertEqual(task.file_ids, ['id-1', 'id-2'])
+        self.assertEqual(task.inputs, ['id-1', 'id-2'])
 
 
 class Task__root(unittest.TestCase):
@@ -592,7 +592,7 @@ class Task__store(unittest.TestCase):
             parent = None,
             spec = dict(
                 runnable = True,
-                file_ids = ['file-0'],
+                inputs = ['file-0'],
                 marginal_stages = [
                     'stage2',
                 ],
@@ -649,7 +649,7 @@ class Task__load(unittest.TestCase):
             parent = None,
             spec = dict(
                 runnable = True,
-                file_ids = ['file-0'],
+                inputs = ['file-0'],
                 marginal_stages = [
                     'stage2',
                 ],
@@ -903,7 +903,7 @@ class Task__run(unittest.TestCase):
             parent = None,
             spec = dict(
                 runnable = True,
-                file_ids = ['file-0', 'file-1'],
+                inputs = ['file-0', 'file-1'],
             ),
         )
         self.config = self.task.create_config()

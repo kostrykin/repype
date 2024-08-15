@@ -67,7 +67,7 @@ To perform batch processing of a dataset, you first need to create a *task*. To 
        "input_pathpattern": "/data/dataset/img-%d.tiff",
        "result_pathpattern": "seg/dna-%d.png",
        
-       "file_ids": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+       "inputs": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
 
        "config": {
        }
@@ -93,8 +93,8 @@ The meaning of the different fields is as follows:
 ``cfg_pathpattern``
     Relative path of files, where the hyperparameters are to be written to, using placeholders as described above (mainly for reviewing the automatically generated hyperparameters).
 
-``file_ids``
-    List of file IDs, which are used to resolve the pattern-based fields described above. In the considered example, the list of input images will resolve to ``/data/dataset/img-1.tiff``, …, ``/data/dataset/img-10.tiff``. File IDs are allowed to be strings, and they are also allowed to contain ``/`` to encode paths which involve sub-directories.
+``inputs``
+    List of inputs, which are used to resolve the pattern-based fields described above. In the considered example, the list of input images will resolve to ``/data/dataset/img-1.tiff``, …, ``/data/dataset/img-10.tiff``. Inputs are allowed to be strings, and they are also allowed to contain ``/`` to encode paths which involve sub-directories.
 
 ``last_stage``
     If specified, then the pipeline processing will end at the specified stage.

@@ -14,7 +14,7 @@ from . import testsuite
 
 class run_cli_ex(unittest.TestCase):
 
-    stage1_cls = testsuite.create_stage_class(id = 'stage1', inputs = ['file_id'], outputs = ['output1'])
+    stage1_cls = testsuite.create_stage_class(id = 'stage1', inputs = ['input'  ], outputs = ['output1'])
     stage2_cls = testsuite.create_stage_class(id = 'stage2', inputs = ['output1'], outputs = ['output2'])
 
     def setUp(self):
