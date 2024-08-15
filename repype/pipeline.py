@@ -183,8 +183,8 @@ class Pipeline:
         if input is None:
             return None
         else:
-            scope = self.scopes['scope']
-            return pathlib.Path(str(scope) % input)
+            scope = self.scopes[scope]
+            return pathlib.Path(str(scope) % input).resolve()
     
     @property
     def fields(self):

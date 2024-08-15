@@ -1,4 +1,5 @@
 import itertools
+import pathlib
 import unittest
 from unittest.mock import (
     MagicMock,
@@ -397,6 +398,29 @@ class Pipeline__fields(unittest.TestCase):
             sorted(self.pipeline.fields),
             ['input', 'x1', 'x2', 'x3'],
         )
+
+
+class Pipeline__resolve(unittest.TestCase):
+
+    def setUp(self):
+        self.pipeline = repype.pipeline.Pipeline()
+
+    def test_relative(self):
+        self.pipeline.scopes = {
+            'input': 'input-%02d.json',
+        }
+        filepath = self.pipeline.resolve('input', 0)
+        self.assertIsInstance(filepath, pathlib.Path)
+        self.assertEqual(filepath, pathlib.Path.cwd() / 'input-00.json')
+
+    @testsuite.with_temporary_paths(1)
+    def test_absolute(self, path):
+        self.pipeline.scopes = {
+            'input': str(path / 'input-%s.json'),
+        }
+        filepath = self.pipeline.resolve('input', '00')
+        self.assertIsInstance(filepath, pathlib.Path)
+        self.assertEqual(filepath, path.resolve() / 'input-00.json')
 
 
 class create_pipeline(unittest.TestCase):
