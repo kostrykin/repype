@@ -153,7 +153,7 @@ class Pipeline:
         idx = self.find(stage_id, None)
         return self.stages[idx] if idx is not None else None
 
-    def append(self, stage: repype.stage.Stage, after: Union[str, int] = None):
+    def append(self, stage: repype.stage.Stage, after: Optional[Union[str, int]] = None):
         for stage2 in self.stages:
             if stage2 is stage: raise RuntimeError(f'stage {stage.id} already added')
             if stage2.id == stage.id: raise RuntimeError(f'stage with ID {stage.id} already added')
