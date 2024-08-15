@@ -45,10 +45,10 @@ class Stage(unittest.TestCase):
 
     def test(self):
         stage = testsuite.create_stage(id = 'test', inputs = ['x1', 'x2'], outputs = ['y'], \
-            process = lambda x1, x2, cfg, log_root_dir = None, status = None: \
+            process = lambda x1, x2, config, log_root_dir = None, status = None: \
                 dict(y = \
-                    x1 * cfg.get('x1_factor', 0) + \
-                    x2 * cfg.get('x2_factor', 0))
+                    x1 * config.get('x1_factor', 0) + \
+                    x2 * config.get('x2_factor', 0))
             )
         cfg = pypers.config.Config()
         for x1_factor in [0, 1]:
@@ -65,55 +65,55 @@ class Stage(unittest.TestCase):
 
     def test_missing_input(self):
         stage = testsuite.create_stage(id = 'test', outputs = ['y'], \
-            process = lambda x, cfg, log_root_dir = None, status = None: \
+            process = lambda x, config, log_root_dir = None, status = None: \
                 dict(y = x)
             )
         data = dict(x = 0)
-        cfg  = pypers.config.Config()
-        self.assertRaises(TypeError, lambda: stage(data, cfg))
+        config = pypers.config.Config()
+        self.assertRaises(TypeError, lambda: stage(data, config))
 
     def test_missing_output(self):
         stage = testsuite.create_stage(id = 'test', outputs = ['y'], \
-            process = lambda cfg, log_root_dir = None, status = None: \
+            process = lambda config, log_root_dir = None, status = None: \
                 dict()
             )
         data = dict()
-        cfg  = pypers.config.Config()
-        self.assertRaises(AssertionError, lambda: stage(data, cfg))
+        config = pypers.config.Config()
+        self.assertRaises(AssertionError, lambda: stage(data, config))
 
     def test_spurious_output(self):
         stage = testsuite.create_stage( id = 'test', \
-            process = lambda cfg, log_root_dir = None, status = None: \
+            process = lambda config, log_root_dir = None, status = None: \
                 dict(y = 0)
             )
         data = dict()
-        cfg  = pypers.config.Config()
-        self.assertRaises(AssertionError, lambda: stage(data, cfg))
+        config = pypers.config.Config()
+        self.assertRaises(AssertionError, lambda: stage(data, config))
 
     def test_missing_and_spurious_output(self):
         stage = testsuite.create_stage(id = 'test', outputs = ['y'], \
-            process = lambda cfg, log_root_dir = None, status = None: \
+            process = lambda config, log_root_dir = None, status = None: \
                 dict(z = 0)
             )
         data = dict()
-        cfg  = pypers.config.Config()
-        self.assertRaises(AssertionError, lambda: stage(data, cfg))
+        config = pypers.config.Config()
+        self.assertRaises(AssertionError, lambda: stage(data, config))
 
     def test_consumes(self):
         stage = testsuite.create_stage(id = 'test', consumes = ['x'], \
-            process = lambda x, cfg, log_root_dir = None, status = None: \
+            process = lambda x, config, log_root_dir = None, status = None: \
                 dict()
             )
         data = dict(x = 0, y = 1)
-        cfg  = pypers.config.Config()
-        stage(data, cfg)
+        config = pypers.config.Config()
+        stage(data, config)
         self.assertEqual(data, dict(y = 1))
 
     def test_missing_consumes(self):
         stage = testsuite.create_stage(id = 'test', consumes = ['x'], \
-            process = lambda x, cfg, log_root_dir = None, status = None: \
+            process = lambda x, config, log_root_dir = None, status = None: \
                 dict()
             )
         data = dict()
-        cfg  = pypers.config.Config()
-        self.assertRaises(KeyError, lambda: stage(data, cfg))
+        config = pypers.config.Config()
+        self.assertRaises(KeyError, lambda: stage(data, config))

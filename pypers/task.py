@@ -14,6 +14,7 @@ import pypers.stage
 import pypers.status
 from pypers.typing import (
     Any,
+    DataDictionary,
     Dict,
     FrozenSet,
     Iterator,
@@ -28,7 +29,6 @@ import yaml
 
 
 FileID = TypeVar('FileID', int, str)
-DataDictionary = Dict[str, Any]
 MultiDataDictionary = Dict[FileID, DataDictionary]
 
 

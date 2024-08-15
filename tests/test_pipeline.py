@@ -167,17 +167,17 @@ class create_pipeline(unittest.TestCase):
 
     def test(self, configure_stage1 = None, configure_stage2 = None, configure_stage3 = None):
         call_record = list()
-        def _process_stage1(input, cfg, log_root_dir = None, status = None):
+        def _process_stage1(input, config, log_root_dir = None, status = None):
             call_record.append('stage1 process')
-            return dict(x1 = input * cfg['x1_factor'])
+            return dict(x1 = input * config['x1_factor'])
         
-        def _process_stage2(input, cfg, log_root_dir = None, status = None):
+        def _process_stage2(input, config, log_root_dir = None, status = None):
             call_record.append('stage2 process')
-            return dict(x2 = input * cfg['x2_factor'])
+            return dict(x2 = input * config['x2_factor'])
         
-        def _process_stage3(x1, x2, cfg, log_root_dir = None, status = None):
+        def _process_stage3(x1, x2, config, log_root_dir = None, status = None):
             call_record.append('stage3 process')
-            return dict(y = x1 + x2 + cfg['constant'])
+            return dict(y = x1 + x2 + config['constant'])
         stages = [
             ## stage1 takes `input` and produces `x1`
             testsuite.create_stage(id = 'stage1', inputs = ['input'], outputs = ['x1'], \

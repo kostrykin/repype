@@ -7,4 +7,5 @@ else:
     from typing import *
 
 
+DataDictionary = Dict[str, Any]
 PathLike = TypeVar('PathLike', str, pathlib.Path)
