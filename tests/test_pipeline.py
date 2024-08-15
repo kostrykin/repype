@@ -168,44 +168,21 @@ class Pipeline(unittest.TestCase):
 
 class create_pipeline(unittest.TestCase):
 
-    def test(self, configure_stage1 = None, configure_stage2 = None, configure_stage3 = None):
-        call_record = list()
-        def _process_stage1(input, config, log_root_dir = None, status = None):
-            call_record.append('stage1 process')
-            return dict(x1 = input * config['x1_factor'])
-        
-        def _process_stage2(input, config, log_root_dir = None, status = None):
-            call_record.append('stage2 process')
-            return dict(x2 = input * config['x2_factor'])
-        
-        def _process_stage3(x1, x2, config, log_root_dir = None, status = None):
-            call_record.append('stage3 process')
-            return dict(y = x1 + x2 + config['constant'])
+    def test(self):
+        # Define the stages, in the order they should be executed
         stages = [
-            ## stage1 takes `input` and produces `x1`
-            testsuite.create_stage(id = 'stage1', inputs = ['input'], outputs = ['x1'], \
-                process = _process_stage1, \
-                configure = configure_stage1
-            ),
-            ## stage2 consumes `input` and produces `x2`
-            testsuite.create_stage(id = 'stage2', outputs = ['x2'], consumes = ['input'], \
-                process = _process_stage2,
-                configure = configure_stage2
-            ),
-            ## stage3 takes `x1` and `x2` and produces `y`
-            testsuite.create_stage(id = 'stage3', inputs = ['x1', 'x2'], outputs = ['y'], \
-                process = _process_stage3,
-                configure = configure_stage3
-            ),
+            Mock(id = 'stage1', inputs = ['input'], outputs = ['x1'], consumes = []),   # stage1 takes `input` and produces `x1`
+            Mock(id = 'stage2', inputs = [], outputs = ['x2'], consumes = ['input']),   # stage2 consumes `input` and produces `x2`
+            Mock(id = 'stage3', inputs = ['x1', 'x2'], outputs = ['y'], consumes = []), # stage3 takes `x1` and `x2` and produces `y`
         ]
+
+        # Test `create_pipeline` with all permutations of the stages
         for permutated_stages in itertools.permutations(stages):
             with self.subTest(permutation = permutated_stages):
                 pipeline = pypers.pipeline.create_pipeline(permutated_stages)
                 self.assertEqual(len(pipeline.stages), 3)
                 for stage1, stage2 in zip(pipeline.stages, stages):
                     self.assertIs(stage1, stage2)
-        pipeline.call_record = call_record
-        return pipeline
 
     def test_unsatisfiable(self):
         stages = [
