@@ -7,40 +7,135 @@ from unittest.mock import (
 
 import pypers.pipeline
 import pypers.config
+from pypers.typing import (
+    List,
+)
 
 from . import testsuite
 
 
-class Pipeline(unittest.TestCase):
+class Pipeline__configure(unittest.TestCase):
 
-    def _test_configure(self, original_base_cfg: pypers.config.Config):
-        factors = list(range(-1, +3))
-        for x1_pre_factor, x2_pre_factor in itertools.product(factors, factors):
-            for x1_default_user_factor, x2_default_user_factor in itertools.product(factors, factors):
-                with self.subTest(x1_pre_factor = x1_pre_factor, x2_pre_factor = x2_pre_factor, x1_default_user_factor = x1_default_user_factor, x2_default_user_factor = x2_default_user_factor):
-                    base_config = original_base_cfg.copy()
-                    config = create_pipeline().test(
-                            lambda x1_factor_specs, x2_factor_specs: dict(x1_factor = x1_factor_specs),
-                            lambda x1_factor_specs, x2_factor_specs: dict(x2_factor = x2_factor_specs),
-                        ).configure(base_config,
-                            x1_factor_specs = (x1_pre_factor, x1_default_user_factor),
-                            x2_factor_specs = (x2_pre_factor, x2_default_user_factor),
-                        )
-                    self.assertEqual(base_config, original_base_cfg)
-                    self.assertEqual(config['stage1/x1_factor'], base_config.get('stage1/x1_factor', x1_pre_factor * base_config.get('stage1/AF_x1_factor', x1_default_user_factor)))
-                    self.assertEqual(config['stage2/x2_factor'], base_config.get('stage2/x2_factor', x2_pre_factor * base_config.get('stage2/AF_x2_factor', x2_default_user_factor)))
+    def setUp(self):
+        self.pipeline = pypers.pipeline.Pipeline(
+            [
+                MagicMock(id = 'stage1', inputs = ['input'], outputs = ['x1'], consumes = []),  # stage1 takes `input` and produces `x1`
+                MagicMock(id = 'stage2', inputs = [], outputs = ['x2'], consumes = ['input']),  # stage2 consumes `input` and produces `x2`
+            ]
+        )
+        self.stage1, self.stage2 = self.pipeline.stages[:2]
+        self.stage1.configure.return_value = dict(
+            x1_factor = (
+                1,  # fixed factor
+                2,  # default value for `AF_x1_factor`
+            ),
+        )
+        self.stage2.configure.return_value = dict(
+            x2_factor = (
+                -1, # fixed factor
+                1,  # default value for `AF_x2_factor`
+            ),
+        )
 
     def test_configure(self):
-        cfg = pypers.config.Config()
-        self._test_configure(cfg)
+        base_config = pypers.config.Config()
+        config = self.pipeline.configure(base_config)
+        self.assertEqual(
+            config.entries,
+            dict(
+                stage1 = dict(
+                    AF_x1_factor = 2,
+                    x1_factor = 2,
+                ),
+                stage2 = dict(
+                    AF_x2_factor = 1,
+                    x2_factor = -1,
+                ),
+            )
+        )
 
-        cfg = pypers.config.Config()
-        cfg['stage1/x1_factor'] = 1
-        self._test_configure(cfg)
+    def test_configure_x1_factor(self):
+        base_config = pypers.config.Config()
+        base_config['stage1/x1_factor'] = 100
+        config = self.pipeline.configure(base_config)
+        self.assertEqual(
+            config.entries,
+            dict(
+                stage1 = dict(
+                    AF_x1_factor = 2,
+                    x1_factor = 100,
+                ),
+                stage2 = dict(
+                    AF_x2_factor = 1,
+                    x2_factor = -1,
+                ),
+            )
+        )
 
-        cfg = pypers.config.Config()
-        cfg['stage1/AF_x1_factor'] = 1
-        self._test_configure(cfg)
+    def test_configure_AF_x1_factor(self):
+        base_config = pypers.config.Config()
+        base_config['stage1/AF_x1_factor'] = 10
+        config = self.pipeline.configure(base_config)
+        self.assertEqual(
+            config.entries,
+            dict(
+                stage1 = dict(
+                    AF_x1_factor = 10,
+                    x1_factor = 10,
+                ),
+                stage2 = dict(
+                    AF_x2_factor = 1,
+                    x2_factor = -1,
+                ),
+            )
+        )
+
+    def test_configure_type_min(self):
+        self.stage2.configure.return_value = dict(
+            x2_factor = (
+                -1, # fixed factor
+                1,  # default value for `AF_x2_factor`
+                dict(
+                    type = float,
+                    min = 0,
+                    max = 1,
+                ),
+            ),
+        )
+        base_config = pypers.config.Config()
+        config = self.pipeline.configure(base_config)
+        self.assertEqual(
+            config.entries['stage2'],
+            dict(
+                AF_x2_factor = 1,
+                x2_factor = 0.,
+            )
+        )
+
+    def test_configure_type_max(self):
+        self.stage2.configure.return_value = dict(
+            x2_factor = (
+                -1, # fixed factor
+                -2,  # default value for `AF_x2_factor`
+                dict(
+                    type = float,
+                    min = 0,
+                    max = 1,
+                ),
+            ),
+        )
+        base_config = pypers.config.Config()
+        config = self.pipeline.configure(base_config)
+        self.assertEqual(
+            config.entries['stage2'],
+            dict(
+                AF_x2_factor = -2,
+                x2_factor = 1.,
+            )
+        )
+
+
+class Pipeline(unittest.TestCase):
 
     def test_find(self):
         pipeline = create_pipeline().test()

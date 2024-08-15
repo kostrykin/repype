@@ -1,11 +1,12 @@
+import builtins
 import os
-import weakref
 
 import pypers.config
 import pypers.stage
 import pypers.status
 from pypers.typing import (
     Any,
+    Iterable,
     Optional,
     Sequence,
     Union,
@@ -51,8 +52,8 @@ def create_config_entry(cfg, key, factor, default_user_factor, type=None, min=No
     af_key = f'{"/".join(keys[:-1])}/AF_{keys[-1]}'
     cfg.set_default(key, factor * cfg.get(af_key, default_user_factor), True)
     if type is not None: cfg.update(key, func=type)
-    if  min is not None: cfg.update(key, func=lambda value: __builtins__.max((value, min)))
-    if  max is not None: cfg.update(key, func=lambda value: __builtins__.min((value, max)))
+    if  min is not None: cfg.update(key, func=lambda value: builtins.max((value, min)))
+    if  max is not None: cfg.update(key, func=lambda value: builtins.min((value, max)))
 
 
 class Pipeline:
@@ -64,8 +65,8 @@ class Pipeline:
     Note that hyperparameters are *not* set automatically if the :py:meth:`~.process_image` method is used directly. Hyperparameters are only set automatically if the :py:mod:`~.configure` method or batch processing is used.
     """
     
-    def __init__(self):
-        self.stages = []
+    def __init__(self, stages: Iterable[pypers.stage.Stage] = list()):
+        self.stages = list(stages)
 
     def process(self, input, cfg, first_stage=None, last_stage=None, data=None, log_root_dir=None, status=None, **kwargs):  # TODO: Rename `cfg` to `config` and `input` to `file_id`
         """
