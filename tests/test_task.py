@@ -657,6 +657,7 @@ class Task__load(unittest.TestCase):
         )
         self.data_without_marginals = {
             'file-0': {
+                'input': 'file-0',
                 'output1.1': 'value1.1',
                 'output3.1': 'value3.1',
             },
@@ -671,7 +672,6 @@ class Task__load(unittest.TestCase):
         data = self.task.load()
         self.assertEqual(data, self.data_without_marginals)
 
-    @patch.object(pypers.pipeline.Pipeline, 'fields', {'output1.1', 'output2.1', 'output2.2', 'output3.1'})  # FIXME: Remove this hack when the pipeline is migrated to use `file_id` instead of `input`
     def test_with_pipeline(self):
         pipeline = pypers.pipeline.create_pipeline(
             [
