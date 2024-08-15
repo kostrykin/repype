@@ -252,6 +252,8 @@ class Pipeline__process(unittest.TestCase):
                 self.assertEqual(final_config, expected_final_config)
                 self.assertEqual(data['x3'], config['stage1/x1_factor'] * input + config['stage2/x2_factor'] * input + config['stage3/constant'])
 
+        # TODO: Move this to test_stage
+        #
         # for stage in self.pipeline.stages:
         #     callback = MagicMock()
         #     stage.add_callback('start', callback)
@@ -352,26 +354,57 @@ class Pipeline__process(unittest.TestCase):
                         else:
                             stage.assert_called_once()
 
-"""
-class Pipeline__get_extra_stages(unittest.TestCase):  # TODO: Refactor
+
+class Pipeline__get_extra_stages(unittest.TestCase):
+
+    def setUp(self):
+        self.pipeline = pypers.pipeline.Pipeline(
+            [
+                MagicMock(id = 'stage1', inputs = ['input'], outputs = ['x1'], consumes = []),    # stage1 takes `input` and produces `x1`
+                MagicMock(id = 'stage2', inputs = [], outputs = ['x2'], consumes = ['input']),    # stage2 consumes `input` and produces `x2`
+                MagicMock(id = 'stage3', inputs = ['x1', 'x2'], outputs = ['x3'], consumes = []), # stage3 takes `x1` and `x2` and produces `x3`
+            ]
+        )
 
     def test(self):
-        stages = [
-            testsuite.create_stage(id = 'stage1', inputs = ['input'], outputs = ['x1']),
-            testsuite.create_stage(id = 'stage2', inputs =    ['x1'], outputs = ['x2']),
-            testsuite.create_stage(id = 'stage3', inputs =    ['x2'], outputs = ['x3']),
-            testsuite.create_stage(id = 'stage4', inputs =    ['x3'], outputs = ['x4']),
-        ]
-        pipeline = pypers.pipeline.create_pipeline(stages)
-        self.assertEqual(frozenset(pipeline.get_extra_stages(first_stage = 'stage4', last_stage = None, available_inputs =     [])), frozenset(['stage1', 'stage2', 'stage3']))
-        self.assertEqual(frozenset(pipeline.get_extra_stages(first_stage = 'stage4', last_stage = None, available_inputs = ['x1'])), frozenset(['stage2', 'stage3']))
-        self.assertEqual(frozenset(pipeline.get_extra_stages(first_stage = 'stage4', last_stage = None, available_inputs = ['x2'])), frozenset(['stage3']))
-        self.assertEqual(frozenset(pipeline.get_extra_stages(first_stage = 'stage3', last_stage = None, available_inputs = ['x2'])), frozenset([]))
+        self.assertEqual(
+            sorted(self.pipeline.get_extra_stages(first_stage = 'stage1', last_stage = None, available_inputs = ['input'])),
+            [],
+        )
+        self.assertEqual(
+            sorted(self.pipeline.get_extra_stages(first_stage = 'stage3', last_stage = None, available_inputs = ['input'])),
+            ['stage1', 'stage2'],
+        )
+        self.assertEqual(
+            sorted(self.pipeline.get_extra_stages(first_stage = 'stage3', last_stage = None, available_inputs = ['input', 'x2'])),
+            ['stage1'],
+        )
+        self.assertEqual(
+            sorted(self.pipeline.get_extra_stages(first_stage = 'stage3', last_stage = None, available_inputs = ['input', 'x1'])),
+            ['stage2'],
+        )
+        self.assertEqual(
+            sorted(self.pipeline.get_extra_stages(first_stage = 'stage3', last_stage = None, available_inputs = ['input', 'x1', 'x2'])),
+            [],
+        )
+
+
+class Pipeline__fields(unittest.TestCase):
+
+    def setUp(self):
+        self.pipeline = pypers.pipeline.Pipeline(
+            [
+                MagicMock(id = 'stage1', inputs = ['input'], outputs = ['x1'], consumes = []),    # stage1 takes `input` and produces `x1`
+                MagicMock(id = 'stage2', inputs = [], outputs = ['x2'], consumes = ['input']),    # stage2 consumes `input` and produces `x2`
+                MagicMock(id = 'stage3', inputs = ['x1', 'x2'], outputs = ['x3'], consumes = []), # stage3 takes `x1` and `x2` and produces `x3`
+            ]
+        )
 
     def test_fields(self):
-        expected_fields = set(['input', 'x1', 'x2', 'y'])
-        self.assertEqual(create_pipeline().test().fields, expected_fields)
-"""
+        self.assertEqual(
+            sorted(self.pipeline.fields),
+            ['input', 'x1', 'x2', 'x3'],
+        )
 
 
 class create_pipeline(unittest.TestCase):

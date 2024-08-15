@@ -174,7 +174,7 @@ class Pipeline:
     def fields(self):
         fields = set(['input'])
         for stage in self.stages:
-            fields |= stage.outputs
+            fields |= frozenset(stage.outputs)
         return frozenset(fields)
 
 
