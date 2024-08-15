@@ -9,6 +9,7 @@ from repype.typing import (
     Iterable,
     Optional,
     Sequence,
+    Type,
     Union,
 )
 
@@ -178,7 +179,7 @@ class Pipeline:
         return frozenset(fields)
 
 
-def create_pipeline(stages: Sequence[repype.stage.Stage], *args, **kwargs) -> Pipeline:
+def create_pipeline(stages: Sequence[repype.stage.Stage], *args, pipeline_cls: Type[Pipeline], **kwargs) -> Pipeline:
     """
     Creates and returns a new :py:class:`.Pipeline` object configured for the given stages.
 
@@ -195,7 +196,7 @@ def create_pipeline(stages: Sequence[repype.stage.Stage], *args, **kwargs) -> Pi
     outputs = list(available_inputs) + sum((list(stage.outputs) for stage in stages), [])
     assert len(outputs) == len(frozenset(outputs)), 'ambiguous outputs'
 
-    pipeline = Pipeline(*args, **kwargs)
+    pipeline = pipeline_cls(*args, **kwargs)
     while len(remaining_stages) > 0:
         next_stage = None
 
