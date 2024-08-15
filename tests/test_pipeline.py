@@ -227,8 +227,7 @@ class Pipeline__process(unittest.TestCase):
         config.set_default('enabled', True)
         data['x3'] = data['x1'] + data['x2'] + config.get('constant', 0)
 
-    @testsuite.with_temporary_paths(1)
-    def test(self, path):
+    def test(self):
         config = pypers.config.Config()
         config['stage1/x1_factor'] = 1
         config['stage2/x2_factor'] = 2
@@ -237,8 +236,9 @@ class Pipeline__process(unittest.TestCase):
         for input in range(5):
             with self.subTest(input = input):
 
-                status = pypers.status.Status(path = path)
-                data, final_config, timings = self.pipeline.process(input = input, config = config, status = status)
+                mock_status = MagicMock()
+                data, final_config, timings = self.pipeline.process(input = input, config = config, status = mock_status)
+                mock_status.assert_not_called()
 
                 expected_final_config = config.copy()
                 for stage in self.pipeline.stages:
@@ -252,43 +252,61 @@ class Pipeline__process(unittest.TestCase):
                 self.assertEqual(final_config, expected_final_config)
                 self.assertEqual(data['x3'], config['stage1/x1_factor'] * input + config['stage2/x2_factor'] * input + config['stage3/constant'])
 
-"""
+        # for stage in self.pipeline.stages:
+        #     callback = MagicMock()
+        #     stage.add_callback('start', callback)
+        #     stage.add_callback('end'  , callback)
+        #     stage.add_callback('skip' , callback)
+
     def test_with_first_stage(self):
-        cfg = pypers.config.Config()
-        cfg['stage1/x1_factor'] = 1
-        cfg['stage2/x2_factor'] = 2
-        cfg['stage3/constant' ] = 3
-        pipeline = create_pipeline().test()
-        for stage in pipeline.stages:
-            def _cb(stage2, name, data, status):
-                pipeline.call_record.append(f'{stage2.id} {name}')
-            stage.add_callback('start', _cb)
-            stage.add_callback('end'  , _cb)
-            stage.add_callback('skip' , _cb)
-        def expected_call_record(processed_stages):
-            return sum((([
-                f'{stage.id} start',
-                f'{stage.id} process',
-                f'{stage.id} end',
-            ] if stage.id in processed_stages else [
-                f'{stage.id} skip',
-            ]) for stage in pipeline.stages), [])
+        config = pypers.config.Config()
+        config['stage1/x1_factor'] = 1
+        config['stage2/x2_factor'] = 2
+        config['stage3/constant' ] = 3
+        
+        # Test combinations of `first_stage` with and without the `+` suffix
         for suffix, offset in (('', 0), ('+', 1)):
-            for input in range(3):
-                status_mock = MagicMock()
-                full_data, _, _ = pipeline.process(input = input, cfg = cfg, status = status_mock)
-                self.assertEqual(pipeline.call_record, expected_call_record([stage.id for stage in pipeline.stages]))
-                pipeline.call_record.clear()
-                for first_stage_idx, first_stage in enumerate((stage.id for stage in pipeline.stages[:len(pipeline.stages) - offset])):
+
+            # Test different inputs
+            for input in [-1, 0, +1, +2]:
+
+                # Pre-compute the full data
+                mock_status = MagicMock()
+                full_data, _, _ = self.pipeline.process(input = input, config = config, status = mock_status)
+                mock_status.assert_not_called()
+
+                # Test each stage as a `first_stage`
+                for first_stage_idx, first_stage in enumerate((stage.id for stage in self.pipeline.stages[:len(self.pipeline.stages) - offset])):
                     with self.subTest(suffix = suffix, offset = offset, input = input, first_stage = first_stage):
-                        remaining_stages = frozenset([stage.id for stage in pipeline.stages[first_stage_idx + offset:]])
-                        status_mock = MagicMock()
-                        data, _, timings = pipeline.process(input = input, data = full_data, first_stage = first_stage + suffix, cfg = cfg, status = status_mock)
-                        self.assertEqual(data['y'], full_data['y'])
+                        remaining_stages = frozenset([stage.id for stage in self.pipeline.stages[first_stage_idx + offset:]])
+
+                        # Reset the call records
+                        for stage in self.pipeline.stages:
+                            stage.reset_mock()
+
+                        # Process the pipeline
+                        mock_status = MagicMock()
+                        data, _, timings = self.pipeline.process(
+                            input = input,
+                            data = full_data,
+                            first_stage = first_stage + suffix,
+                            config = config,
+                            status = mock_status,
+                        )
+                        mock_status.assert_not_called()
+
+                        # Check the results
+                        self.assertEqual(data['x3'], full_data['x3'])
                         self.assertEqual(frozenset(timings.keys()), remaining_stages)
-                        self.assertEqual(pipeline.call_record, expected_call_record(remaining_stages))
-                        pipeline.call_record.clear()
-"""
+
+                        # Verify that the skipped stages were not called
+                        for stage_idx, stage in enumerate(self.pipeline.stages):
+                            if stage_idx < first_stage_idx + offset:
+                                stage.assert_not_called()
+                            else:
+                                stage.assert_called_once()
+
+    # FIXME: Add test like `test_with_first_stage` but with missing inputs
 
 """
 class Pipeline__get_extra_stages(unittest.TestCase):  # TODO: Refactor
