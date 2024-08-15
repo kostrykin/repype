@@ -1,12 +1,16 @@
 import builtins
 import os
+import pathlib
 
 import repype.config
 import repype.stage
 import repype.status
 from repype.typing import (
     Any,
+    Dict,
+    FileID,
     Iterable,
+    List,
     Optional,
     Sequence,
     Type,
@@ -67,7 +71,8 @@ class Pipeline:
     """
     
     def __init__(self, stages: Iterable[repype.stage.Stage] = list()):
-        self.stages = list(stages)
+        self.stages: List[repype.stage.Stage] = list(stages)
+        self.scopes: Dict[str, pathlib.Path] = dict()
 
     def process(self, input, config, first_stage=None, last_stage=None, data=None, log_root_dir=None, status=None, **kwargs):
         """
@@ -171,6 +176,16 @@ class Pipeline:
                 create_config_entry(config, f'{stage.id}/{key}', *spec[:2], **create_config_entry_kwargs)
         return config
     
+    def resolve(self, scope: str, input: Optional[FileID] = None) -> pathlib.Path:
+        """
+        Resolves the path of a file based on the given scope and input.
+        """
+        if input is None:
+            return None
+        else:
+            scope = self.scopes['scope']
+            return pathlib.Path(str(scope) % input)
+    
     @property
     def fields(self):
         fields = set(['input'])
@@ -179,7 +194,7 @@ class Pipeline:
         return frozenset(fields)
 
 
-def create_pipeline(stages: Sequence[repype.stage.Stage], *args, pipeline_cls: Type[Pipeline], **kwargs) -> Pipeline:
+def create_pipeline(stages: Sequence[repype.stage.Stage], *args, pipeline_cls: Type[Pipeline] = Pipeline, **kwargs) -> Pipeline:
     """
     Creates and returns a new :py:class:`.Pipeline` object configured for the given stages.
 

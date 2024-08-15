@@ -16,6 +16,7 @@ from repype.typing import (
     Any,
     DataDictionary,
     Dict,
+    FileID,
     FrozenSet,
     Iterator,
     List,
@@ -28,7 +29,6 @@ from repype.typing import (
 import yaml
 
 
-FileID = TypeVar('FileID', int, str)
 MultiDataDictionary = Dict[FileID, DataDictionary]
 
 
