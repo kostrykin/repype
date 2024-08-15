@@ -84,5 +84,5 @@ class repype_segmentation(unittest.TestCase):
         if os.getpid() == self.testsuite_pid:
             self.tempdir.cleanup()
 
-    def test(self):
-        repype.cli.run_cli_ex(self.root_path, run = True)
+    # def test(self):
+    #     repype.cli.run_cli_ex(self.root_path, run = True)

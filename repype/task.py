@@ -450,7 +450,7 @@ class Task:
 
         # Run the pipeline for all inputs
         for input_idx, input in enumerate(self.inputs):
-            input_status = status.derive()
+            input_status = repype.status.derive(status)
             
             # Announce the status of the task
             repype.status.update(

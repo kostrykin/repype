@@ -937,12 +937,14 @@ class Task__run(unittest.TestCase):
             data = dict(),
             config = self.config,
             first_stage = None,
+            status = None,
         )
         mock_create_pipeline.return_value.process.assert_any_call(
             input = 'file-1',
             data = dict(),
             config = self.config,
             first_stage = None,
+            status = None,
         )
         self.assertEqual(mock_create_pipeline.return_value.process.call_count, 2)
         mock_store.assert_called_once()
@@ -966,12 +968,14 @@ class Task__run(unittest.TestCase):
             data = dict(output = 'value1'),
             config = self.config,
             first_stage = stage1,
+            status = None,
         )
         mock_create_pipeline.return_value.process.assert_any_call(
             input = 'file-1',
             data = dict(output = 'value2'),
             config = self.config,
             first_stage = stage1,
+            status = None,
         )
         self.assertEqual(mock_create_pipeline.return_value.process.call_count, 2)
         mock_store.assert_called_once()

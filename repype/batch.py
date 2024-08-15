@@ -130,7 +130,7 @@ class Batch:
             )
 
             # Run the task in a separate process
-            task_process = multiprocessing.Process(target = run_task_process, args = (dill.dumps((rc, task_status)),))
+            task_process = multiprocessing.Process(target = run_task_process, args = (dill.dumps((rc, task_status),),))
             task_process.start()
 
             # Wait for the task process to finish
