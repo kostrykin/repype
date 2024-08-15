@@ -1,6 +1,9 @@
 import itertools
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import (
+    MagicMock,
+    Mock,
+)
 
 import pypers.pipeline
 import pypers.config
@@ -206,24 +209,24 @@ class create_pipeline(unittest.TestCase):
 
     def test_unsatisfiable(self):
         stages = [
-            testsuite.create_stage(id = 'stage1', inputs = ['input'], outputs = ['x1']),     ## stage1 takes `input` and produces `x1`
-            testsuite.create_stage(id = 'stage2', outputs = ['x2'], consumes = ['input']),   ## stage2 consumes `input` and produces `x2`
-            testsuite.create_stage(id = 'stage3', inputs = ['x1', 'x2'], outputs = ['y']),   ## stage3 takes `x1` and `x2` and produces `y`
-            testsuite.create_stage(id = 'stage4', inputs = ['input', 'y'], outputs = ['z']), ## stage4 takes `input` and `y` and produces `z`
+            Mock(id = 'stage1', inputs = ['input'], outputs = ['x1'], consumes = []),      # stage1 takes `input` and produces `x1`
+            Mock(id = 'stage2', inputs = [], outputs = ['x2'], consumes = ['input']),      # stage2 consumes `input` and produces `x2`
+            Mock(id = 'stage3', inputs = ['x1', 'x2'], outputs = ['y'], consumes = []),    # stage3 takes `x1` and `x2` and produces `y`
+            Mock(id = 'stage4', inputs = ['input', 'y'], outputs = ['z'], consumes = []),  # stage4 takes `input` and `y` and produces `z`
         ]
         for permutated_stages in itertools.permutations(stages):
             with self.subTest(permutation = permutated_stages):
                 self.assertRaises(RuntimeError, lambda: pypers.pipeline.create_pipeline(permutated_stages))
 
-    def test_ambiguous_namespaces(self):
-        stage1 = testsuite.create_stage(id = 'stage1')
-        stage2 = testsuite.create_stage(id = 'stage2')
-        stage3 = testsuite.create_stage(id = 'stage2')
+    def test_ambiguous_ids(self):
+        stage1 = Mock(id = 'stage1')
+        stage2 = Mock(id = 'stage2')
+        stage3 = Mock(id = 'stage2')
         self.assertRaises(AssertionError, lambda: pypers.pipeline.create_pipeline([stage1, stage2, stage3]))
         self.assertRaises(AssertionError, lambda: pypers.pipeline.create_pipeline([stage1, stage2, stage2]))
 
     def test_ambiguous_outputs(self):
-        stage1 = testsuite.create_stage(id = 'stage1', outputs = ['x1'])
-        stage2 = testsuite.create_stage(id = 'stage2', outputs = ['x2'])
-        stage3 = testsuite.create_stage(id = 'stage3', outputs = ['x2'])
+        stage1 = Mock(id = 'stage1', outputs = ['x1'])
+        stage2 = Mock(id = 'stage2', outputs = ['x2'])
+        stage3 = Mock(id = 'stage3', outputs = ['x2'])
         self.assertRaises(AssertionError, lambda: pypers.pipeline.create_pipeline([stage1, stage2, stage3]))

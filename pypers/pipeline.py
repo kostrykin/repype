@@ -199,13 +199,14 @@ def create_pipeline(stages: Sequence[pypers.stage.Stage], *args, **kwargs) -> Pi
 
         # Ensure that the next stage has no missing inputs
         for stage1 in remaining_stages:
-            if stage1.inputs.issubset(available_inputs):
+            if frozenset(stage1.inputs).issubset(frozenset(available_inputs)):
                 conflicted = False
 
                 # Ensure that no remaining stage requires a consumed input
                 for stage2 in remaining_stages:
                     if stage1 is stage2: continue
-                    if len(stage1.consumes) > 0 and stage1.consumes.issubset(stage2.inputs):
+                    consumes = frozenset(getattr(stage1, 'consumes', []))
+                    if len(consumes) > 0 and consumes.issubset(frozenset(stage2.inputs)):
                         conflicted = True
 
                 if not conflicted:
@@ -213,10 +214,13 @@ def create_pipeline(stages: Sequence[pypers.stage.Stage], *args, **kwargs) -> Pi
                     break
 
         if next_stage is None:
-            raise RuntimeError(f'failed to resolve total ordering (pipeline so far: {pipeline.stages}, available inputs: {available_inputs}, remaining stages: {remaining_stages})')
+            raise RuntimeError(
+                f'Failed to resolve total ordering (pipeline so far: {pipeline.stages}, '
+                f'available inputs: {available_inputs}, remaining stages: {remaining_stages})')
+        
         remaining_stages.remove(next_stage)
         pipeline.append(next_stage)
-        available_inputs |= next_stage.outputs
-        available_inputs -= next_stage.consumes
+        available_inputs |= frozenset(getattr(next_stage, 'outputs' , []))
+        available_inputs -= frozenset(getattr(next_stage, 'consumes', []))
 
     return pipeline
