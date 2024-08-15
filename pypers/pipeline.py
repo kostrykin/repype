@@ -1,8 +1,6 @@
 import os
 import weakref
 
-from deprecated import deprecated
-
 import pypers.config
 import pypers.stage
 import pypers.status
@@ -93,27 +91,6 @@ class Configurator:
         :rtype: Config
         """
         return self.pipeline.configure(base_cfg, input)
-    
-    @deprecated
-    def first_differing_stage(self, config1: pypers.config.Config, config2: pypers.config.Config):
-        """
-        Find the first stage with differing configurations between two sets of hyperparameters.
-        
-        :param config1: The first set of hyperparameters.
-        :type config1: Config
-        :param config2: The second set of hyperparameters.
-        :type config2: Config
-        :return: The first differing stage, or None if no differences are found.
-        :rtype: Stage or None
-        """
-        for stage in self.pipeline.stages:
-            if any([
-                stage.id in config1 and stage.id not in config2,
-                stage.id not in config1 and stage.id in config2,
-                stage.id in config1 and stage.id in config2 and config1[stage.id] != config2[stage.id],
-            ]):
-                return stage
-        return None
 
 
 class Pipeline:
