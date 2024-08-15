@@ -1,341 +1,442 @@
 import itertools
 import unittest
+from unittest.mock import (
+    MagicMock,
+    Mock,
+)
 
-import pypers.pipeline
-import pypers.config
+import repype.pipeline
+import repype.config
 
 from . import testsuite
 
 
-class suggest_id(unittest.TestCase):
+class Pipeline__configure(unittest.TestCase):
 
-    def test(self):
-        self.assertEqual(pypers.pipeline.suggest_stage_id('TheGreatPCMapper'     ), 'the-great-pc-mapper'    )
-        self.assertEqual(pypers.pipeline.suggest_stage_id('TheGreat_PCMapper'    ), 'the-great-pc-mapper'    )
-        self.assertEqual(pypers.pipeline.suggest_stage_id('TheGreat__PCMapper'   ), 'the-great-pc-mapper'    )
-        self.assertEqual(pypers.pipeline.suggest_stage_id('TheGreat_123_PCMapper'), 'the-great-123-pc-mapper')
-        self.assertEqual(pypers.pipeline.suggest_stage_id('TheGreat123_PCMapper' ), 'the-great-123-pc-mapper')
-        self.assertEqual(pypers.pipeline.suggest_stage_id('TheGreat123PCMapper'  ), 'the-great-123-pc-mapper')
-        self.assertEqual(pypers.pipeline.suggest_stage_id('TheGreatMapperStage'  ), 'the-great-mapper'       )
-        self.assertEqual(pypers.pipeline.suggest_stage_id('Stage'                ), 'stage'                  )
-
-    def test_illegal(self):
-        self.assertRaises(AssertionError, lambda: pypers.pipeline.suggest_stage_id(''))
-        self.assertRaises(AssertionError, lambda: pypers.pipeline.suggest_stage_id('_'))
-        self.assertRaises(AssertionError, lambda: pypers.pipeline.suggest_stage_id('_1'))
-        self.assertRaises(AssertionError, lambda: pypers.pipeline.suggest_stage_id('TheGreat PCMapper'))
-        self.assertRaises(AssertionError, lambda: pypers.pipeline.suggest_stage_id('TheGreat-PCMapper'))
-        self.assertRaises(AssertionError, lambda: pypers.pipeline.suggest_stage_id('1TheGreatPCMapper'))
-
-
-class Stage(unittest.TestCase):
-
-    def test_no_inputs_no_outputs(self):
-        stage = testsuite.create_stage(id = 'test')
-        data  = dict()
-        cfg   = pypers.config.Config()
-        dt    = stage(data, cfg, out = 'muted')
-        self.assertIsInstance(dt, float)
-        self.assertEqual(data, dict())
-
-    def test_init(self):
-        class Stage(pypers.pipeline.Stage):
-            pass
-        self.assertEqual(Stage().id, 'stage')
-
-    def test(self):
-        stage = testsuite.create_stage(id = 'test', inputs = ['x1', 'x2'], outputs = ['y'], \
-            process = lambda x1, x2, cfg, log_root_dir = None, out = None: \
-                dict(y = \
-                    x1 * cfg.get('x1_factor', 0) + \
-                    x2 * cfg.get('x2_factor', 0))
-            )
-        cfg = pypers.config.Config()
-        for x1_factor in [0, 1]:
-            for x2_factor in [0, 1]:
-                x1, x2 = 10, 20
-                with self.subTest(x1_factor = x1_factor, x2_factor = x2_factor):
-                    cfg['test/x1_factor'] = x1_factor
-                    cfg['test/x2_factor'] = x2_factor
-                    data = dict(x1 = x1, x2 = x2)
-                    dt   = stage(data, cfg, out = 'muted')
-                    self.assertEqual(data, dict(x1 = x1, x2 = x2, y = x1 * x1_factor + x2 * x2_factor))
-                    self.assertIsInstance(dt, float)
-
-    def test_missing_input(self):
-        stage = testsuite.create_stage(id = 'test', outputs = ['y'], \
-            process = lambda x, cfg, log_root_dir = None, out = None: \
-                dict(y = x)
-            )
-        data = dict(x = 0)
-        cfg  = pypers.config.Config()
-        self.assertRaises(TypeError, lambda: stage(data, cfg, out = 'muted'))
-
-    def test_missing_output(self):
-        stage = testsuite.create_stage(id = 'test', outputs = ['y'], \
-            process = lambda cfg, log_root_dir = None, out = None: \
-                dict()
-            )
-        data = dict()
-        cfg  = pypers.config.Config()
-        self.assertRaises(AssertionError, lambda: stage(data, cfg, out = 'muted'))
-
-    def test_spurious_output(self):
-        stage = testsuite.create_stage( id = 'test', \
-            process = lambda cfg, log_root_dir = None, out = None: \
-                dict(y = 0)
-            )
-        data = dict()
-        cfg  = pypers.config.Config()
-        self.assertRaises(AssertionError, lambda: stage(data, cfg, out = 'muted'))
-
-    def test_missing_and_spurious_output(self):
-        stage = testsuite.create_stage(id = 'test', outputs = ['y'], \
-            process = lambda cfg, log_root_dir = None, out = None: \
-                dict(z = 0)
-            )
-        data = dict()
-        cfg  = pypers.config.Config()
-        self.assertRaises(AssertionError, lambda: stage(data, cfg, out = 'muted'))
-
-    def test_consumes(self):
-        stage = testsuite.create_stage(id = 'test', consumes = ['x'], \
-            process = lambda x, cfg, log_root_dir = None, out = None: \
-                dict()
-            )
-        data = dict(x = 0, y = 1)
-        cfg  = pypers.config.Config()
-        stage(data, cfg, out = 'muted')
-        self.assertEqual(data, dict(y = 1))
-
-    def test_missing_consumes(self):
-        stage = testsuite.create_stage(id = 'test', consumes = ['x'], \
-            process = lambda x, cfg, log_root_dir = None, out = None: \
-                dict()
-            )
-        data = dict()
-        cfg  = pypers.config.Config()
-        self.assertRaises(KeyError, lambda: stage(data, cfg, out = 'muted'))
-
-
-class Pipeline(unittest.TestCase):
-
-    def _test_configure(self, original_base_cfg: 'config.Config'):
-        factors = list(range(-1, +3))
-        for x1_pre_factor, x2_pre_factor in itertools.product(factors, factors):
-            for x1_default_user_factor, x2_default_user_factor in itertools.product(factors, factors):
-                with self.subTest(x1_pre_factor = x1_pre_factor, x2_pre_factor = x2_pre_factor, x1_default_user_factor = x1_default_user_factor, x2_default_user_factor = x2_default_user_factor):
-                    base_cfg = original_base_cfg.copy()
-                    cfg = create_pipeline().test(
-                            lambda x1_factor_specs, x2_factor_specs: dict(x1_factor = x1_factor_specs),
-                            lambda x1_factor_specs, x2_factor_specs: dict(x2_factor = x2_factor_specs),
-                        ).configure(base_cfg,
-                            x1_factor_specs = (x1_pre_factor, x1_default_user_factor),
-                            x2_factor_specs = (x2_pre_factor, x2_default_user_factor),
-                        )
-                    self.assertEqual(base_cfg, original_base_cfg)
-                    self.assertEqual(cfg['stage1/x1_factor'], base_cfg.get('stage1/x1_factor', x1_pre_factor * base_cfg.get('stage1/AF_x1_factor', x1_default_user_factor)))
-                    self.assertEqual(cfg['stage2/x2_factor'], base_cfg.get('stage2/x2_factor', x2_pre_factor * base_cfg.get('stage2/AF_x2_factor', x2_default_user_factor)))
+    def setUp(self):
+        self.pipeline = repype.pipeline.Pipeline(
+            [
+                MagicMock(id = 'stage1'),
+                MagicMock(id = 'stage2'),
+            ]
+        )
+        self.stage1, self.stage2 = self.pipeline.stages[:2]
+        self.stage1.configure.return_value = dict(
+            x1_factor = (
+                1,  # fixed factor
+                2,  # default value for `AF_x1_factor`
+            ),
+        )
+        self.stage2.configure.return_value = dict(
+            x2_factor = (
+                -1, # fixed factor
+                1,  # default value for `AF_x2_factor`
+            ),
+        )
 
     def test_configure(self):
-        cfg = pypers.config.Config()
-        self._test_configure(cfg)
+        base_config = repype.config.Config()
+        config = self.pipeline.configure(base_config)
+        self.assertEqual(
+            config.entries,
+            dict(
+                stage1 = dict(
+                    AF_x1_factor = 2,
+                    x1_factor = 2,
+                ),
+                stage2 = dict(
+                    AF_x2_factor = 1,
+                    x2_factor = -1,
+                ),
+            )
+        )
 
-        cfg = pypers.config.Config()
-        cfg['stage1/x1_factor'] = 1
-        self._test_configure(cfg)
+    def test_configure_x1_factor(self):
+        base_config = repype.config.Config()
+        base_config['stage1/x1_factor'] = 100
+        config = self.pipeline.configure(base_config)
+        self.assertEqual(
+            config.entries,
+            dict(
+                stage1 = dict(
+                    AF_x1_factor = 2,
+                    x1_factor = 100,
+                ),
+                stage2 = dict(
+                    AF_x2_factor = 1,
+                    x2_factor = -1,
+                ),
+            )
+        )
 
-        cfg = pypers.config.Config()
-        cfg['stage1/AF_x1_factor'] = 1
-        self._test_configure(cfg)
+    def test_configure_AF_x1_factor(self):
+        base_config = repype.config.Config()
+        base_config['stage1/AF_x1_factor'] = 10
+        config = self.pipeline.configure(base_config)
+        self.assertEqual(
+            config.entries,
+            dict(
+                stage1 = dict(
+                    AF_x1_factor = 10,
+                    x1_factor = 10,
+                ),
+                stage2 = dict(
+                    AF_x2_factor = 1,
+                    x2_factor = -1,
+                ),
+            )
+        )
+
+    def test_configure_type_min(self):
+        self.stage2.configure.return_value = dict(
+            x2_factor = (
+                -1, # fixed factor
+                1,  # default value for `AF_x2_factor`
+                dict(
+                    type = float,
+                    min = 0,
+                    max = 1,
+                ),
+            ),
+        )
+        base_config = repype.config.Config()
+        config = self.pipeline.configure(base_config)
+        self.assertEqual(
+            config.entries['stage2'],
+            dict(
+                AF_x2_factor = 1,
+                x2_factor = 0.,
+            )
+        )
+
+    def test_configure_type_max(self):
+        self.stage2.configure.return_value = dict(
+            x2_factor = (
+                -1, # fixed factor
+                -2,  # default value for `AF_x2_factor`
+                dict(
+                    type = float,
+                    min = 0,
+                    max = 1,
+                ),
+            ),
+        )
+        base_config = repype.config.Config()
+        config = self.pipeline.configure(base_config)
+        self.assertEqual(
+            config.entries['stage2'],
+            dict(
+                AF_x2_factor = -2,
+                x2_factor = 1.,
+            )
+        )
+
+
+class Pipeline__find(unittest.TestCase):
+
+    def setUp(self):
+        self.pipeline = repype.pipeline.Pipeline(
+            [
+                MagicMock(id = 'stage1'),
+                MagicMock(id = 'stage2'),
+                MagicMock(id = 'stage3'),
+                MagicMock(id = 'stage4'),
+            ]
+        )
 
     def test_find(self):
-        pipeline = create_pipeline().test()
-        for expected_position, stage in enumerate(pipeline.stages):
+        for expected_position, stage in enumerate(self.pipeline.stages):
             with self.subTest(expected_position = expected_position):
-                actual_position = pipeline.find(stage.id)
+                actual_position = self.pipeline.find(stage.id)
                 self.assertEqual(actual_position, expected_position)
 
     def test_find_missing(self):
-        pipeline = create_pipeline().test()
         dummy = object()
-        self.assertIs(pipeline.find('stage4', dummy), dummy)
+        self.assertIs(self.pipeline.find('stage5', dummy), dummy)
+
+
+class Pipeline__append(unittest.TestCase):
+
+    def setUp(self):
+        self.pipeline = repype.pipeline.Pipeline(
+            [
+                MagicMock(id = 'stage1'),
+                MagicMock(id = 'stage2'),
+                MagicMock(id = 'stage3'),
+            ]
+        )
+        self.stage4 = MagicMock(id = 'stage4')
 
     def test_append(self):
-        new_stage = testsuite.create_stage(id = 'new_stage')
-        pipeline = create_pipeline().test()
-        expected_pos = len(pipeline.stages)
-        pos = pipeline.append(new_stage)
+        expected_pos = len(self.pipeline.stages)
+        pos = self.pipeline.append(self.stage4)
         self.assertEqual(pos, expected_pos)
-        self.assertEqual(len(pipeline.stages), expected_pos + 1)
-        self.assertIs(pipeline.stages[pos], new_stage)
+        self.assertEqual(len(self.pipeline.stages), expected_pos + 1)
+        self.assertIs(self.pipeline.stages[pos], self.stage4)
 
     def test_append_twice(self):
-        pipeline = create_pipeline().test()
-        for stage in pipeline.stages:
+        for stage in self.pipeline.stages:
             with self.subTest(stage = stage.id):
-                self.assertRaises(RuntimeError, lambda: pipeline.append(stage))
-                self.assertRaises(RuntimeError, lambda: pipeline.append(testsuite.create_stage(id = stage.id)))
+                with self.assertRaises(RuntimeError):
+                    self.pipeline.append(stage)
+                with self.assertRaises(RuntimeError):
+                    self.pipeline.append(MagicMock(id = stage.id))
 
     def test_append_after_str(self):
-        new_stage = testsuite.create_stage(id = 'new_stage')
-        stages = create_pipeline().test().stages
-        for after in [stage.id for stage in stages]:
-            pipeline = create_pipeline().test()
+        for after in [stage.id for stage in self.pipeline.stages]:
+            pipeline = repype.pipeline.Pipeline(self.pipeline.stages)
             expected_pos = pipeline.find(after) + 1
             with self.subTest(after = after):
-                pos = pipeline.append(new_stage, after = after)
+                pos = pipeline.append(self.stage4, after = after)
                 self.assertEqual(pos, expected_pos)
-                self.assertIs(pipeline.stages[pos], new_stage)
+                self.assertIs(pipeline.stages[pos], self.stage4)
 
     def test_append_after_int(self):
-        new_stage = testsuite.create_stage(id = 'new_stage')
-        stages = create_pipeline().test().stages
-        for after in range(-1, len(stages)):
-            pipeline = create_pipeline().test()
+        for after in range(-1, len(self.pipeline.stages)):
+            pipeline = repype.pipeline.Pipeline(self.pipeline.stages)
             expected_pos = after + 1
             with self.subTest(after = after):
-                pos = pipeline.append(new_stage, after = after)
+                pos = pipeline.append(self.stage4, after = after)
                 self.assertEqual(pos, expected_pos)
-                self.assertIs(pipeline.stages[pos], new_stage)
+                self.assertIs(pipeline.stages[pos], self.stage4)
 
-    def test_process(self):
-        x1_factor = 1
-        x2_factor = 2
-        constant  = 3
-        cfg = pypers.config.Config()
-        cfg['stage1/x1_factor'] = x1_factor
-        cfg['stage2/x2_factor'] = x2_factor
-        cfg['stage3/constant' ] = constant
-        pipeline = create_pipeline().test()
+
+class Pipeline__process(unittest.TestCase):
+
+    def setUp(self):
+        self.pipeline = repype.pipeline.Pipeline(
+            [
+                MagicMock(id = 'stage1', inputs = ['input'], outputs = ['x1'], consumes = []),    # stage1 takes `input` and produces `x1`
+                MagicMock(id = 'stage2', inputs = [], outputs = ['x2'], consumes = ['input']),    # stage2 consumes `input` and produces `x2`
+                MagicMock(id = 'stage3', inputs = ['x1', 'x2'], outputs = ['x3'], consumes = []), # stage3 takes `x1` and `x2` and produces `x3`
+            ]
+        )
+        self.pipeline.stages[0].side_effect = self.stage1
+        self.pipeline.stages[1].side_effect = self.stage2
+        self.pipeline.stages[2].side_effect = self.stage3
+
+    def stage1(self, data, config, status = None, log_root_dir = None, **kwargs):
+        config.set_default('enabled', True)
+        data['x1'] = config.get('x1_factor', 1) * data['input']
+
+    def stage2(self, data, config, status = None, log_root_dir = None, **kwargs):
+        config.set_default('enabled', True)
+        data['x2'] = config.get('x2_factor', 1) * data['input']
+
+    def stage3(self, data, config, status = None, log_root_dir = None, **kwargs):
+        config.set_default('enabled', True)
+        data['x3'] = data['x1'] + data['x2'] + config.get('constant', 0)
+
+    def test(self):
+        config = repype.config.Config()
+        config['stage1/x1_factor'] = 1
+        config['stage2/x2_factor'] = 2
+        config['stage3/constant' ] = 3
+        
         for input in range(5):
             with self.subTest(input = input):
-                data, final_cfg, timings = pipeline.process(input = input, cfg = cfg, out = 'muted')
-                expected_final_cfg = cfg.copy()
-                for stage in pipeline.stages:
-                    expected_final_cfg[f'{stage.id}/enabled'] = True
-                    self.assertTrue(stage.id in timings)
-                self.assertEqual(final_cfg, expected_final_cfg, f'expected: {expected_final_cfg}, actual: {final_cfg}')
-                self.assertEqual(data['y'], x1_factor * input + x2_factor * input + constant)
-                self.assertEqual(len(timings), len(pipeline.stages))
 
-    def test_process_first_stage(self):
-        cfg = pypers.config.Config()
-        cfg['stage1/x1_factor'] = 1
-        cfg['stage2/x2_factor'] = 2
-        cfg['stage3/constant' ] = 3
-        pipeline = create_pipeline().test()
-        for stage in pipeline.stages:
-            def _cb(stage2, name, data, out):
-                pipeline.call_record.append(f'{stage2.id} {name}')
-            stage.add_callback('start', _cb)
-            stage.add_callback('end'  , _cb)
-            stage.add_callback('skip' , _cb)
-        def expected_call_record(processed_stages):
-            return sum((([
-                f'{stage.id} start',
-                f'{stage.id} process',
-                f'{stage.id} end',
-            ] if stage.id in processed_stages else [
-                f'{stage.id} skip',
-            ]) for stage in pipeline.stages), [])
+                mock_status = MagicMock()
+                data, final_config, timings = self.pipeline.process(input = input, config = config, status = mock_status)
+                mock_status.assert_not_called()
+
+                expected_final_config = config.copy()
+                for stage in self.pipeline.stages:
+                    expected_final_config[f'{stage.id}/enabled'] = True
+
+                self.assertEqual(len(timings), len(self.pipeline.stages))
+                self.assertEqual(
+                    [stage.id in timings for stage in self.pipeline.stages],
+                    [True] * len(self.pipeline.stages),
+                )
+                self.assertEqual(final_config, expected_final_config)
+                self.assertEqual(data['x3'], config['stage1/x1_factor'] * input + config['stage2/x2_factor'] * input + config['stage3/constant'])
+
+    def test_with_first_stage(self):
+        config = repype.config.Config()
+        config['stage1/x1_factor'] = 1
+        config['stage2/x2_factor'] = 2
+        config['stage3/constant' ] = 3
+        
+        # Test combinations of `first_stage` with and without the `+` suffix
         for suffix, offset in (('', 0), ('+', 1)):
-            for input in range(3):
-                full_data, _, _ = pipeline.process(input = input, cfg = cfg, out = 'muted')
-                self.assertEqual(pipeline.call_record, expected_call_record([stage.id for stage in pipeline.stages]))
-                pipeline.call_record.clear()
-                for first_stage_idx, first_stage in enumerate((stage.id for stage in pipeline.stages[:len(pipeline.stages) - offset])):
-                    with self.subTest(suffix = suffix, offset = offset, input = input, first_stage = first_stage):
-                        remaining_stages = frozenset([stage.id for stage in pipeline.stages[first_stage_idx + offset:]])
-                        data, _, timings = pipeline.process(input = input, data = full_data, first_stage = first_stage + suffix, cfg = cfg, out = 'muted')
-                        self.assertEqual(data['y'], full_data['y'])
-                        self.assertEqual(frozenset(timings.keys()), remaining_stages)
-                        self.assertEqual(pipeline.call_record, expected_call_record(remaining_stages))
-                        pipeline.call_record.clear()
 
-    def test_get_extra_stages(self):
-        stages = [
-            testsuite.create_stage(id = 'stage1', inputs = ['input'], outputs = ['x1']),
-            testsuite.create_stage(id = 'stage2', inputs =    ['x1'], outputs = ['x2']),
-            testsuite.create_stage(id = 'stage3', inputs =    ['x2'], outputs = ['x3']),
-            testsuite.create_stage(id = 'stage4', inputs =    ['x3'], outputs = ['x4']),
-        ]
-        pipeline = pypers.pipeline.create_pipeline(stages)
-        self.assertEqual(frozenset(pipeline.get_extra_stages(first_stage = 'stage4', last_stage = None, available_inputs =     [])), frozenset(['stage1', 'stage2', 'stage3']))
-        self.assertEqual(frozenset(pipeline.get_extra_stages(first_stage = 'stage4', last_stage = None, available_inputs = ['x1'])), frozenset(['stage2', 'stage3']))
-        self.assertEqual(frozenset(pipeline.get_extra_stages(first_stage = 'stage4', last_stage = None, available_inputs = ['x2'])), frozenset(['stage3']))
-        self.assertEqual(frozenset(pipeline.get_extra_stages(first_stage = 'stage3', last_stage = None, available_inputs = ['x2'])), frozenset([]))
+            # Test different inputs
+            for input in [-1, 0, +1, +2]:
+
+                # Pre-compute the full data
+                mock_status = MagicMock()
+                full_data, _, _ = self.pipeline.process(input = input, config = config, status = mock_status)
+                mock_status.assert_not_called()
+
+                # Test each stage as a `first_stage`
+                for first_stage_idx, first_stage in enumerate((stage.id for stage in self.pipeline.stages[:len(self.pipeline.stages) - offset])):
+                    with self.subTest(suffix = suffix, offset = offset, input = input, first_stage = first_stage):
+                        remaining_stages = frozenset([stage.id for stage in self.pipeline.stages[first_stage_idx + offset:]])
+
+                        # Reset the call records
+                        for stage in self.pipeline.stages:
+                            stage.reset_mock()
+
+                        # Process the pipeline
+                        mock_status = MagicMock()
+                        data, _, timings = self.pipeline.process(
+                            input = input,
+                            data = full_data,
+                            first_stage = first_stage + suffix,
+                            config = config,
+                            status = mock_status,
+                        )
+                        mock_status.assert_not_called()
+
+                        # Check the results
+                        self.assertEqual(data, full_data)
+                        self.assertEqual(frozenset(timings.keys()), remaining_stages)
+
+                        # Verify that the skipped stages were not called
+                        for stage_idx, stage in enumerate(self.pipeline.stages):
+                            if stage_idx < first_stage_idx + offset:
+                                stage.assert_not_called()
+                            else:
+                                stage.assert_called_once()
+
+    def test_with_first_stage_and_missing_inputs(self):
+        config = repype.config.Config()
+        config['stage1/x1_factor'] = 1
+        config['stage2/x2_factor'] = 2
+        config['stage3/constant' ] = 3
+
+        # Pre-compute the full data
+        mock_status = MagicMock()
+        full_data, _, _ = self.pipeline.process(input = 10, config = config, status = mock_status)
+        mock_status.assert_not_called()
+
+        # Test each stage as a `first_stage`
+        for first_stage_idx, first_stage in enumerate((stage.id for stage in self.pipeline.stages[:len(self.pipeline.stages)])):
+            remaining_stages = frozenset([stage.id for stage in self.pipeline.stages[first_stage_idx:]])
+
+            # Remove the results from one of the previous stages
+            for marginal_stage in self.pipeline.stages[:first_stage_idx]:
+                full_data_without_marginals = {key: value for key, value in full_data.items() if key not in marginal_stage.outputs}
+                with self.subTest(first_stage = first_stage, marginal_stage = marginal_stage.id):
+
+                    # Reset the call records
+                    for stage in self.pipeline.stages:
+                        stage.reset_mock()
+
+                    # Process the pipeline
+                    mock_status = MagicMock()
+                    data, _, timings = self.pipeline.process(
+                        input = full_data['input'],
+                        data = full_data_without_marginals,
+                        first_stage = first_stage,
+                        config = config,
+                        status = mock_status,
+                    )
+                    mock_status.assert_not_called()
+
+                    # Check the results
+                    self.assertEqual(data, full_data)
+                    self.assertEqual(frozenset(timings.keys()), remaining_stages | {marginal_stage.id})
+
+                    # Verify that the skipped stages were not called
+                    for stage_idx, stage in enumerate(self.pipeline.stages):
+                        if stage_idx < first_stage_idx and stage.id != marginal_stage.id:
+                            stage.assert_not_called()
+                        else:
+                            stage.assert_called_once()
+
+
+class Pipeline__get_extra_stages(unittest.TestCase):
+
+    def setUp(self):
+        self.pipeline = repype.pipeline.Pipeline(
+            [
+                MagicMock(id = 'stage1', inputs = ['input'], outputs = ['x1'], consumes = []),    # stage1 takes `input` and produces `x1`
+                MagicMock(id = 'stage2', inputs = [], outputs = ['x2'], consumes = ['input']),    # stage2 consumes `input` and produces `x2`
+                MagicMock(id = 'stage3', inputs = ['x1', 'x2'], outputs = ['x3'], consumes = []), # stage3 takes `x1` and `x2` and produces `x3`
+            ]
+        )
+
+    def test(self):
+        self.assertEqual(
+            sorted(self.pipeline.get_extra_stages(first_stage = 'stage1', last_stage = None, available_inputs = ['input'])),
+            [],
+        )
+        self.assertEqual(
+            sorted(self.pipeline.get_extra_stages(first_stage = 'stage3', last_stage = None, available_inputs = ['input'])),
+            ['stage1', 'stage2'],
+        )
+        self.assertEqual(
+            sorted(self.pipeline.get_extra_stages(first_stage = 'stage3', last_stage = None, available_inputs = ['input', 'x2'])),
+            ['stage1'],
+        )
+        self.assertEqual(
+            sorted(self.pipeline.get_extra_stages(first_stage = 'stage3', last_stage = None, available_inputs = ['input', 'x1'])),
+            ['stage2'],
+        )
+        self.assertEqual(
+            sorted(self.pipeline.get_extra_stages(first_stage = 'stage3', last_stage = None, available_inputs = ['input', 'x1', 'x2'])),
+            [],
+        )
+
+
+class Pipeline__fields(unittest.TestCase):
+
+    def setUp(self):
+        self.pipeline = repype.pipeline.Pipeline(
+            [
+                MagicMock(id = 'stage1', inputs = ['input'], outputs = ['x1'], consumes = []),    # stage1 takes `input` and produces `x1`
+                MagicMock(id = 'stage2', inputs = [], outputs = ['x2'], consumes = ['input']),    # stage2 consumes `input` and produces `x2`
+                MagicMock(id = 'stage3', inputs = ['x1', 'x2'], outputs = ['x3'], consumes = []), # stage3 takes `x1` and `x2` and produces `x3`
+            ]
+        )
 
     def test_fields(self):
-        expected_fields = set(['input', 'x1', 'x2', 'y'])
-        self.assertEqual(create_pipeline().test().fields, expected_fields)
+        self.assertEqual(
+            sorted(self.pipeline.fields),
+            ['input', 'x1', 'x2', 'x3'],
+        )
 
 
 class create_pipeline(unittest.TestCase):
 
-    def test(self, configure_stage1 = None, configure_stage2 = None, configure_stage3 = None):
-        call_record = list()
-        def _process_stage1(input, cfg, log_root_dir = None, out = None):
-            call_record.append('stage1 process')
-            return dict(x1 = input * cfg['x1_factor'])
-        
-        def _process_stage2(input, cfg, log_root_dir = None, out = None):
-            call_record.append('stage2 process')
-            return dict(x2 = input * cfg['x2_factor'])
-        
-        def _process_stage3(x1, x2, cfg, log_root_dir = None, out = None):
-            call_record.append('stage3 process')
-            return dict(y = x1 + x2 + cfg['constant'])
+    def test(self):
+        # Define the stages, in the order they should be executed
         stages = [
-            ## stage1 takes `input` and produces `x1`
-            testsuite.create_stage(id = 'stage1', inputs = ['input'], outputs = ['x1'], \
-                process = _process_stage1, \
-                configure = configure_stage1
-            ),
-            ## stage2 consumes `input` and produces `x2`
-            testsuite.create_stage(id = 'stage2', outputs = ['x2'], consumes = ['input'], \
-                process = _process_stage2,
-                configure = configure_stage2
-            ),
-            ## stage3 takes `x1` and `x2` and produces `y`
-            testsuite.create_stage(id = 'stage3', inputs = ['x1', 'x2'], outputs = ['y'], \
-                process = _process_stage3,
-                configure = configure_stage3
-            ),
+            Mock(id = 'stage1', inputs = ['input'], outputs = ['x1'], consumes = []),   # stage1 takes `input` and produces `x1`
+            Mock(id = 'stage2', inputs = [], outputs = ['x2'], consumes = ['input']),   # stage2 consumes `input` and produces `x2`
+            Mock(id = 'stage3', inputs = ['x1', 'x2'], outputs = ['y'], consumes = []), # stage3 takes `x1` and `x2` and produces `y`
         ]
+
+        # Test `create_pipeline` with all permutations of the stages
         for permutated_stages in itertools.permutations(stages):
             with self.subTest(permutation = permutated_stages):
-                pipeline = pypers.pipeline.create_pipeline(permutated_stages)
+                pipeline = repype.pipeline.create_pipeline(permutated_stages)
                 self.assertEqual(len(pipeline.stages), 3)
                 for stage1, stage2 in zip(pipeline.stages, stages):
                     self.assertIs(stage1, stage2)
-        pipeline.call_record = call_record
-        return pipeline
 
     def test_unsatisfiable(self):
         stages = [
-            testsuite.create_stage(id = 'stage1', inputs = ['input'], outputs = ['x1']),     ## stage1 takes `input` and produces `x1`
-            testsuite.create_stage(id = 'stage2', outputs = ['x2'], consumes = ['input']),   ## stage2 consumes `input` and produces `x2`
-            testsuite.create_stage(id = 'stage3', inputs = ['x1', 'x2'], outputs = ['y']),   ## stage3 takes `x1` and `x2` and produces `y`
-            testsuite.create_stage(id = 'stage4', inputs = ['input', 'y'], outputs = ['z']), ## stage4 takes `input` and `y` and produces `z`
+            Mock(id = 'stage1', inputs = ['input'], outputs = ['x1'], consumes = []),      # stage1 takes `input` and produces `x1`
+            Mock(id = 'stage2', inputs = [], outputs = ['x2'], consumes = ['input']),      # stage2 consumes `input` and produces `x2`
+            Mock(id = 'stage3', inputs = ['x1', 'x2'], outputs = ['y'], consumes = []),    # stage3 takes `x1` and `x2` and produces `y`
+            Mock(id = 'stage4', inputs = ['input', 'y'], outputs = ['z'], consumes = []),  # stage4 takes `input` and `y` and produces `z`
         ]
         for permutated_stages in itertools.permutations(stages):
             with self.subTest(permutation = permutated_stages):
-                self.assertRaises(RuntimeError, lambda: pypers.pipeline.create_pipeline(permutated_stages))
+                self.assertRaises(RuntimeError, lambda: repype.pipeline.create_pipeline(permutated_stages))
 
-    def test_ambiguous_namespaces(self):
-        stage1 = testsuite.create_stage(id = 'stage1')
-        stage2 = testsuite.create_stage(id = 'stage2')
-        stage3 = testsuite.create_stage(id = 'stage2')
-        self.assertRaises(AssertionError, lambda: pypers.pipeline.create_pipeline([stage1, stage2, stage3]))
-        self.assertRaises(AssertionError, lambda: pypers.pipeline.create_pipeline([stage1, stage2, stage2]))
+    def test_ambiguous_ids(self):
+        stage1 = Mock(id = 'stage1')
+        stage2 = Mock(id = 'stage2')
+        stage3 = Mock(id = 'stage2')
+        self.assertRaises(AssertionError, lambda: repype.pipeline.create_pipeline([stage1, stage2, stage3]))
+        self.assertRaises(AssertionError, lambda: repype.pipeline.create_pipeline([stage1, stage2, stage2]))
 
     def test_ambiguous_outputs(self):
-        stage1 = testsuite.create_stage(id = 'stage1', outputs = ['x1'])
-        stage2 = testsuite.create_stage(id = 'stage2', outputs = ['x2'])
-        stage3 = testsuite.create_stage(id = 'stage3', outputs = ['x2'])
-        self.assertRaises(AssertionError, lambda: pypers.pipeline.create_pipeline([stage1, stage2, stage3]))
-
-
-if __name__ == '__main__':
-    unittest.main()
+        stage1 = Mock(id = 'stage1', outputs = ['x1'])
+        stage2 = Mock(id = 'stage2', outputs = ['x2'])
+        stage3 = Mock(id = 'stage3', outputs = ['x2'])
+        self.assertRaises(AssertionError, lambda: repype.pipeline.create_pipeline([stage1, stage2, stage3]))

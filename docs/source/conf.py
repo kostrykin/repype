@@ -2,8 +2,8 @@
 
 # -- Project information
 
-project = 'pypers'
-copyright = '2017-2023 Leonid Kostrykin, Biomedical Computer Vision Group, Heidelberg University'
+project = 'repype'
+copyright = '2017-2024 Leonid Kostrykin, Biomedical Computer Vision Group, Heidelberg University'
 author = 'Leonid Kostrykin'
 
 # -- General configuration

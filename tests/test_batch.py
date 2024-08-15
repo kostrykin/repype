@@ -1,477 +1,217 @@
-import unittest
-import argparse
+import os
 import pathlib
-import re
-import json
-import gzip
-import dill
-import tarfile
+import pprint
+import tempfile
+import unittest
 
-import pypers.pipeline
-import pypers.batch
-import pypers.config
-
+import repype.batch
+import repype.pipeline
+import repype.task
 from . import testsuite
+import repype.status
 
 
-rootdir = pathlib.Path(__file__).parent / 'batch'
+class Batch__task(unittest.TestCase):
+
+    def test_virtual_paths(self):
+        batch = repype.batch.Batch()
+
+        # Load the tasks
+        task1 = batch.task(
+            path = 'path/to/task',
+            spec = dict(),
+        )
+        task2 = batch.task(
+            path = 'path/to/task/2',
+            spec = dict(),
+        )
+
+        # Verify the tasks
+        self.assertEqual(len(batch.tasks), 2)
+        self.assertIsNone(task1.parent)
+        self.assertIs(task2.parent, task1)
+
+    def test_virtual_path_without_parent(self):
+        batch = repype.batch.Batch()
+        task = batch.task(
+            path = '',
+            spec = dict(),
+        )
+        self.assertIsNone(task.parent)
+
+    @testsuite.with_temporary_paths(1)
+    def test_spec_files(self, root):
+        testsuite.create_task_file(root, 'pipeline: repype.pipeline.Pipeline')
+        testsuite.create_task_file(root / 'task-2', 'field1: value1')
+
+        # Load the tasks
+        batch = repype.batch.Batch()
+        task1 = batch.task(path = root)
+        task2 = batch.task(path = root / 'task-2')
+
+        # Verify the number of loaded tasks
+        self.assertEqual(len(batch.tasks), 2)
+
+        # Verify task1
+        self.assertIsNone(task1.parent)
+        self.assertEqual(task1.full_spec, dict(pipeline = 'repype.pipeline.Pipeline'))
+
+        # Verify task2
+        self.assertIs(task2.parent, task1)
+        self.assertEqual(task2.full_spec, dict(pipeline = 'repype.pipeline.Pipeline', field1 = 'value1'))
+
+    @testsuite.with_temporary_paths(1)
+    def test_spec_files_with_override(self, root):
+        testsuite.create_task_file(root, 'pipeline: repype.pipeline.Pipeline')
+        batch = repype.batch.Batch()
+        task = batch.task(
+            path = root,
+            spec = dict(pipeline = 'repype.pipeline.Pipeline2'),
+        )
+        self.assertIsNone(task.parent)
+        self.assertEqual(task.spec, dict(pipeline = 'repype.pipeline.Pipeline2'))
+
+    @testsuite.with_temporary_paths(1)
+    def test_mixed_virtual_paths_and_spec_files(self, root):
+        testsuite.create_task_file(root, 'pipeline: repype.pipeline.Pipeline')
+        testsuite.create_task_file(root / 'task-2', 'field1: value1')
+
+        # Load the tasks
+        batch = repype.batch.Batch()
+        task3 = batch.task(
+            path = root / 'task-2' / 'task-3',
+            spec = dict(field2 = 'value2'),
+        )
+        task2 = batch.task(path = root / 'task-2')
+
+        # Verify the number of loaded tasks
+        self.assertEqual(len(batch.tasks), 3)
+
+        # Verify task3
+        self.assertIs(task3.parent, task2)
+        self.assertEqual(task3.full_spec, dict(pipeline = 'repype.pipeline.Pipeline', field1 = 'value1', field2 = 'value2'))
 
 
-def _get_written_results_file(task):
-    if hasattr(task, 'result_path') and task.result_path.exists():
-        return task.result_path
-    elif task.parent_task is not None:
-        return _get_written_results_file(task.parent_task)
-    else:
-        return None
-    
-
-def get_number_from_json_file(filepath):
-    with open(filepath) as fin:
-        return float(json.load(fin))
-
-
-class BatchLoader(unittest.TestCase):
-
-    def test_load(self):
-        batch = pypers.batch.BatchLoader(pypers.batch.Task, pypers.batch.JSONLoader())
-        batch.load(rootdir)
-        expected_task_list = [
-            str(rootdir / 'task1'),                     ## 0
-            str(rootdir / 'task1' / 'x3=1'),            ## 1
-            str(rootdir / 'task1' / 'x3=1' / 'x2=1'),   ## 2
-            str(rootdir / 'task1' / 'x2=1'),            ## 3
-            str(rootdir / 'task1' / 'x2=1' / 'x2=0'),   ## 4
-            str(rootdir / 'task1' / 'x1=1'),            ## 5
-            str(rootdir / 'task2'),                     ## 6
-            str(rootdir / 'task2' / 'x2=1'),            ## 7
-            str(rootdir / 'task2' / 'x2=1' / 'x2=0'),   ## 8
-            str(rootdir / 'task3'),
-            str(rootdir / 'task3' / 'runnable=false'),
-            str(rootdir / 'task3' / 'runnable=false' / 'runnable=true'),
-        ]
-        self.assertEqual(frozenset(batch.task_list), frozenset(expected_task_list))
-        self.assertLess (batch.task_list.index(expected_task_list[0]), batch.task_list.index(expected_task_list[1]))
-        self.assertLess (batch.task_list.index(expected_task_list[0]), batch.task_list.index(expected_task_list[3]))
-        self.assertLess (batch.task_list.index(expected_task_list[0]), batch.task_list.index(expected_task_list[5]))
-        self.assertLess (batch.task_list.index(expected_task_list[1]), batch.task_list.index(expected_task_list[2]))
-        self.assertLess (batch.task_list.index(expected_task_list[3]), batch.task_list.index(expected_task_list[4]))
-        self.assertLess (batch.task_list.index(expected_task_list[6]), batch.task_list.index(expected_task_list[7]))
-        self.assertLess (batch.task_list.index(expected_task_list[7]), batch.task_list.index(expected_task_list[8]))
-        return batch
-    
-    def test_task(self):
-        batch = self.test_load()
-        for expected_task in batch.tasks:
-            actual_task = batch.task(expected_task.path)
-            self.assertIs(actual_task, expected_task)
-        self.assertIsNone(batch.task(''))
-
-
-class DummyTask(pypers.batch.Task):
-
-    def create_pipeline(self, dry: bool = False):
-        assert isinstance(dry, bool)
-        stages = [
-            ## stage1 takes `input` and produces `a`
-            testsuite.create_stage(id = 'stage1', inputs = ['input'], outputs = ['a'], process = self.stage1_process),
-            ## stage2 takes `a` and produces `b`
-            testsuite.create_stage(id = 'stage2', inputs = ['a'], outputs = ['b'], process = self.stage2_process),
-            ## stage3 takes `b` and produces `c`
-            testsuite.create_stage(id = 'stage3', inputs = ['b'], outputs = ['c'], process = self.stage3_process),
-        ]
-        return pypers.pipeline.create_pipeline(stages)
-    
-    def stage1_process(self, input, cfg, log_root_dir = None, out = None):
-        input_value = get_number_from_json_file(input)
-        if log_root_dir is not None:
-            with open(log_root_dir + '/stage1.txt', 'w') as file:
-                file.write(f"{input_value} * {cfg['x1']}")
-        return dict(a = input_value * cfg['x1'])
-    
-    def stage2_process(self, a, cfg, log_root_dir = None, out = None):
-        if log_root_dir is not None:
-            with open(log_root_dir + '/stage2.txt', 'w') as file:
-                file.write(f"{a} + {cfg['x2']}")
-        return dict(b = a + cfg['x2'])
-    
-    def stage3_process(self, b, cfg, log_root_dir = None, out = None):
-        if log_root_dir is not None:
-            with open(log_root_dir + '/stage3.txt', 'w') as file:
-                file.write(f"{b} * {cfg['x3']}")
-        return dict(c = b * cfg['x3'])
-    
-
-import unittest.mock
-class run_cli_Test(unittest.TestCase):
+class Batch__load(unittest.TestCase):
 
     def setUp(self):
-        self.tested = TaskTest()
-        self.tested.setUp()
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.root_path = pathlib.Path(self.tempdir.name)
+        testsuite.create_task_file(self.root_path, 'pipeline: repype.pipeline.Pipeline')
+        testsuite.create_task_file(self.root_path / 'task-2', 'field1: value1')
+        testsuite.create_task_file(self.root_path / 'task-2' / 'task-3', 'field2: value2')
+        self.batch = repype.batch.Batch()
 
     def tearDown(self):
-        self.tested.tearDown()
+        self.tempdir.cleanup()
 
-    @unittest.mock.patch('argparse.ArgumentParser.parse_args', return_value = argparse.Namespace(
-            path = str(rootdir),
-            run = True,
-            verbosity = -1,
-            force = False,
-            oneshot = False,
-            last_stage = None,
-            no_pickup = False,
-            task = list(),
-            task_dir = list(),
-            report = None,
-        ))
-    def test(self, *args):
-        # Determine the expected results
-        data_expected = dict()
-        for task in self.tested.batch.tasks:
-            task.run(out = 'muted')
-            if hasattr(task, 'result_path'):
-                result_path = _get_written_results_file(task)
-                with gzip.open(result_path, 'rb') as fin:
-                    data_expected[result_path] = dill.load(fin)
-
-        # Clear the previously written results
-        for task in self.tested.batch.tasks:
-            task.reset()
-
-        # Call the CLI
-        pypers.batch.run_cli(DummyTask)
-
-        # Compare the results
-        for path, expeceted in data_expected.items():
-            with gzip.open(path, 'rb') as fin:
-                actual = dill.load(fin)
-            self.assertEqual(actual, expeceted)
-
-
-class TaskTest(unittest.TestCase):
-
-    def setUp(self):
-        self.batch = pypers.batch.BatchLoader(DummyTask, pypers.batch.JSONLoader())
-        self.batch.load(rootdir)
-
-    def tearDown(self):
-        for task in self.batch.tasks:
-            task.reset()
-
-    def test_config(self):
-        expected_base_config = pypers.config.Config({
-            'stage1': dict(x1 = 0),
-            'stage2': dict(x2 = 0),
-            'stage3': dict(x3 = 0),
-        })
-        self.assertEqual(self.batch.task(rootdir / 'task1').config, expected_base_config)
-        self.assertEqual(self.batch.task(rootdir / 'task1' / 'x1=1').config, expected_base_config.derive({'stage1': dict(x1=1)}))
-        self.assertEqual(self.batch.task(rootdir / 'task1' / 'x2=1').config, expected_base_config.derive({'stage2': dict(x2=1)}))
-        self.assertEqual(self.batch.task(rootdir / 'task1' / 'x3=1').config, expected_base_config.derive({'stage3': dict(x3=1)}))
-        self.assertEqual(self.batch.task(rootdir / 'task1' / 'x3=1' / 'x2=1').config, expected_base_config.derive({'stage3': dict(x3=1), 'stage2': dict(x2=1)}))
-        self.assertEqual(self.batch.task(rootdir / 'task1' / 'x2=1' / 'x2=0').config, expected_base_config)
-        self.assertEqual(self.batch.task(rootdir / 'task2' / 'x2=1').config, expected_base_config.derive({'stage2': dict(x2=1)}))
-        self.assertEqual(self.batch.task(rootdir / 'task2' / 'x2=1' / 'x2=0').config, expected_base_config)
-        self.assertEqual(self.batch.task(rootdir / 'task3').config, expected_base_config)
-        self.assertEqual(self.batch.task(rootdir / 'task3' / 'runnable=false' / 'runnable=true').config, expected_base_config)
-
-    def test_root_path(self):
-        get_expected_root_path = lambda task: rootdir / re.match(r'.*(task[123]).*', str(task.path)).group(1)
-        for task in self.batch.tasks:
-            self.assertEqual(task.root_path, get_expected_root_path(task))
-
-    def test_config_digest(self):
-        classes = [
+    def test(self):
+        self.batch.load(self.root_path)
+        self.assertEqual(
+            [task.path for task in self.batch.tasks.values()],
             [
-                rootdir / 'task1',
-                rootdir / 'task1' / 'x2=1' / 'x2=0',
-                rootdir / 'task2' / 'x2=1' / 'x2=0',
-                rootdir / 'task3',
-                rootdir / 'task3' / 'runnable=false' / 'runnable=true',
+                self.root_path,
+                self.root_path / 'task-2',
+                self.root_path / 'task-2' / 'task-3',
             ],
-            [
-                rootdir / 'task1' / 'x2=1',
-                rootdir / 'task2' / 'x2=1',
-            ],
-        ]
-        classes += [[task.path] for task in self.batch.tasks if task.runnable and all([task.path not in cls for cls in classes])]
-        for cls_idx, cls in enumerate(classes):
-            task1 = self.batch.task(cls[0])
-            digest1 = task1.config_digest
-            for task2 in (self.batch.task(path) for path in cls[1:]):
-                digest2 = task2.config_digest
-                self.assertEqual(digest1, digest2)
-            for cls2_idx, cls2 in enumerate(classes):
-                if cls2_idx == cls_idx: continue
-                task2 = self.batch.task(cls2[0])
-                digest2 = task2.config_digest
-                self.assertNotEqual(digest1, digest2, f'{task1}, {task2}')
+        )
 
-    def test_pickup_previous_task(self):
-        data = dict()
-
-        task = self.batch.task(rootdir / 'task1')
-        self.assertEqual(task.pickup_previous_task(task.create_pipeline(), out = 'muted'), (None, {}))
-        data[task.path] = task.run(out = 'muted')
-
-        task = self.batch.task(rootdir / 'task1' / 'x2=1')
-        pickup_stage, pickup_data = task.pickup_previous_task(task.create_pipeline(), out = 'muted')
-        self.assertEqual(pickup_stage, 'stage2')
-        self.assertEqual(pickup_data, data[rootdir / 'task1'])
-        data[task.path] = task.run(out = 'muted')
-
-        task = self.batch.task(rootdir / 'task1' / 'x2=1' / 'x2=0')
-        pickup_stage, pickup_data = task.pickup_previous_task(task.create_pipeline(), out = 'muted')
-        self.assertEqual(pickup_stage, 'stage2') ## TODO: pickup from stage 3 should be possible and better
-        self.assertEqual(pickup_data, data[rootdir / 'task1' / 'x2=1'])
-
-        task = self.batch.task(rootdir / 'task3')
-        self.assertEqual(task.pickup_previous_task(task.create_pipeline(), out = 'muted'), (None, {}))
-        data[task.path] = task.run(out = 'muted')
-
-        task = self.batch.task(rootdir / 'task3' / 'runnable=false' / 'runnable=true')
-        pickup_stage, pickup_data = task.pickup_previous_task(task.create_pipeline(), out = 'muted')
-        self.assertEqual(pickup_stage, '')
-        self.assertEqual(pickup_data, data[rootdir / 'task3'])
-
-    def test_run(self):
-        data_actual = dict()
-        for task in self.batch.tasks:
-            task.run(out = 'muted')
-            if hasattr(task, 'result_path'):
-                result_path = _get_written_results_file(task)
-                with gzip.open(result_path, 'rb') as fin:
-                    data_actual[task.path] = dill.load(fin)
-            else:
-                data_actual[task.path] = None
-        for task in self.batch.tasks:
-            task.reset()
-        for task in self.batch.tasks:
-            with self.subTest(task = task):
-                data_expected = task.run(out = 'muted')
-                if data_expected is None:
-                    self.assertIsNone(data_expected)
-                else:
-                    self.assertEqual(data_actual[task.path], data_expected)
-
-    def test_run_dry(self):
-        task = self.batch.tasks[0]
-        actual = task.run(dry = True, out = 'muted')
-        expected = {file_id: None for file_id in task.file_ids}
-        self.assertEqual(actual, expected)
-
-    def test_pending(self):
-        for task in self.batch.tasks:
-            if task.runnable:
-                self.assertTrue(task.is_pending)
-            task.run(out = 'muted')
-            self.assertFalse(task.is_pending)
-
-    def test_run_twice(self):
-        for task in self.batch.tasks:
-            data = task.run(out = 'muted')
-            if task.runnable:
-                self.assertIsNotNone(data)
-            self.assertIsNone(task.run(out = 'muted'))
-
-    def test_run_oneshot(self):
-        for task in self.batch.tasks:
-            check_pending = task.is_pending
-            data1 = task.run(out = 'muted', one_shot=True)
-            if check_pending:
-                self.assertTrue(task.is_pending)
-            if task.runnable:
-                self.assertIsNotNone(data1)
-                data2 = task.run(out = 'muted')
-                self.assertIsNotNone(data2)
-
-    def test_run_force(self):
-        for task in self.batch.tasks:
-            data1 = task.run(out = 'muted')
-            if task.runnable:
-                self.assertIsNotNone(data1)
-                data2 = task.run(out = 'muted', force=True)
-                self.assertIsNotNone(data2)
-
-    def test_cfg_pathpattern(self):
-        cfg_pathpattern = 'cfg/cfg-%s'
-        batch = pypers.batch.BatchLoader(DummyTask, pypers.batch.JSONLoader(), inject = dict(cfg_pathpattern = cfg_pathpattern))
-        batch.load(rootdir)
-        task = batch.task(rootdir / 'task1')
-        self.assertEqual(task.cfg_pathpattern, task.path / cfg_pathpattern)
-        try:
-            task.run(out = 'muted')
-            for file_id in task.file_ids:
-                cfg_filepath = task.path / (cfg_pathpattern % file_id + '.json')
-                self.assertTrue(cfg_filepath.exists())
-                cfg = task.loader.load(cfg_filepath)
-                self.assertEqual(cfg, task.config.entries)
-        finally:
-            task.reset()
-            for file_id in task.file_ids:
-                cfg_filepath = task.path / (cfg_pathpattern % file_id + '.json')
-                self.assertFalse(cfg_filepath.exists())
-        return task
-
-    def test_yaml(self):
-        yaml_batch = pypers.batch.BatchLoader(DummyTask, pypers.batch.YAMLLoader(), inject = dict(cfg_pathpattern = 'cfg/cfg-%s'))
-        yaml_batch.load(rootdir)
-        self.assertEqual(yaml_batch.task_list, [str(rootdir / 'yml_task1')])
-        yaml_task = yaml_batch.task(rootdir / 'yml_task1')
-        json_task = self.test_cfg_pathpattern()
-        self.assertEqual(yaml_task, json_task)
-        try:
-            data_json = json_task.run(out = 'muted')
-            data_yaml = yaml_task.run(out = 'muted')
-            self.assertEqual(data_yaml, data_json)
-            for file_id in yaml_task.file_ids:
-                cfg_filepath = pathlib.Path(pypers.batch.resolve_pathpattern(yaml_task.cfg_pathpattern, file_id) + '.yml')
-                self.assertTrue(cfg_filepath.exists())
-                cfg = yaml_task.loader.load(cfg_filepath)
-                self.assertEqual(cfg, json_task.config.entries)
-        finally:
-            json_task.reset()
-            yaml_task.reset()
-            for file_id in yaml_task.file_ids:
-                cfg_filepath = pathlib.Path(pypers.batch.resolve_pathpattern(yaml_task.cfg_pathpattern, file_id) + '.yml')
-                self.assertFalse(cfg_filepath.exists())
-
-    def test_log_pathpattern(self):
-        log_pathpattern = 'log/log-%s'
-        batch = pypers.batch.BatchLoader(DummyTask, pypers.batch.JSONLoader(), inject = dict(log_pathpattern = log_pathpattern))
-        batch.load(rootdir)
-        task = batch.task(rootdir / 'task1')
-        self.assertEqual(task.log_pathpattern, task.path / log_pathpattern)
-        try:
-            task.run(out = 'muted')
-            for file_id in task.file_ids:
-                log_filepath = task.path / (log_pathpattern % file_id + '.tgz')
-                with self.subTest(file_id = file_id):
-                    self.assertTrue(log_filepath.exists())
-                    with tarfile.open(log_filepath, 'r:gz') as file:
-                        self.assertEqual(frozenset(file.getnames()) - {''}, frozenset(['stage1.txt', 'stage2.txt', 'stage3.txt']))
-        finally:
-            task.reset()
-            for file_id in task.file_ids:
-                log_filepath = task.path / (log_pathpattern % file_id + '.tgz')
-                self.assertFalse(log_filepath.exists())
-
-    def test_get_marginal_fields(self):
-        for task in self.batch.tasks:
-            pipeline = task.create_pipeline()
-            self.assertEqual(task.get_marginal_fields(pipeline), set())
-
-class ExtendedTask(DummyTask):
-
-    outputs = ['result_a', 'result_c']
-    
-    def is_stage_marginal(self, stage):
-        if stage == 'stage1' or stage == 'stage3':
-            return True
-        else:
-            return False
-
-    def create_pipeline(self, *args, **kwargs):
-        pipeline = super(ExtendedTask, self).create_pipeline(*args, **kwargs)
-        pipeline.stages[0].add_callback('end' , self.write_intermediate_results)
-        pipeline.stages[2].add_callback('end' , self.write_intermediate_results)
-        return pipeline
-        
-    def write_intermediate_results(self, stage, cb_name, data, result_a_filepath, result_c_filepath, out):
-        if stage.id == 'stage1':
-            with open(result_a_filepath, 'w') as fout:
-                json.dump(data['a'], fout)
-        if stage.id == 'stage3':
-            with open(result_c_filepath, 'w') as fout:
-                json.dump(data['c'], fout)
+    def test_illegal_path(self):
+        with self.assertRaises(AssertionError):
+            self.batch.load(self.root_path / 'task-3')
 
 
-class ExtendedTaskTest(unittest.TestCase):
+class Batch__contexts(unittest.TestCase):
+
+    stage1_cls = testsuite.create_stage_class(id = 'stage1')
+    stage2_cls = testsuite.create_stage_class(id = 'stage2')
 
     def setUp(self):
-        self.batch = pypers.batch.BatchLoader(ExtendedTask, pypers.batch.JSONLoader())
-        self.batch.load(rootdir)
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.root_path = pathlib.Path(self.tempdir.name)
+        testsuite.create_task_file(
+            self.root_path,
+            'runnable: true' '\n'
+            'pipeline:' '\n'
+            '- tests.test_task.Task__create_pipeline.stage1_cls' '\n'
+            '- tests.test_task.Task__create_pipeline.stage2_cls' '\n'
+        )
+        testsuite.create_task_file(
+            self.root_path / 'task-2',
+            'config:' '\n'
+            '  stage1:' '\n'
+            '    key1: value1' '\n'
+        )
+        testsuite.create_task_file(
+            self.root_path / 'task-3',
+            'config:' '\n'
+            '  stage2:' '\n'
+            '    key2: value2' '\n'
+        )
+        self.batch = repype.batch.Batch()
+        self.batch.load(self.root_path)
+        self.testsuite_pid = os.getpid()
 
     def tearDown(self):
-        for task in self.batch.tasks:
-            task.reset()
+        if os.getpid() == self.testsuite_pid:
+            self.tempdir.cleanup()
 
-    def test_get_marginal_fields(self):
-        for task in self.batch.tasks:
-            pipeline = task.create_pipeline()
-            self.assertEqual(task.get_marginal_fields(pipeline), set(['a', 'c']))
-
-    def test_run(self):
-        for task in self.batch.tasks:
-            if not str(task.path).startswith(str(self.batch.task(rootdir / 'task1'))): continue
-            pipeline = task.create_pipeline()
-            task.run(out = 'muted')
-            if hasattr(task, 'result_path'):
-                result_path = _get_written_results_file(task)
-                with gzip.open(result_path, 'rb') as fin:
-                    data = dill.load(fin)
-                for field in task.get_marginal_fields(pipeline):
-                    with self.subTest(task = task, field = field):
-                        self.assertFalse(field in data.keys())
-
-    def test_pickup_previous_task(self):
-        self.batch.task(rootdir / 'task1').run(out = 'muted')
-        task = self.batch.task(rootdir / 'task1' / 'x2=1')
-        self.assertEqual(task.pickup_previous_task(task.create_pipeline(), out = 'muted'), (None, {}))
-
-    def test_intermediate_results(self):
-        self.batch.task(rootdir / 'task1').run(out = 'muted')
-        task = self.batch.task(rootdir / 'task1' / 'x2=1')
-        expected_data = task.run(out = 'muted')
-        for file_id in task.file_ids:
-            with self.subTest(file_id = file_id):
-                self.assertEqual(get_number_from_json_file(task.path / 'results_a' / f'{file_id}.json'), expected_data[file_id]['a'])
-                self.assertEqual(get_number_from_json_file(task.path / 'results_c' / f'{file_id}.json'), expected_data[file_id]['c'])
-        return task
-
-    def test_reset(self):
-        task = self.test_intermediate_results()
-        task.reset()
-        for file_id in task.file_ids:
-            with self.subTest(file_id = file_id):
-                self.assertFalse((task.path / 'results_a' / f'{file_id}.json').exists())
-                self.assertFalse((task.path / 'results_c' / f'{file_id}.json').exists())
+    def test(self):
+        contexts = self.batch.contexts
+        self.assertEqual(len(contexts), 3)
+        self.assertEqual(
+            [context.task.path for context in contexts],
+            [
+                self.root_path,
+                self.root_path / 'task-2',
+                self.root_path / 'task-3',
+            ],
+        )
+        self.assertEqual(
+            [context.config.entries for context in contexts],
+            [
+                dict(),
+                dict(stage1 = dict(key1 = 'value1')),
+                dict(stage2 = dict(key2 = 'value2')),
+            ],
+        )
 
 
-class _copy_dict_Test(unittest.TestCase):
+class Batch__run(unittest.TestCase):
 
-    def test_copy_dict(self):
-        # Test case 1: Empty dictionary
-        d1 = {}
-        d2 = pypers.batch._copy_dict(d1)
-        self.assertEqual(d1, d2)
-        self.assertIsNot(d1, d2)
+    stage1_cls = testsuite.create_stage_class(id = 'stage1')
+    stage2_cls = testsuite.create_stage_class(id = 'stage2')
 
-        # Test case 2: Nested dictionary
-        d1 = {'a': 1, 'b': {'c': 2, 'd': {'e': 3}}}
-        d2 = pypers.batch._copy_dict(d1)
-        self.assertEqual(d1, d2)
-        self.assertIsNot(d1, d2)
-        self.assertIsNot(d1['b'], d2['b'])
-        self.assertIsNot(d1['b']['d'], d2['b']['d'])
+    def setUp(self):
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.root_path = pathlib.Path(self.tempdir.name)
+        testsuite.create_task_file(
+            self.root_path,
+            'runnable: true' '\n'
+            'pipeline:' '\n'
+            '- tests.test_task.Task__create_pipeline.stage1_cls' '\n'
+            '- tests.test_task.Task__create_pipeline.stage2_cls' '\n'
+        )
+        testsuite.create_task_file(
+            self.root_path / 'task-2',
+            'stage1:' '\n'
+            '  key1: value1' '\n'
+        )
+        testsuite.create_task_file(
+            self.root_path / 'task-3',
+            'stage2:' '\n'
+            '  key2: value2' '\n'
+        )
+        self.batch = repype.batch.Batch()
+        self.batch.load(self.root_path)
+        self.testsuite_pid = os.getpid()
 
-        # Test case 3: Dictionary with different value types
-        d1 = {'a': 1, 'b': [1, 2, 3], 'c': {'d': True}}
-        d2 = pypers.batch._copy_dict(d1)
-        self.assertEqual(d1, d2)
-        self.assertIsNot(d1, d2)
-        self.assertIsNot(d1['b'], d2['b'])
-        self.assertIsNot(d1['c'], d2['c'])
+    def tearDown(self):
+        if os.getpid() == self.testsuite_pid:
+            self.tempdir.cleanup()
 
-
-class _is_subpath_Test(unittest.TestCase):
-
-    def test_is_subpath(self):
-        # Test when values are illegal
-        path = ''
-        subpath = pathlib.Path('/Users/void/Documents')
-        self.assertFalse(pypers.batch._is_subpath(path, subpath))
-
-
-if __name__ == '__main__':
-    unittest.main()
+    @testsuite.with_temporary_paths(1)
+    def test(self, path):
+        status = repype.status.Status(path = path)
+        self.batch.run(status = status)
+        self.assertEqual([list(item.keys()) for item in status.data], [['expand']] * 3, '\n' + pprint.pformat(status.data))

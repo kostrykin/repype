@@ -3,7 +3,7 @@
   <div align="center">
     <h6>To support the sustainability of your software experiments</h6>
     <h1>
-      <a href="https://github.com/kostrykin/pypers">pypers</a><br>
+      <a href="https://github.com/kostrykin/pypers">repype</a><br>
       <a href="https://github.com/kostrykin/pypers/actions/workflows/tests.yml"><img src="https://github.com/kostrykin/pypers/actions/workflows/tests.yml/badge.svg" /></a>
       <a href="https://github.com/kostrykin/pypers/actions/workflows/tests.yml"><img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/kostrykin/5f8b1433a1c405da22639f817d6a38d9/raw/pypers.json" /></a>
       <a href="https://pypers-batch.readthedocs.io"><img src="https://readthedocs.org/projects/pypers-batch/badge/?version=latest" /></a><br>
@@ -20,7 +20,6 @@
 **Documentation:** https://pypers-batch.readthedocs.io
 
 **Development instructions:**
-
 
 - Use ``python -m unittest`` in the root directory of the repository to run the test suite.
 - Or use coverage.py instead to also produce a test coverage report::

@@ -1,7 +1,7 @@
-pypers.pipeline
+repype.pipeline
 ===============
 
-.. automodule:: pypers.pipeline
+.. automodule:: repype.pipeline
     :members:
     :undoc-members:
     :show-inheritance:

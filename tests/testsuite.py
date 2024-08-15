@@ -1,11 +1,35 @@
-import pypers.pipeline
+import os
+import pathlib
+import shutil
+import tempfile
 
-from collections.abc import Sequence
+import repype.stage
+from repype.typing import (
+    PathLike,
+)
 
 
-# __init__(self, name: str, inputs: Sequence, outputs: Sequence, consumes: Sequence, process: callable, configure: callable = None):
+# Losen truncation limit for error messages
+__import__('sys').modules['unittest.util']._MAX_LENGTH = 1000
 
-def create_stage(**kwargs):
+
+def with_temporary_paths(count: int):
+    def decorator(test_func):
+        def wrapper(self, *args, **kwargs):
+            testsuite_pid = os.getpid()
+            paths = [tempfile.mkdtemp() for _ in range(count)]
+            try:
+                ret = test_func(self, *[pathlib.Path(path) for path in paths], *args, **kwargs)
+            finally:
+                if os.getpid() == testsuite_pid:
+                    for path in paths:
+                        shutil.rmtree(path)
+            return ret
+        return wrapper
+    return decorator
+
+
+def create_stage_class(**kwargs):
     kwargs = dict(kwargs)
 
     kwargs.setdefault('inputs'  , [])
@@ -15,7 +39,7 @@ def create_stage(**kwargs):
     _process   = kwargs.get('process'  , None)
     _configure = kwargs.get('configure', None)
 
-    class DummyStage(pypers.pipeline.Stage):
+    class DummyStage(repype.stage.Stage):
 
         id       = kwargs['id']
         inputs   = kwargs['inputs']
@@ -31,15 +55,35 @@ def create_stage(**kwargs):
             if _configure is None: return dict()
             else: return _configure(*args, **kwargs)
 
-    return DummyStage()
+    return DummyStage
+
+def create_stage(**kwargs):
+    stage_class = create_stage_class(**kwargs)
+    return stage_class()
 
 
 # Test create_stage:
 
 _stage = create_stage(id = 'dummy', inputs = ['x1', 'x2'], outputs = ['y'])
-assert isinstance(_stage, pypers.pipeline.Stage)
+assert isinstance(_stage, repype.stage.Stage)
 assert isinstance(_stage.inputs , frozenset)
 assert isinstance(_stage.outputs, frozenset)
 assert _stage.inputs  == frozenset(['x1', 'x2'])
 assert _stage.outputs == frozenset(['y'])
 del _stage
+
+
+def create_task_file(task_path: PathLike, spec_yaml: str) -> None:
+    task_path = pathlib.Path(task_path)
+    task_filepath = task_path / 'task.yml'
+    if not task_path.is_dir():
+        task_path.mkdir(parents = True, exist_ok = True)
+    with task_filepath.open('w') as spec_file:
+        spec_file.write(spec_yaml)
+
+
+class TestError(Exception):
+    
+    def __ini__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs

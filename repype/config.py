@@ -15,7 +15,7 @@ class Config:
 
     .. code-block:: python
     
-       cfg = pypers.config.Config()
+       cfg = repype.config.Config()
        cfg['stage1/param1'] = 1000
        cfg['stage2/param2'] = 5
 
@@ -182,6 +182,12 @@ class Config:
         """The MD5 hash code associated with the hyperparameters set in this configuration.
         """
         return hashlib.md5(json.dumps(self.entries).encode('utf8'))
+        
+    @property
+    def sha(self):
+        """The SHA1 hash code associated with the hyperparameters set in this configuration.
+        """
+        return hashlib.sha1(json.dumps(self.entries).encode('utf8'))
     
     def __str__(self):
         """Readable representation of this configuration.

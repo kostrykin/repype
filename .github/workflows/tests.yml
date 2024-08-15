@@ -1,22 +1,16 @@
 name: Tests
 
 on:
-
   workflow_dispatch:
-
   push:
-    branches:
-      - master
-    
+    branches: ['master']
   pull_request:
-    branches: [ "*" ]
-
+    branches: ['*']
 
 permissions:
   contents: read
   issues: write
   pull-requests: write
-
 
 jobs:
 
@@ -25,9 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     
     strategy:
+      fail-fast: false
       matrix:
         python-version:
-        - "3.8"
         - "pypy3.9"
         - "pypy3.10"
         - "3.9"
@@ -51,10 +45,12 @@ jobs:
         pip install -r requirements.txt
 
     - name: Run tests
-      uses: kostrykin/report-test-coverage-action@v1.0.0
+      uses: kostrykin/report-test-coverage-action@v1.0.2
       with:
         report: ${{ strategy.job-index == 0 }}
         gist-id: 5f8b1433a1c405da22639f817d6a38d9
         github-auth: ${{ secrets.GITHUB_TOKEN }}
         gist-auth: ${{ secrets.GIST_SECRET }}
         gist-filename: pypers.json
+      env:
+        REPYPE_WATCHDOG_TIMEOUT: 1
