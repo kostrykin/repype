@@ -296,7 +296,7 @@ class Pipeline__process(unittest.TestCase):
                         mock_status.assert_not_called()
 
                         # Check the results
-                        self.assertEqual(data['x3'], full_data['x3'])
+                        self.assertEqual(data, full_data)
                         self.assertEqual(frozenset(timings.keys()), remaining_stages)
 
                         # Verify that the skipped stages were not called
@@ -306,7 +306,51 @@ class Pipeline__process(unittest.TestCase):
                             else:
                                 stage.assert_called_once()
 
-    # FIXME: Add test like `test_with_first_stage` but with missing inputs
+    def test_with_first_stage_and_missing_inputs(self):
+        config = pypers.config.Config()
+        config['stage1/x1_factor'] = 1
+        config['stage2/x2_factor'] = 2
+        config['stage3/constant' ] = 3
+
+        # Pre-compute the full data
+        mock_status = MagicMock()
+        full_data, _, _ = self.pipeline.process(input = 10, config = config, status = mock_status)
+        mock_status.assert_not_called()
+
+        # Test each stage as a `first_stage`
+        for first_stage_idx, first_stage in enumerate((stage.id for stage in self.pipeline.stages[:len(self.pipeline.stages)])):
+            remaining_stages = frozenset([stage.id for stage in self.pipeline.stages[first_stage_idx:]])
+
+            # Remove the results from one of the previous stages
+            for marginal_stage in self.pipeline.stages[:first_stage_idx]:
+                full_data_without_marginals = {key: value for key, value in full_data.items() if key not in marginal_stage.outputs}
+                with self.subTest(first_stage = first_stage, marginal_stage = marginal_stage.id):
+
+                    # Reset the call records
+                    for stage in self.pipeline.stages:
+                        stage.reset_mock()
+
+                    # Process the pipeline
+                    mock_status = MagicMock()
+                    data, _, timings = self.pipeline.process(
+                        input = full_data['input'],
+                        data = full_data_without_marginals,
+                        first_stage = first_stage,
+                        config = config,
+                        status = mock_status,
+                    )
+                    mock_status.assert_not_called()
+
+                    # Check the results
+                    self.assertEqual(data, full_data)
+                    self.assertEqual(frozenset(timings.keys()), remaining_stages | {marginal_stage.id})
+
+                    # Verify that the skipped stages were not called
+                    for stage_idx, stage in enumerate(self.pipeline.stages):
+                        if stage_idx < first_stage_idx and stage.id != marginal_stage.id:
+                            stage.assert_not_called()
+                        else:
+                            stage.assert_called_once()
 
 """
 class Pipeline__get_extra_stages(unittest.TestCase):  # TODO: Refactor
