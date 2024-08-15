@@ -97,5 +97,5 @@ class repype_segmentation(unittest.TestCase):
 
     def test(self):
         ret = repype.cli.run_cli_ex(self.root_path, run = True)
-        #import sys; print(self.stdout, file = sys.stderr)
+        import sys; print(self.stdout, file = sys.stderr)
         self.assertTrue(ret)

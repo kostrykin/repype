@@ -205,6 +205,13 @@ class Cursor:
                 return cursor
             
         return None
+    
+    def has_subsequent_non_intermediate(self) -> bool:
+        cursor = self
+        while cursor := cursor.find_next_element():
+            if not cursor.intermediate:
+                return True
+        return False
 
     def get_elements(self) -> Optional[List[list]]:
         """
@@ -286,7 +293,6 @@ class StatusReader(FileSystemEventHandler):
         time.sleep(1)  # Give the WatchDog observer some extra time
         self.observer.stop()
         self.observer.join()
-        import sys; print(self.data, file = sys.stderr)
 
     def update(self, filepath: pathlib.Path) -> bool:
         data_frame = self.data_frames.get(filepath)
@@ -356,7 +362,8 @@ class StatusReader(FileSystemEventHandler):
                 self.handle_new_status(elements[:-1], list(cursor.path), copy.deepcopy(elements[-1]))
 
             # If the element is an intermediate, leave the cursor on the last non-intermediate position
-            if cursor.intermediate:
+            # Unless there is a subsequent non-intermediate element
+            if cursor.intermediate and not cursor.has_subsequent_non_intermediate():
                 self._intermediate = (elements[:-1], list(cursor.path), copy.deepcopy(elements[-1]))
                 break
             else:

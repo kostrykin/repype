@@ -47,7 +47,6 @@ def run_task_process(payload):
             traceback = traceback.format_exc(),
             stage = error.stage.id if isinstance(error, repype.pipeline.StageError) else None,
         )
-        print('***', error, file = sys.stderr)
         sys.exit(1)  # Indicate a failure to the parent process
 
 
