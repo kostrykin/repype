@@ -55,8 +55,8 @@ class Stage(unittest.TestCase):
             for x2_factor in [0, 1]:
                 x1, x2 = 10, 20
                 with self.subTest(x1_factor = x1_factor, x2_factor = x2_factor):
-                    cfg['test/x1_factor'] = x1_factor
-                    cfg['test/x2_factor'] = x2_factor
+                    cfg['x1_factor'] = x1_factor
+                    cfg['x2_factor'] = x2_factor
                     data = dict(x1 = x1, x2 = x2)
                     status_mock = MagicMock()
                     dt = stage(data, cfg, status = status_mock)

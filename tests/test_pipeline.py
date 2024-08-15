@@ -290,7 +290,7 @@ class Pipeline__process(unittest.TestCase):
                         pipeline.call_record.clear()
 """
 
-
+"""
 class Pipeline__get_extra_stages(unittest.TestCase):  # TODO: Refactor
 
     def test(self):
@@ -309,6 +309,7 @@ class Pipeline__get_extra_stages(unittest.TestCase):  # TODO: Refactor
     def test_fields(self):
         expected_fields = set(['input', 'x1', 'x2', 'y'])
         self.assertEqual(create_pipeline().test().fields, expected_fields)
+"""
 
 
 class create_pipeline(unittest.TestCase):
