@@ -464,7 +464,7 @@ class Task:
 
             # Process the input
             data_chunk = data.get(input, dict())
-            data_chunk = pipeline.process(
+            data_chunk, _, _ = pipeline.process(
                 input = input,
                 data = data_chunk,
                 config = config,

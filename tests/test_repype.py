@@ -31,7 +31,7 @@ class Download(repype.stage.Stage):
             status: Optional[repype.status.Status] = None,
         ) -> DataDictionary:
         url = config['url']
-        with urllib.request.urlopen('http://www.example.com/') as file:
+        with urllib.request.urlopen(url) as file:
             data = file.read()
         return dict(
             download = data
@@ -53,7 +53,7 @@ class Unzip(repype.stage.Stage):
             log_root_dir: Optional[pathlib.Path] = None,
             status: Optional[repype.status.Status] = None,
         ) -> DataDictionary:
-        contents = zipfile.ZipFile(download)
+        contents = zipfile.ZipFile(io.BytesIO(download))
         with contents.open(input) as file:
             data = file.read()
         return dict(
