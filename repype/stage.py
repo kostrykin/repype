@@ -238,6 +238,12 @@ class Stage:
             # Add the item to the signature
             signature[key] = value
 
+        # Apply some "fixes" to the signature, apparently the order of the items is not guaranteed
+        # - https://github.com/kostrykin/repype/pull/15#issuecomment-2293154385
+        # - https://github.com/kostrykin/repype/pull/15#issuecomment-2293264509
+        for key in ('inputs', 'outputs', 'consumes'):
+            signature[key] = list(sorted(signature[key]))
+
         # Return the signature
         return signature
 
