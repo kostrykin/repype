@@ -202,12 +202,20 @@ class Pipeline:
     
     @property
     def fields(self):
-        # Compute all fields that are produced by the pipeline
+        """
+        Compute all fields that are produced by the pipeline.
+        """
         fields = set(['input'])
         for stage in self.stages:
             fields |= frozenset(stage.outputs)
-        
-        # Remove those fields which are consumed
+        return frozenset(fields)
+    
+    @property
+    def persistent_fields(self):
+        """
+        Compute all fields that are produced by the pipeline, minus those which are consumed.
+        """
+        fields = self.fields
         for stage in self.stages:
             fields -= frozenset(stage.consumes)
         return frozenset(fields)

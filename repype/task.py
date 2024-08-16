@@ -302,7 +302,7 @@ class Task:
 
         # Check if the data is consistent with the pipeline
         if pipeline is not None:
-            required_fields = pipeline.fields - self.get_marginal_fields(pipeline)
+            required_fields = pipeline.persistent_fields - self.get_marginal_fields(pipeline)
             assert all(
                 (frozenset(data[input].keys()) == required_fields for input in data.keys())
             ), 'Loaded data is inconsistent with the pipeline.'
