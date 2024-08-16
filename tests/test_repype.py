@@ -97,5 +97,19 @@ class repype_segmentation(unittest.TestCase):
 
     def test(self):
         ret = repype.cli.run_cli_ex(self.root_path, run = True)
-        import sys; print(self.stdout, file = sys.stderr)
+        #import sys; print(self.stdout, file = sys.stderr)
         self.assertTrue(ret)
+        self.assertEqual(
+            self.stdout,
+            f'\n'
+            f'1 task(s) selected for running' '\n'
+            f'  ' '\n'
+            f'  (1/1) Entering task: {self.root_path.resolve()}/task' '\n'
+            f'  Starting from scratch' '\n'
+            f'    ' '\n'
+            f'    (1/1) Processing input: B2--W00026--P00001--Z00000--T00000--dapi.tif' '\n'
+            f'    Starting stage: download' '\r'
+            f'    Starting stage: unzip   ' '\r'
+            f'                            ' '\n'
+            f'  Results have been stored ✅' '\n'
+        )

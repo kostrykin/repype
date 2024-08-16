@@ -22,6 +22,7 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
     def __init__(self, *args, indent: int = 2, **kwargs):
         self.indent = indent
         self._intermediate_line_length = 0
+        self.margin = None
         super().__init__(*args, **kwargs)
 
     def clear_line(self, line: str) -> str:
@@ -31,15 +32,18 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
     def handle_new_status(self, parents: List[Union[str, dict]], positions: List[int], element: Optional[Union[str, dict]]):
         if element is not None:
 
-            # Print an intermediate line
+            # If status is intermediate, print the last line of the status accordingly
             if isinstance(element, dict) and element.get('content_type') == 'intermediate':
-                line = self.format_line(parents, positions, element.get('content', '')[0], intermediate = True)
-                print(line, end='\r')
-                self._intermediate_line_length = len(line)
+                text = self.full_format(parents, positions, element.get('content', '')[0], intermediate = True)
+                lines = text.split('\n')
+                if len(lines) > 1:
+                    print('\n'.join(lines[:-1]))
+                print(lines[-1], end='\r')
+                self._intermediate_line_length = len(lines[-1])
 
             # Print a regular line
             else:
-                print(self.format_line(parents, positions, element, intermediate = False))
+                print(self.full_format(parents, positions, element, intermediate = False))
                 self._intermediate_line_length = 0
 
         # Clear the intermediate line
@@ -47,15 +51,16 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
             print(self.clear_line(''), end='\r')
             self._intermediate_line_length = 0
 
-    def format_line(self, parents: List[Union[str, dict]], positions: List[int], status: Union[str, dict], intermediate: bool) -> str:
+    def full_format(self, parents: List[Union[str, dict]], positions: List[int], status: Union[str, dict], intermediate: bool) -> str:
         text = str(self.format(parents, positions, status, intermediate))
 
-        # Console output only supports single-line intermediates
-        if intermediate:
-            text = text.replace('\n', ' ')
+        # Compute indentation, and add an extra line if the margin changes
+        margin = ' ' * self.indent * (len(positions) - 1)
+        if self.margin is not None and margin != self.margin and text.split('\n')[0].strip() != '':
+            text = '\n' + text
+        self.margin = margin
 
         # Indent all lines
-        margin = ' ' * self.indent * (len(positions) - 1)
         lines = [margin + line for line in text.split('\n')]
         lines[0] = self.clear_line(lines[0])
         return '\n'.join(lines)
@@ -80,7 +85,7 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
                     text = 'Starting from scratch'
 
             if status.get('info') == 'process':
-                text = f'\n({status["step"] + 1}/{status["step_count"]}) Processing input: {status["input"]}'
+                text = f'({status["step"] + 1}/{status["step_count"]}) Processing input: {status["input"]}'
 
             if status.get('info') == 'start-stage':
                 text = f'Starting stage: {status["stage"]}'
@@ -102,7 +107,7 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
                     '-' * 80
                 
             if status.get('info') == 'interrupted':
-                text = f'\nBatch run interrupted'
+                text = f'Batch run interrupted'
 
             # FIXME: Handle `Status.progress` here
 
