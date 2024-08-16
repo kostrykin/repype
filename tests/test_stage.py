@@ -179,6 +179,18 @@ class Stage__callback(unittest.TestCase):
         )
 
 
+class Stage__signature(unittest.TestCase):
+
+    def setUp(self):
+        self.stage = testsuite.create_stage(id = 'test')
+        self.signature = self.stage.signature
+
+    def test_serialization(self):
+        stage_serialized = dill.dumps(self.stage)
+        stage = dill.loads(stage_serialized)
+        self.assertEqual(self.signature, stage.signature)
+
+
 class Stage__sha(unittest.TestCase):
 
     def setUp(self):

@@ -218,7 +218,7 @@ class Stage:
 
         # Iterate over all attributes of the stage (leaving out a few special ones)
         for key in dir(self):
-            if key in ('__doc__', '__weakref__', '__module__', '__dict__', 'signature', 'sha'): continue
+            if key in ('__doc__', '__weakref__', '__module__', '__dict__', '__slotnames__', 'signature', 'sha'): continue
             value = getattr(self, key)
 
             if isinstance(value, Iterable):
