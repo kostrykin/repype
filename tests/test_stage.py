@@ -1,3 +1,5 @@
+import json
+import multiprocessing
 import unittest
 from unittest.mock import (
     call,
@@ -179,6 +181,12 @@ class Stage__callback(unittest.TestCase):
         )
 
 
+def write_signature(payload, filepath):
+    stage = dill.loads(payload)
+    with open(filepath, 'w') as file:
+        json.dump(stage.signature, file)
+
+
 class Stage__signature(unittest.TestCase):
 
     def setUp(self):
@@ -189,6 +197,16 @@ class Stage__signature(unittest.TestCase):
         stage_serialized = dill.dumps(self.stage)
         stage = dill.loads(stage_serialized)
         self.assertEqual(self.signature, stage.signature)
+
+    @testsuite.with_temporary_paths(1)
+    def test_interprocess(self, path):
+        filepath = path / 'signature.json'
+        p = multiprocessing.Process(target = write_signature, args = (dill.dumps(self.stage), str(filepath)))
+        p.start()
+        p.join()
+        with filepath.open('r') as file:
+            signature = json.load(file)
+        self.assertEqual(self.signature, signature)
 
 
 class Stage__sha(unittest.TestCase):
