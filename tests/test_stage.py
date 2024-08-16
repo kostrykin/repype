@@ -4,9 +4,9 @@ from unittest.mock import (
     MagicMock,
 )
 
+import dill
 import repype.stage
 import repype.config
-
 from . import testsuite
 
 
@@ -177,3 +177,15 @@ class Stage__callback(unittest.TestCase):
                 call(self.stage, 'skip', self.data, status = None, config = self.config),
             ],
         )
+
+
+class Stage__sha(unittest.TestCase):
+
+    def setUp(self):
+        self.stage = testsuite.create_stage(id = 'test')
+        self.sha = self.stage.sha
+
+    def test_serialization(self):
+        stage_serialized = dill.dumps(self.stage)
+        stage = dill.loads(stage_serialized)
+        self.assertEqual(self.sha, stage.sha)
