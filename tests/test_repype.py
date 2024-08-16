@@ -92,8 +92,7 @@ class Output(repype.stage.Stage):
             status: Optional[repype.status.Status] = None,
         ) -> DataDictionary:
         filepath = pipeline.resolve('segmentation', input)
-        if not filepath.parent.is_dir():
-            filepath.parent.mkdir(parents = True)
+        filepath.parent.mkdir(parents = True, exist_ok = True)
         skimage.io.imsave(filepath, segmentation)
         return dict()
 

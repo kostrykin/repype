@@ -7,12 +7,14 @@ import repype.stage
 import repype.status
 from repype.typing import (
     Any,
+    DataDictionary,
     Dict,
     Input,
     Iterable,
     List,
     Optional,
     Sequence,
+    Tuple,
     Type,
     Union,
 )
@@ -89,7 +91,16 @@ class Pipeline:
         self.stages: List[repype.stage.Stage] = list(stages)
         self.scopes: Dict[str, pathlib.Path] = dict(scopes)
 
-    def process(self, input, config, first_stage=None, last_stage=None, data=None, status=None, **kwargs):
+    def process(
+            self,
+            input: Input,
+            config: repype.config.Config,
+            first_stage: Optional[str] = None,
+            last_stage: Optional[str] = None,
+            data: Optional[DataDictionary] = None,
+            status: Optional[repype.status.Status] = None,
+            **kwargs,
+        ) -> Tuple[DataDictionary, repype.config.Config, Dict[str, float]]:
         """
         Processes the input.
 
@@ -188,11 +199,13 @@ class Pipeline:
                 create_config_entry(config, f'{stage.id}/{key}', *spec[:2], **create_config_entry_kwargs)
         return config
     
-    def resolve(self, scope: str, input: Optional[Input] = None) -> pathlib.Path:
+    def resolve(self, scope: str, input: Optional[Input] = None) -> Optional[pathlib.Path]:
         """
         Resolves the path of a file based on the given scope and input.
+
+        Returns None if the input is None, or the scope is not defined.
         """
-        if input is None:
+        if input is None or scope not in self.scopes:
             return None
         else:
             scope = self.scopes[scope]

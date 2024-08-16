@@ -464,7 +464,7 @@ class Task:
 
             # Process the input
             data_chunk = data.get(input, dict())
-            data_chunk, _, _ = pipeline.process(
+            data_chunk, final_config, _ = pipeline.process(
                 input = input,
                 data = data_chunk,
                 config = config,
@@ -474,6 +474,12 @@ class Task:
 
             if strip_marginals:
                 data_chunk = self.strip_marginals(pipeline, data_chunk)
+
+            # Store the final configuration used for the input, if a corresponding scope is defined
+            if final_config and (final_config_filepath := pipeline.resolve('config', input)):
+                final_config_filepath.parent.mkdir(parents = True, exist_ok = True)
+                with final_config_filepath.open('w') as final_config_file:
+                    yaml.dump(final_config.entries, final_config_file)
 
             data[input] = data_chunk
 
