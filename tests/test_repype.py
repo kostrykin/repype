@@ -97,6 +97,8 @@ class Output(repype.stage.Stage):
             status: Optional[repype.status.Status] = None,
         ) -> DataDictionary:
         filepath = pipeline.resolve('segmentation', input)
+        if not filepath.parent.is_dir():
+            filepath.parent.mkdir(parents = True)
         skimage.io.imsave(filepath, segmentation)
         return dict()
 
@@ -122,7 +124,12 @@ class repype_segmentation(unittest.TestCase):
             'inputs:' '\n'
             '  - B2--W00026--P00001--Z00000--T00000--dapi.tif'
         )
-        (self.root_path / 'task' / 'seg').mkdir()
+        testsuite.create_task_file(
+            self.root_path / 'task' / 'sigma=2',
+            'config:' '\n'
+            '  segmentation:' '\n'
+            '    sigma: 2' '\n'
+        )
 
     def tearDown(self):
         self.tempdir.cleanup()
@@ -130,25 +137,39 @@ class repype_segmentation(unittest.TestCase):
     def test(self):
         with testsuite.CaptureStdout() as stdout:
             ret = repype.cli.run_cli_ex(self.root_path, run = True)
-        self.assertTrue(ret)
-        self.assertEqual(
-            str(stdout),
-            f'\n'
-            f'1 task(s) selected for running' '\n'
-            f'  ' '\n'
-            f'  (1/1) Entering task: {self.root_path.resolve()}/task' '\n'
-            f'  Starting from scratch' '\n'
-            f'    ' '\n'
-            f'    (1/1) Processing input: B2--W00026--P00001--Z00000--T00000--dapi.tif' '\n'
-            f'    Starting stage: download' '\r'
-            f'    Starting stage: unzip   ' '\r'
-            f'    Starting stage: segmentation' '\r'
-            f'    Starting stage: output      ' '\r'
-            f'                                ' '\n'
-            f'  Results have been stored ✅' '\n'
-        )
+            self.assertTrue(ret)
+            self.assertEqual(
+                str(stdout),
+                f'\n'
+                f'2 task(s) selected for running' '\n'
+                f'  ' '\n'
+                f'  (1/2) Entering task: {self.root_path.resolve()}/task' '\n'
+                f'  Starting from scratch' '\n'
+                f'    ' '\n'
+                f'    (1/1) Processing input: B2--W00026--P00001--Z00000--T00000--dapi.tif' '\n'
+                f'    Starting stage: download' '\r'
+                f'    Starting stage: unzip   ' '\r'
+                f'    Starting stage: segmentation' '\r'
+                f'    Starting stage: output      ' '\r'
+                f'                                ' '\n'
+                f'  Results have been stored ✅' '\n'
+                f'  ' '\n'
+                f'  (2/2) Entering task: {self.root_path.resolve()}/task/sigma=2' '\n'
+                f'  Picking up from: {self.root_path.resolve()}/task (segmentation)' '\n'
+                f'    ' '\n'
+                f'    (1/1) Processing input: B2--W00026--P00001--Z00000--T00000--dapi.tif' '\n'
+                f'    Starting stage: segmentation' '\r'
+                f'    Starting stage: output      ' '\r'
+                f'                                ' '\n'
+                f'  Results have been stored ✅' '\n'
+            )
 
-        # Load and verify the segmentation result
+        # Load and verify the segmentation result for `sigma=1`
         segmentation = skimage.io.imread(self.root_path / 'task' / 'seg' / 'B2--W00026--P00001--Z00000--T00000--dapi.tif.png')
         n_onjects = ndi.label(segmentation)[1]
         self.assertEqual(n_onjects, 463)
+
+        # Load and verify the segmentation result for `sigma=2`
+        segmentation = skimage.io.imread(self.root_path / 'task' / 'sigma=2' / 'seg' / 'B2--W00026--P00001--Z00000--T00000--dapi.tif.png')
+        n_onjects = ndi.label(segmentation)[1]
+        self.assertEqual(n_onjects, 435)

@@ -202,9 +202,14 @@ class Pipeline:
     
     @property
     def fields(self):
+        # Compute all fields that are produced by the pipeline
         fields = set(['input'])
         for stage in self.stages:
             fields |= frozenset(stage.outputs)
+        
+        # Remove those fields which are consumed
+        for stage in self.stages:
+            fields -= frozenset(stage.consumes)
         return frozenset(fields)
 
 

@@ -468,7 +468,7 @@ class Task:
                 input = input,
                 data = data_chunk,
                 config = config,
-                first_stage = first_stage,
+                first_stage = first_stage.id if first_stage else None,
                 status = input_status,
             )
 
