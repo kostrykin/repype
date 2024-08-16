@@ -197,12 +197,6 @@ class Status__progress(TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_break(self, path):
-        # PyPy requires closing the generator explicitly, but assigning it to a variable
-        # somehow changes the behaviour of the garbage collector in CPython. We thus skip
-        # this test for PyPy.
-        if platform.python_implementation() == 'PyPy':
-            return
-
         intermediate_path = None
         status = Status(path = path)
 
