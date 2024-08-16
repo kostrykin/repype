@@ -57,12 +57,10 @@ class run_cli_ex(unittest.TestCase):
             '  stage2:' '\n'
             '    key2: value2' '\n'
         )
-        self.testsuite_pid = os.getpid()
 
     def tearDown(self):
-        if os.getpid() == self.testsuite_pid:
-            self.ctx.__exit__(None, None, None)
-            self.tempdir.cleanup()
+        self.ctx.__exit__(None, None, None)
+        self.tempdir.cleanup()
 
     @property
     def stdout(self):

@@ -1,6 +1,5 @@
 import contextlib
 import io
-import os
 import pathlib
 import re
 import shutil
@@ -23,14 +22,12 @@ except KeyError:
 def with_temporary_paths(count: int):
     def decorator(test_func):
         def wrapper(self, *args, **kwargs):
-            testsuite_pid = os.getpid()
             paths = [tempfile.mkdtemp() for _ in range(count)]
             try:
                 ret = test_func(self, *[pathlib.Path(path) for path in paths], *args, **kwargs)
             finally:
-                if os.getpid() == testsuite_pid:
-                    for path in paths:
-                        shutil.rmtree(path)
+                for path in paths:
+                    shutil.rmtree(path)
             return ret
         return wrapper
     return decorator
