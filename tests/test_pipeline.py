@@ -216,15 +216,15 @@ class Pipeline__process(unittest.TestCase):
         self.pipeline.stages[1].side_effect = self.stage2
         self.pipeline.stages[2].side_effect = self.stage3
 
-    def stage1(self, pipeline, data, config, status = None, log_root_dir = None, **kwargs):
+    def stage1(self, pipeline, data, config, status = None,  **kwargs):
         config.set_default('enabled', True)
         data['x1'] = config.get('x1_factor', 1) * data['input']
 
-    def stage2(self, pipeline, data, config, status = None, log_root_dir = None, **kwargs):
+    def stage2(self, pipeline, data, config, status = None, **kwargs):
         config.set_default('enabled', True)
         data['x2'] = config.get('x2_factor', 1) * data['input']
 
-    def stage3(self, pipeline, data, config, status = None, log_root_dir = None, **kwargs):
+    def stage3(self, pipeline, data, config, status = None, **kwargs):
         config.set_default('enabled', True)
         data['x3'] = data['x1'] + data['x2'] + config.get('constant', 0)
 

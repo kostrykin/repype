@@ -51,7 +51,7 @@ class Stage(unittest.TestCase):
 
     def test(self):
         stage = testsuite.create_stage(id = 'test', inputs = ['x1', 'x2'], outputs = ['y'], \
-            process = lambda pipeline, x1, x2, config, log_root_dir = None, status = None: \
+            process = lambda pipeline, x1, x2, config, status = None: \
                 dict(y = \
                     x1 * config.get('x1_factor', 0) + \
                     x2 * config.get('x2_factor', 0))
@@ -72,7 +72,7 @@ class Stage(unittest.TestCase):
 
     def test_missing_input(self):
         stage = testsuite.create_stage(id = 'test', outputs = ['y'], \
-            process = lambda pipeline, x, config, log_root_dir = None, status = None: \
+            process = lambda pipeline, x, config, status = None: \
                 dict(y = x)
             )
         data = dict(x = 0)
@@ -83,7 +83,7 @@ class Stage(unittest.TestCase):
 
     def test_missing_output(self):
         stage = testsuite.create_stage(id = 'test', outputs = ['y'], \
-            process = lambda pipeline, config, log_root_dir = None, status = None: \
+            process = lambda pipeline, config, status = None: \
                 dict()
             )
         data = dict()
@@ -94,7 +94,7 @@ class Stage(unittest.TestCase):
 
     def test_spurious_output(self):
         stage = testsuite.create_stage( id = 'test', \
-            process = lambda pipeline, config, log_root_dir = None, status = None: \
+            process = lambda pipeline, config, status = None: \
                 dict(y = 0)
             )
         data = dict()
@@ -105,7 +105,7 @@ class Stage(unittest.TestCase):
 
     def test_missing_and_spurious_output(self):
         stage = testsuite.create_stage(id = 'test', outputs = ['y'], \
-            process = lambda pipeline, config, log_root_dir = None, status = None: \
+            process = lambda pipeline, config, status = None: \
                 dict(z = 0)
             )
         data = dict()
@@ -116,7 +116,7 @@ class Stage(unittest.TestCase):
 
     def test_consumes(self):
         stage = testsuite.create_stage(id = 'test', consumes = ['x'], \
-            process = lambda pipeline, x, config, log_root_dir = None, status = None: \
+            process = lambda pipeline, x, config, status = None: \
                 dict()
             )
         data = dict(x = 0, y = 1)
@@ -127,7 +127,7 @@ class Stage(unittest.TestCase):
 
     def test_missing_consumes(self):
         stage = testsuite.create_stage(id = 'test', consumes = ['x'], \
-            process = lambda pipeline, x, config, log_root_dir = None, status = None: \
+            process = lambda pipeline, x, config, status = None: \
                 dict()
             )
         data = dict()

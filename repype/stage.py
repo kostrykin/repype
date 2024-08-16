@@ -124,7 +124,6 @@ class Stage:
             data: DataDictionary,
             config: repype.config.Config,
             status: Optional[repype.status.Status] = None,
-            log_root_dir: Optional[pathlib.Path] = None,
             **kwargs) -> float:
 
         # Run the stage if it is enabled
@@ -149,7 +148,6 @@ class Stage:
             output_data = self.process(
                 pipeline = pipeline,
                 config = clean_config,
-                log_root_dir = log_root_dir,
                 status = status,
                 **input_data,
             )
@@ -183,7 +181,6 @@ class Stage:
             self,
             pipeline: 'repype.pipeline.Pipeline',
             config: repype.config.Config,
-            log_root_dir: Optional[pathlib.Path] = None,
             status: Optional[repype.status.Status] = None,
             **inputs,
         ) -> DataDictionary:
@@ -194,7 +191,6 @@ class Stage:
 
         :param input_data: A dictionary containing the inputs required by this stage. Each key-value pair in the dictionary represents an input name and its corresponding value.
         :param config: A :py:class:`~repype.config.Config` object, containing the hyperparameters to be used by this stage.
-        :param log_root_dir: The path to the directory where log files will be written. If this parameter is ``None``, no log files will be written.
         :param status: A :py:class:`~repype.status.Status` object.
         :return: A dictionary containing the outputs produced by this stage. Each key-value pair in the dictionary represents an output name and its corresponding value.
         """

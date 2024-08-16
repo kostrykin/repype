@@ -89,7 +89,7 @@ class Pipeline:
         self.stages: List[repype.stage.Stage] = list(stages)
         self.scopes: Dict[str, pathlib.Path] = dict(scopes)
 
-    def process(self, input, config, first_stage=None, last_stage=None, data=None, log_root_dir=None, status=None, **kwargs):
+    def process(self, input, config, first_stage=None, last_stage=None, data=None, status=None, **kwargs):
         """
         Processes the input.
 
@@ -100,14 +100,12 @@ class Pipeline:
         :param first_stage: The name of the first stage to be executed.
         :param last_stage: The name of the last stage to be executed.
         :param data: The results of a previous execution.
-        :param log_root_dir: Path to a directory where log files should be written to.
         :param status: A :py:class:`~repype.status.Status` object.
         :return: Tuple ``(data, cfg, timings)``, where ``data`` is the *pipeline data object* comprising all final and intermediate results, ``cfg`` are the finally used hyperparameters, and ``timings`` is a dictionary containing the execution time of each individual pipeline stage (in seconds).
 
         The parameter ``data`` is used if and only if ``first_stage`` is not ``None``. In this case, the outputs produced by the stages of the pipeline which are being skipped must be fed in using the ``data`` parameter obtained from a previous execution of this method.
         """
         config = config.copy()
-        if log_root_dir is not None: os.makedirs(log_root_dir, exist_ok=True)
         if first_stage == self.stages[0].id and data is None: first_stage = None
         if first_stage is not None and first_stage.endswith('+'): first_stage = self.stages[1 + self.find(first_stage[:-1])].id
         if first_stage is not None and last_stage is not None and self.find(first_stage) > self.find(last_stage): return data, config, {}
@@ -121,7 +119,7 @@ class Pipeline:
             if ctrl.step(stage.id) or stage.id in extra_stages:
                 stage_config = config.get(stage.id, {})
                 try:
-                    dt = stage(self, data, stage_config, status = status, log_root_dir = log_root_dir, **kwargs)
+                    dt = stage(self, data, stage_config, status = status, **kwargs)
                 except:
                     raise StageError(stage)
                 timings[stage.id] = dt

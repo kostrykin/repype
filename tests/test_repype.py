@@ -28,7 +28,6 @@ class Download(repype.stage.Stage):
             self,
             pipeline: repype.pipeline.Pipeline,
             config: repype.config.Config,
-            log_root_dir: Optional[pathlib.Path] = None,
             status: Optional[repype.status.Status] = None,
         ) -> DataDictionary:
         url = config['url']
@@ -51,7 +50,6 @@ class Unzip(repype.stage.Stage):
             download,
             pipeline: repype.pipeline.Pipeline,
             config: repype.config.Config,
-            log_root_dir: Optional[pathlib.Path] = None,
             status: Optional[repype.status.Status] = None,
         ) -> DataDictionary:
         contents = zipfile.ZipFile(io.BytesIO(download))
@@ -72,7 +70,6 @@ class Segmentation(repype.stage.Stage):
             image,
             pipeline: repype.pipeline.Pipeline,
             config: repype.config.Config,
-            log_root_dir: Optional[pathlib.Path] = None,
             status: Optional[repype.status.Status] = None,
         ) -> DataDictionary:
         image = skimage.filters.gaussian(image, sigma = config.get('sigma', 1.))
@@ -92,7 +89,6 @@ class Output(repype.stage.Stage):
             segmentation,
             pipeline: repype.pipeline.Pipeline,
             config: repype.config.Config,
-            log_root_dir: Optional[pathlib.Path] = None,
             status: Optional[repype.status.Status] = None,
         ) -> DataDictionary:
         filepath = pipeline.resolve('segmentation', input)
