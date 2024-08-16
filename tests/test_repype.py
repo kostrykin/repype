@@ -1,8 +1,6 @@
-import contextlib
 import io
 import os
 import pathlib
-import re
 import tempfile
 import unittest
 import urllib.request
@@ -108,11 +106,6 @@ class repype_segmentation(unittest.TestCase):
     def setUp(self):
         self.tempdir = tempfile.TemporaryDirectory()
         self.root_path = pathlib.Path(self.tempdir.name)
-        self.testsuite_pid = os.getpid()
-        self.stdout_buf = io.StringIO()
-        self.ctx = contextlib.redirect_stdout(self.stdout_buf)
-        self.ctx.__enter__()
-
         testsuite.create_task_file(
             self.root_path / 'task',
             'runnable: true' '\n'
@@ -132,21 +125,14 @@ class repype_segmentation(unittest.TestCase):
         (self.root_path / 'task' / 'seg').mkdir()
 
     def tearDown(self):
-        if os.getpid() == self.testsuite_pid:
-            self.tempdir.cleanup()
-            self.ctx.__exit__(None, None, None)
-
-    @property
-    def stdout(self):
-        return re.sub(r'\033\[K', '', self.stdout_buf.getvalue())
+        self.tempdir.cleanup()
 
     def test(self):
-        ret = repype.cli.run_cli_ex(self.root_path, run = True)
-        if not ret:
-            import sys; print(self.stdout, file = sys.stderr)
+        with testsuite.CaptureStdout() as stdout:
+            ret = repype.cli.run_cli_ex(self.root_path, run = True)
         self.assertTrue(ret)
         self.assertEqual(
-            self.stdout,
+            str(stdout),
             f'\n'
             f'1 task(s) selected for running' '\n'
             f'  ' '\n'
@@ -165,5 +151,4 @@ class repype_segmentation(unittest.TestCase):
         # Load and verify the segmentation result
         segmentation = skimage.io.imread(self.root_path / 'task' / 'seg' / 'B2--W00026--P00001--Z00000--T00000--dapi.tif.png')
         n_onjects = ndi.label(segmentation)[1]
-        #import shutil; shutil.copy(self.root_path / 'task' / 'seg' / 'B2--W00026--P00001--Z00000--T00000--dapi.tif.png', './output.png')
         self.assertEqual(n_onjects, 463)

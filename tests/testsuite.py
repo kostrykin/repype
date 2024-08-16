@@ -1,6 +1,10 @@
+import contextlib
+import io
 import os
 import pathlib
+import re
 import shutil
+import sys
 import tempfile
 
 import repype.stage
@@ -90,3 +94,22 @@ class TestError(Exception):
     def __ini__(self, *args, **kwargs):
         self.args = args
         self.kwargs = kwargs
+
+
+class CaptureStdout:
+
+    def __init__(self):
+        self.stdout_buf = io.StringIO()
+
+    def __enter__(self):
+        self.redirect = contextlib.redirect_stdout(self.stdout_buf)
+        self.redirect.__enter__()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.redirect.__exit__(exc_type, exc_value, traceback)
+        if exc_value is not None:
+            print(str(self), file = sys.stderr)
+
+    def __str__(self):
+        return re.sub(r'\033\[K', '', self.stdout_buf.getvalue())
