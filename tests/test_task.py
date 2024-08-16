@@ -929,6 +929,7 @@ class Task__run(unittest.TestCase):
             self.task.run(self.config)
 
     def test_nothing_to_pickup(self, mock_create_pipeline, mock_load, mock_store):
+        mock_create_pipeline.return_value.process.return_value = (dict(), None, None)
         self.task.run(self.config)
         mock_load.assert_not_called()
         mock_create_pipeline.assert_called_once_with()
@@ -950,6 +951,7 @@ class Task__run(unittest.TestCase):
         mock_store.assert_called_once()
 
     def test_with_pickup(self, mock_create_pipeline, mock_load, mock_store):
+        mock_create_pipeline.return_value.process.return_value = (dict(), None, None)
         mock_load.return_value = {
             'file-0': dict(output = 'value1'),
             'file-1': dict(output = 'value2'),

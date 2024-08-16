@@ -89,7 +89,7 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
                 text = f'Storing results...'
 
             if status.get('info') == 'completed':
-                text = f'\nResults have been stored ✅'
+                text = f'Results have been stored ✅'
 
             if status.get('info') == 'error':
                 parts = ['\nAn error occurred while processing']
