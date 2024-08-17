@@ -21,17 +21,44 @@ class StatusReaderConsoleAdapter__progress(unittest.TestCase):
         self.status_reader.__exit__(None, None, None)
         self.tempdir.cleanup()
 
-    @testsuite.with_temporary_paths(1)
-    def test(self, path):
+    def test(self):
+        intermediates = [
+            '[                    ] 0.0% (0 / 3)\r',
+            '[======              ] 33.3% (1 / 3, ETA: 00:02)\r',
+            '[=============       ] 66.7% (2 / 3, ETA: 00:01)\r',
+        ]
         with testsuite.CaptureStdout() as stdout:
-            for item_idx, item in enumerate(repype.status.progress(self.status, range(3), info = 'progress')):
+            for item_idx, item in enumerate(repype.status.progress(self.status, range(3))):
+                time.sleep(1)
+                self.assertEqual(str(stdout), ''.join(intermediates[:item_idx + 1]))
 
-                test_status.wait_for_watchdog()
-                if item_idx == 0:
-                    self.assertEqual(
-                        str(stdout),
-                        "{'status': {'info': 'progress'}, 'progress': 0.0, 'step': 0, 'max_steps': 3}\r",
-                    )
+        # Verify that there have been three iterations, i.e. `item_idx = 0`, `item_idx = 1`, `item_idx = 2`
+        self.assertEqual(item_idx, 2)
+
+    def test_with_details_str(self):
+        intermediates = [
+            'details [                    ] 0.0% (0 / 3)\r',
+            'details [======              ] 33.3% (1 / 3, ETA: 00:02)\r',
+            'details [=============       ] 66.7% (2 / 3, ETA: 00:01)\r',
+        ]
+        with testsuite.CaptureStdout() as stdout:
+            for item_idx, item in enumerate(repype.status.progress(self.status, range(3), details = 'details')):
+                time.sleep(1)
+                self.assertEqual(str(stdout), ''.join(intermediates[:item_idx + 1]))
+
+        # Verify that there have been three iterations, i.e. `item_idx = 0`, `item_idx = 1`, `item_idx = 2`
+        self.assertEqual(item_idx, 2)
+
+    def test_with_details_dict(self):
+        intermediates = [
+            "{'info': 'details'} [                    ] 0.0% (0 / 3)\r",
+            "{'info': 'details'} [======              ] 33.3% (1 / 3, ETA: 00:02)\r",
+            "{'info': 'details'} [=============       ] 66.7% (2 / 3, ETA: 00:01)\r",
+        ]
+        with testsuite.CaptureStdout() as stdout:
+            for item_idx, item in enumerate(repype.status.progress(self.status, range(3), details = dict(info = 'details'))):
+                time.sleep(1)
+                self.assertEqual(str(stdout), ''.join(intermediates[:item_idx + 1]))
 
         # Verify that there have been three iterations, i.e. `item_idx = 0`, `item_idx = 1`, `item_idx = 2`
         self.assertEqual(item_idx, 2)
