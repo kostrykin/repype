@@ -105,14 +105,15 @@ class Status:
             self._intermediate = None
             self.update()
 
-    def progress(self, status: Optional[Union[str, dict]], iterable: Iterable, len_override: Optional[int] = None) -> Iterator[dict]:
+    def progress(self, iterable: Iterable, len_override: Optional[int] = None, details: Optional[Union[str, dict]] = None) -> Iterator[dict]:
         max_steps = len_override or len(iterable)
         try:
             for step, item in enumerate(iterable):
                 assert step < max_steps
                 self.intermediate(
                     dict(
-                        status = status,
+                        info = 'progress',
+                        details = details,
                         progress = step / max_steps,
                         step = step,
                         max_steps = max_steps,
@@ -395,8 +396,14 @@ def derive(status: Optional[Status]) -> Optional[Status]:
         return status.derive()
 
 
-def progress(status: Optional[Status], iterable: Iterable, len_override: Optional[int] = None, **kwargs) -> Iterator[dict]:
+def progress(
+        status: Optional[Status],
+        iterable: Iterable,
+        len_override: Optional[int] = None,
+        details: Optional[Union[str, dict]] = None,
+    ) -> Iterator[dict]:
+    
     if status is None:
         return iterable
     else:
-        return status.progress(dict(**kwargs), iterable, len_override)
+        return status.progress(iterable, len_override, details)

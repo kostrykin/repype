@@ -2,6 +2,7 @@ import argparse
 import pathlib
 import sys
 import tempfile
+import time
 
 import repype.batch
 import repype.status
@@ -14,10 +15,19 @@ from repype.typing import (
 )
 
 
+def format_hms(seconds):
+    seconds = round(seconds)
+    h, m, s = seconds // 3600, (seconds % 3600) // 60, (seconds % 60)
+    ms = f'{m:02d}:{s:02d}'
+    return ms if h == 0 else f'{h:d}:{ms}'
+
+
 class StatusReaderConsoleAdapter(repype.status.StatusReader):
     """
     Writes status updates to stdout.
     """
+
+    progress_bar_length = 20
 
     def __init__(self, *args, indent: int = 2, **kwargs):
         self.indent = indent
@@ -107,10 +117,30 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
             if status.get('info') == 'interrupted':
                 text = f'🔴 Batch run interrupted'
 
+            if status.get('info') == 'progress':
+                if status.get('step') == 0:
+                    self.progress_t0 = time.time()
+                    eta = ''
+                else:
+                    progress_t1 = time.time()
+                    speed = (progress_t1 - self.progress_t0) / status.get('step')
+                    eta = ', ETA: ' + format_hms(speed * (status.get('max_steps') - status.get('step')))
+                text = f'{100 * status.get("step") / status.get("max_steps"):.1f}% ({status.get("step")} / {status.get("max_steps")}{eta})'
+                progress_bar = ((self.progress_bar_length * status.get('step')) // status.get('max_steps')) * '='
+                progress_bar = progress_bar + (self.progress_bar_length - len(progress_bar)) * ' '
+                text = f'[{progress_bar}] {text}'
+                if details := status.get('details'):
+                    if isinstance(details, dict):
+                        details = self.format_progress_details(details)
+                    text = f'{details} {text}'
+
             return text if text else status
             
         else:
             return status
+        
+    def format_progress_details(self, details: dict) -> str:
+        return str(details)
 
 
 def run_cli(
