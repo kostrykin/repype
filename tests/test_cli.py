@@ -9,6 +9,25 @@ from . import testsuite
 from . import test_status
 
 
+class StatusReaderConsoleAdapter__write(unittest.TestCase):
+
+    def setUp(self):
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.status = repype.status.Status(path = self.tempdir.name)
+        self.status_reader = repype.cli.StatusReaderConsoleAdapter(self.status.filepath)
+        self.status_reader.__enter__()
+
+    def tearDown(self):
+        self.status_reader.__exit__(None, None, None)
+        self.tempdir.cleanup()
+
+    def test(self):
+        with testsuite.CaptureStdout() as stdout:
+            self.status.write('message')
+            test_status.wait_for_watchdog()
+            self.assertEqual(str(stdout), 'message')
+
+
 class StatusReaderConsoleAdapter__progress(unittest.TestCase):
 
     def setUp(self):
