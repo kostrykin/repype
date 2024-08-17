@@ -30,25 +30,23 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
         return line + ' ' * max((0, self._intermediate_line_length - len(line)))
 
     def handle_new_status(self, parents: List[Union[str, dict]], positions: List[int], element: Optional[Union[str, dict]]):
-        if element is not None:
-
-            # If status is intermediate, print the last line of the status accordingly
-            if isinstance(element, dict) and element.get('content_type') == 'intermediate':
-                text = self.full_format(parents, positions, element.get('content', '')[0], intermediate = True)
-                lines = text.split('\n')
-                if len(lines) > 1:
-                    print('\n'.join(lines[:-1]))
-                print(lines[-1], end='\r')
-                self._intermediate_line_length = len(lines[-1])
-
-            # Print a regular line
+        # If status is intermediate, print the last line of the status accordingly
+        if element.get('content_type') == 'intermediate':
+            
+            if element['content'] is None:
+                text = ''
             else:
-                print(self.full_format(parents, positions, element, intermediate = False))
-                self._intermediate_line_length = 0
+                text = self.full_format(parents, positions, element['content'][0], intermediate = True)
 
-        # Clear the intermediate line
+            lines = text.split('\n')
+            if len(lines) > 1:
+                print('\n'.join(lines[:-1]))
+            print(lines[-1], end='\r')
+            self._intermediate_line_length = len(lines[-1])
+
+        # Print a regular line
         else:
-            print(self.clear_line(''), end='\r')
+            print(self.full_format(parents, positions, element, intermediate = False))
             self._intermediate_line_length = 0
 
     def full_format(self, parents: List[Union[str, dict]], positions: List[int], status: Union[str, dict], intermediate: bool) -> str:
@@ -108,8 +106,6 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
                 
             if status.get('info') == 'interrupted':
                 text = f'🔴 Batch run interrupted'
-
-            # FIXME: Handle `Status.progress` here
 
             return text if text else status
             
