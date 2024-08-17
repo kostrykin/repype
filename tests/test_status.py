@@ -180,7 +180,7 @@ class Status__progress(TestCase):
                     data,
                     [
                         dict(
-                            description = 'description',
+                            status = 'description',
                             progress = item_idx / 3,
                             step = item_idx,
                             max_steps = 3,
@@ -214,7 +214,7 @@ class Status__progress(TestCase):
                     data,
                     [
                         dict(
-                            description = 'description',
+                            status = 'description',
                             progress = item_idx / 3,
                             step = item_idx,
                             max_steps = 3,
@@ -275,7 +275,7 @@ class Status__progress(TestCase):
                         data,
                         [
                             dict(
-                                description = 'description',
+                                status = 'description',
                                 progress = item_idx / 3,
                                 step = item_idx,
                                 max_steps = 3,

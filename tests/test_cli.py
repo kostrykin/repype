@@ -6,6 +6,37 @@ from unittest.mock import patch
 
 import repype.cli
 from . import testsuite
+from . import test_status
+
+
+class StatusReaderConsoleAdapter__progress(unittest.TestCase):
+
+    def setUp(self):
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.status = repype.status.Status(path = self.tempdir.name)
+        self.status_reader = repype.cli.StatusReaderConsoleAdapter(self.status.filepath)
+        self.status_reader.__enter__()
+
+    def tearDown(self):
+        self.status_reader.__exit__(None, None, None)
+        self.tempdir.cleanup()
+
+    @testsuite.with_temporary_paths(1)
+    def test(self, path):
+        with testsuite.CaptureStdout() as stdout:
+            for item_idx, item in enumerate(repype.status.progress(self.status, range(3), info = 'progress')):
+
+                test_status.wait_for_watchdog()
+                if item_idx == 0:
+                    self.assertEqual(
+                        str(stdout),
+                        "{'status': {'info': 'progress'}, 'progress': 0.0, 'step': 0, 'max_steps': 3}\r",
+                    )
+
+        # Verify that there have been three iterations, i.e. `item_idx = 0`, `item_idx = 1`, `item_idx = 2`
+        self.assertEqual(item_idx, 2)
+
+# ---
 
 
 class DelayedTask(repype.task.Task):
