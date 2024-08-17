@@ -13,6 +13,7 @@ import repype.pipeline
 import repype.task
 from . import testsuite
 import repype.status
+import yaml
 
 
 class decode_inputs(unittest.TestCase):
@@ -981,3 +982,46 @@ class Task__run(unittest.TestCase):
         )
         self.assertEqual(mock_create_pipeline.return_value.process.call_count, 2)
         mock_store.assert_called_once()
+
+
+class Task__final_config(unittest.TestCase):
+
+    @testsuite.with_temporary_paths(1)
+    def test(self, path):
+        task = repype.task.Task(
+            path = path,
+            parent = None,
+            spec = dict(
+                runnable = True,
+                pipeline = 'repype.pipeline.Pipeline',
+                inputs = [1, 2],
+                scopes = dict(
+                    config = 'cfg/%d.yml',
+                ),
+                config = dict(
+                    stage1 = dict(
+                        key1 = 'value1',
+                        key2 = 'value2',
+                    ),
+                ),
+            ),
+        )
+        pipeline = task.create_pipeline()
+        pipeline.append(testsuite.create_stage(id = 'stage1'))
+        task.run(task.create_config(), pipeline)
+        for input in [1, 2]:
+            with self.subTest(input = input):
+                with (path / 'cfg' / f'{input}.yml').open('r') as config_file:
+                    config = repype.config.Config(yaml.safe_load(config_file))
+                    self.assertEqual(
+                        config,
+                        repype.config.Config(
+                            dict(
+                                stage1 = dict(
+                                    enabled = True,
+                                    key1 = 'value1',
+                                    key2 = 'value2',
+                                ),
+                            ),
+                        ),
+                    )
