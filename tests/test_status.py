@@ -248,9 +248,46 @@ class Status__progress(TestCase):
         for item in status.progress('description', list()):
             pass
 
-        # Verify that there have been two iterations, i.e. `item_idx = 0` and `item_idx = 1`
+        # Verify that there have been no iterations
         self.assertFalse('item' in locals())
-                    
+
+        with open(status.filepath) as file:
+            data = json.load(file)
+            self.assertEqual(data, list())
+
+    @testsuite.with_temporary_paths(1)
+    def test_error(self, path):
+        intermediate_path = None
+        status = Status(path = path)
+
+        with self.assertRaises(testsuite.TestError):
+            for item_idx, item in (enumerate(status.progress('description', range(3)))):
+
+                if intermediate_path is None:
+                    with open(status.filepath) as file:
+                        data = json.load(file)
+                        intermediate_path = data[0]['expand']
+                        
+                with open(intermediate_path) as file:
+                    data = json.load(file)
+                    self.assertEqual(item, item_idx)
+                    self.assertEqual(
+                        data,
+                        [
+                            dict(
+                                description = 'description',
+                                progress = item_idx / 3,
+                                step = item_idx,
+                                max_steps = 3,
+                            ),
+                        ],
+                    )
+
+                raise testsuite.TestError()
+
+        # Verify that there has been one iterations, i.e. `item_idx = 0`
+        self.assertEqual(item_idx, 0)
+        
         with open(status.filepath) as file:
             data = json.load(file)
             self.assertEqual(data, list())
