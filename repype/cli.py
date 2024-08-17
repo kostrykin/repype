@@ -44,7 +44,7 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
         if element.get('content_type') == 'intermediate':
             
             if element['content'] is None:
-                text = ''
+                text = self.clear_line('')
             else:
                 text = self.full_format(parents, positions, element['content'][0], intermediate = True)
 
