@@ -10,7 +10,8 @@
     </h1>
   </div>
 
-⚠️ **This branch is currently not stable.** ⚠️
+| ⚠️ **This branch is currently not stable.** ⚠️
+| See https://github.com/kostrykin/repype/releases/tag/v0.1.0 for the last stable version.
 
 ----
 
