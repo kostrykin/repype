@@ -27,12 +27,16 @@
 
 **Development instructions:**
 
-- Use ``python -m unittest`` in the root directory of the repository to run the test suite.
-- Or use coverage.py instead to also produce a test coverage report::
+- To run the test suite, first install the testing dependencies::
+
+      pip install -r tests/requirements.txt
+      python -m unittest
+
+- Instead of using ``python -m unittest``, use coverage.py to also produce a test coverage report::
 
       coverage run -m unittest && python -m coverage html
 
-  This requires `coverage.py <https://coverage.readthedocs.io/en/7.4.0/#quick-start>`_ to be installed, like ``pip install coverage``.
+  This requires `coverage.py <https://coverage.readthedocs.io/en/7.4.0/#quick-start>`_ to be installed additionally, like ``pip install coverage``.
 
 - To build the documentation locally::
 
