@@ -23,7 +23,7 @@
     git clone git@github.com:kostrykin/pypers.git
     cd pypers && python setup.py install
 
-**Documentation:** https://pypers-batch.readthedocs.io
+**Documentation:** https://repype.readthedocs.io
 
 **Development instructions:**
 
