@@ -40,4 +40,11 @@ html_theme = 'sphinx_rtd_theme'
 epub_show_urls = 'footnote'
 
 # -- Report broken links
-#nitpicky = True
+nitpicky = True
+nitpick_ignore = [
+    ('py:class', 'watchdog.events.FileSystemEventHandler'),
+    ('py:class', 'watchdog.events.DirModifiedEvent'),
+    ('py:class', 'watchdog.events.FileModifiedEvent'),
+    ('py:class', 'DirModifiedEvent'),
+    ('py:class', 'FileModifiedEvent'),
+]

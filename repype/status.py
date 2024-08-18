@@ -7,6 +7,7 @@ import uuid
 
 from watchdog.observers import Observer
 from watchdog.events import (
+    DirModifiedEvent,
     FileModifiedEvent,
     FileSystemEventHandler,
 )
@@ -349,7 +350,7 @@ class StatusReader(FileSystemEventHandler):
             
             return True
 
-    def on_modified(self, event) -> None:
+    def on_modified(self, event: Union[DirModifiedEvent, FileModifiedEvent]) -> None:
         if isinstance(event, FileModifiedEvent):
             filepath = pathlib.Path(event.src_path).resolve()
             if self.update(filepath):
