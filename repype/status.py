@@ -377,7 +377,7 @@ class StatusReader(FileSystemEventHandler):
             self.handle_new_status(*self._intermediate)
             self._intermediate = None
 
-    def handle_new_status(self, parents: List[Union[str, dict]], positions: List[int], element: Optional[Union[str, dict]]):
+    def handle_new_status(self, parents: List[Union[str, dict]], positions: List[int], element: Union[str, dict]):
         pass
     
 
@@ -402,7 +402,7 @@ def progress(
         len_override: Optional[int] = None,
         details: Optional[Union[str, dict]] = None,
     ) -> Iterator[dict]:
-    
+
     if status is None:
         return iterable
     else:

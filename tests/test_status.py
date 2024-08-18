@@ -166,7 +166,7 @@ class Status__progress(TestCase):
     def test(self, path):
         intermediate_path = None
         status = Status(path = path)
-        for item_idx, item in enumerate(status.progress('description', range(3))):
+        for item_idx, item in enumerate(status.progress(range(3), details = 'details')):
 
             if intermediate_path is None:
                 with open(status.filepath) as file:
@@ -180,7 +180,8 @@ class Status__progress(TestCase):
                     data,
                     [
                         dict(
-                            status = 'description',
+                            info = 'progress',
+                            details = 'details',
                             progress = item_idx / 3,
                             step = item_idx,
                             max_steps = 3,
@@ -200,7 +201,7 @@ class Status__progress(TestCase):
         intermediate_path = None
         status = Status(path = path)
 
-        for item_idx, item in (enumerate(status.progress('description', range(3)))):
+        for item_idx, item in (enumerate(status.progress(range(3), details = 'details'))):
 
             if intermediate_path is None:
                 with open(status.filepath) as file:
@@ -214,7 +215,8 @@ class Status__progress(TestCase):
                     data,
                     [
                         dict(
-                            status = 'description',
+                            info = 'progress',
+                            details = 'details',
                             progress = item_idx / 3,
                             step = item_idx,
                             max_steps = 3,
@@ -235,7 +237,7 @@ class Status__progress(TestCase):
     def test_len_override(self, path):
         status = Status(path = path)
         with self.assertRaises(AssertionError):
-            for item in status.progress('description', range(3), len_override = 2):
+            for item in status.progress(range(3), len_override = 2):
                 pass
 
         with open(status.filepath) as file:
@@ -245,7 +247,7 @@ class Status__progress(TestCase):
     @testsuite.with_temporary_paths(1)
     def test_empty(self, path):
         status = Status(path = path)
-        for item in status.progress('description', list()):
+        for item in status.progress(list()):
             pass
 
         # Verify that there have been no iterations
@@ -261,7 +263,7 @@ class Status__progress(TestCase):
         status = Status(path = path)
 
         with self.assertRaises(testsuite.TestError):
-            for item_idx, item in (enumerate(status.progress('description', range(3)))):
+            for item_idx, item in (enumerate(status.progress(range(3), details = 'details'))):
 
                 if intermediate_path is None:
                     with open(status.filepath) as file:
@@ -275,7 +277,8 @@ class Status__progress(TestCase):
                         data,
                         [
                             dict(
-                                status = 'description',
+                                info = 'progress',
+                                details = 'details',
                                 progress = item_idx / 3,
                                 step = item_idx,
                                 max_steps = 3,

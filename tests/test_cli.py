@@ -25,7 +25,7 @@ class StatusReaderConsoleAdapter__write(unittest.TestCase):
         with testsuite.CaptureStdout() as stdout:
             self.status.write('message')
             test_status.wait_for_watchdog()
-            self.assertEqual(str(stdout), 'message')
+            self.assertEqual(str(stdout), 'message\n')
 
 
 class StatusReaderConsoleAdapter__progress(unittest.TestCase):
