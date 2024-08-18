@@ -80,7 +80,7 @@ class Status:
         self.data.append(status)
         self.update()
 
-    def intermediate(self, status: Optional[str] = None) -> None:
+    def intermediate(self, status: Optional[Union[str, dict]] = None) -> None:
         # An intermediate status object is created, and then linked within this status object
         # The order of the two operations is crucial, because otherwise an empty intermediate object might be detected initially
         if status is not None:
@@ -105,14 +105,15 @@ class Status:
             self._intermediate = None
             self.update()
 
-    def progress(self, description: str, iterable: Iterable, len_override: Optional[int] = None) -> Iterator[dict]:
+    def progress(self, iterable: Iterable, len_override: Optional[int] = None, details: Optional[Union[str, dict]] = None) -> Iterator[dict]:
         max_steps = len_override or len(iterable)
         try:
             for step, item in enumerate(iterable):
                 assert step < max_steps
                 self.intermediate(
                     dict(
-                        description = description,
+                        info = 'progress',
+                        details = details,
                         progress = step / max_steps,
                         step = step,
                         max_steps = max_steps,
@@ -205,6 +206,13 @@ class Cursor:
                 return cursor
             
         return None
+    
+    def has_subsequent_non_intermediate(self) -> bool:
+        cursor = self
+        while cursor := cursor.find_next_element():
+            if not cursor.intermediate:
+                return True
+        return False
 
     def get_elements(self) -> Optional[List[list]]:
         """
@@ -355,7 +363,8 @@ class StatusReader(FileSystemEventHandler):
                 self.handle_new_status(elements[:-1], list(cursor.path), copy.deepcopy(elements[-1]))
 
             # If the element is an intermediate, leave the cursor on the last non-intermediate position
-            if cursor.intermediate:
+            # Unless there is a subsequent non-intermediate element
+            if cursor.intermediate and not cursor.has_subsequent_non_intermediate():
                 self._intermediate = (elements[:-1], list(cursor.path), copy.deepcopy(elements[-1]))
                 break
             else:
@@ -368,25 +377,33 @@ class StatusReader(FileSystemEventHandler):
             self.handle_new_status(*self._intermediate)
             self._intermediate = None
 
-    def handle_new_status(self, parents: List[Union[str, dict]], positions: List[int], element: Optional[Union[str, dict]]):
+    def handle_new_status(self, parents: List[Union[str, dict]], positions: List[int], element: Union[str, dict]):
         pass
     
 
 # Define some shortcuts
 
-def update(status, intermediate = False, **kwargs):
+def update(status: Optional[Status], intermediate: bool = False, **kwargs) -> None:
     if status is not None:
         if intermediate:
             status.intermediate(dict(**kwargs))
         else:
             status.write(dict(**kwargs))
 
-def derive(status):
+
+def derive(status: Optional[Status]) -> Optional[Status]:
     if status is not None:
         return status.derive()
-    
-def progress(status, iterable, *args, **kwargs):
+
+
+def progress(
+        status: Optional[Status],
+        iterable: Iterable,
+        len_override: Optional[int] = None,
+        details: Optional[Union[str, dict]] = None,
+    ) -> Iterator[dict]:
+
     if status is None:
         return iterable
     else:
-        return status.progress(iterable, *args, **kwargs)
+        return status.progress(iterable, len_override, details)

@@ -1,4 +1,5 @@
 import itertools
+import pathlib
 import unittest
 from unittest.mock import (
     MagicMock,
@@ -215,15 +216,15 @@ class Pipeline__process(unittest.TestCase):
         self.pipeline.stages[1].side_effect = self.stage2
         self.pipeline.stages[2].side_effect = self.stage3
 
-    def stage1(self, data, config, status = None, log_root_dir = None, **kwargs):
+    def stage1(self, pipeline, data, config, status = None,  **kwargs):
         config.set_default('enabled', True)
         data['x1'] = config.get('x1_factor', 1) * data['input']
 
-    def stage2(self, data, config, status = None, log_root_dir = None, **kwargs):
+    def stage2(self, pipeline, data, config, status = None, **kwargs):
         config.set_default('enabled', True)
         data['x2'] = config.get('x2_factor', 1) * data['input']
 
-    def stage3(self, data, config, status = None, log_root_dir = None, **kwargs):
+    def stage3(self, pipeline, data, config, status = None, **kwargs):
         config.set_default('enabled', True)
         data['x3'] = data['x1'] + data['x2'] + config.get('constant', 0)
 
@@ -397,6 +398,29 @@ class Pipeline__fields(unittest.TestCase):
             sorted(self.pipeline.fields),
             ['input', 'x1', 'x2', 'x3'],
         )
+
+
+class Pipeline__resolve(unittest.TestCase):
+
+    def setUp(self):
+        self.pipeline = repype.pipeline.Pipeline()
+
+    def test_relative(self):
+        self.pipeline.scopes = {
+            'input': 'input-%02d.json',
+        }
+        filepath = self.pipeline.resolve('input', 0)
+        self.assertIsInstance(filepath, pathlib.Path)
+        self.assertEqual(filepath, pathlib.Path.cwd() / 'input-00.json')
+
+    @testsuite.with_temporary_paths(1)
+    def test_absolute(self, path):
+        self.pipeline.scopes = {
+            'input': str(path / 'input-%s.json'),
+        }
+        filepath = self.pipeline.resolve('input', '00')
+        self.assertIsInstance(filepath, pathlib.Path)
+        self.assertEqual(filepath, path.resolve() / 'input-00.json')
 
 
 class create_pipeline(unittest.TestCase):

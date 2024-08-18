@@ -1,6 +1,9 @@
-import os
+import contextlib
+import io
 import pathlib
+import re
 import shutil
+import sys
 import tempfile
 
 import repype.stage
@@ -10,20 +13,21 @@ from repype.typing import (
 
 
 # Losen truncation limit for error messages
-__import__('sys').modules['unittest.util']._MAX_LENGTH = 1000
+try:
+    __import__('sys').modules['unittest.util']._MAX_LENGTH = 1000
+except KeyError:
+    pass
 
 
 def with_temporary_paths(count: int):
     def decorator(test_func):
         def wrapper(self, *args, **kwargs):
-            testsuite_pid = os.getpid()
             paths = [tempfile.mkdtemp() for _ in range(count)]
             try:
                 ret = test_func(self, *[pathlib.Path(path) for path in paths], *args, **kwargs)
             finally:
-                if os.getpid() == testsuite_pid:
-                    for path in paths:
-                        shutil.rmtree(path)
+                for path in paths:
+                    shutil.rmtree(path)
             return ret
         return wrapper
     return decorator
@@ -87,3 +91,22 @@ class TestError(Exception):
     def __ini__(self, *args, **kwargs):
         self.args = args
         self.kwargs = kwargs
+
+
+class CaptureStdout:
+
+    def __init__(self):
+        self.stdout_buf = io.StringIO()
+
+    def __enter__(self):
+        self.redirect = contextlib.redirect_stdout(self.stdout_buf)
+        self.redirect.__enter__()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.redirect.__exit__(exc_type, exc_value, traceback)
+        if exc_value is not None:
+            print(str(self), file = sys.stderr)
+
+    def __str__(self):
+        return re.sub(r'\033\[K', '', self.stdout_buf.getvalue())

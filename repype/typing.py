@@ -8,4 +8,5 @@ else:
 
 
 DataDictionary = Dict[str, Any]
+Input = TypeVar('Input', int, str)
 PathLike = TypeVar('PathLike', str, pathlib.Path)

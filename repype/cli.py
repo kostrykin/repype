@@ -2,6 +2,7 @@ import argparse
 import pathlib
 import sys
 import tempfile
+import time
 
 import repype.batch
 import repype.status
@@ -14,48 +15,60 @@ from repype.typing import (
 )
 
 
+def format_hms(seconds):
+    seconds = round(seconds)
+    h, m, s = seconds // 3600, (seconds % 3600) // 60, (seconds % 60)
+    ms = f'{m:02d}:{s:02d}'
+    return ms if h == 0 else f'{h:d}:{ms}'
+
+
 class StatusReaderConsoleAdapter(repype.status.StatusReader):
     """
     Writes status updates to stdout.
     """
 
+    progress_bar_length = 20
+
     def __init__(self, *args, indent: int = 2, **kwargs):
         self.indent = indent
         self._intermediate_line_length = 0
+        self.margin = None
         super().__init__(*args, **kwargs)
 
     def clear_line(self, line: str) -> str:
         line = line.replace('\n', ' ')
         return line + ' ' * max((0, self._intermediate_line_length - len(line)))
 
-    def handle_new_status(self, parents: List[Union[str, dict]], positions: List[int], element: Optional[Union[str, dict]]):
-        if element is not None:
-
-            # Print an intermediate line
-            if isinstance(element, dict) and element.get('content_type') == 'intermediate':
-                line = self.format_line(parents, positions, element.get('content', '')[0], intermediate = True)
-                print(line, end='\r')
-                self._intermediate_line_length = len(line)
-
-            # Print a regular line
+    def handle_new_status(self, parents: List[Union[str, dict]], positions: List[int], element: Union[str, dict]):
+        # If status is intermediate, print the last line of the status accordingly
+        if  isinstance(element, dict) and element.get('content_type') == 'intermediate':
+            
+            if element['content'] is None:
+                text = self.clear_line('')
             else:
-                print(self.format_line(parents, positions, element, intermediate = False))
-                self._intermediate_line_length = 0
+                text = self.full_format(parents, positions, element['content'][0], intermediate = True)
 
-        # Clear the intermediate line
+            lines = text.split('\n')
+            if len(lines) > 1:
+                print('\n'.join(lines[:-1]))
+            print(lines[-1], end='\r')
+            self._intermediate_line_length = len(lines[-1])
+
+        # Print a regular line
         else:
-            print(self.clear_line(''), end='\r')
+            print(self.full_format(parents, positions, element, intermediate = False))
             self._intermediate_line_length = 0
 
-    def format_line(self, parents: List[Union[str, dict]], positions: List[int], status: Union[str, dict], intermediate: bool) -> str:
+    def full_format(self, parents: List[Union[str, dict]], positions: List[int], status: Union[str, dict], intermediate: bool) -> str:
         text = str(self.format(parents, positions, status, intermediate))
 
-        # Console output only supports single-line intermediates
-        if intermediate:
-            text = text.replace('\n', ' ')
+        # Compute indentation, and add an extra line if the margin changes
+        margin = ' ' * self.indent * (len(positions) - 1)
+        if self.margin is not None and margin != self.margin and text.split('\n')[0].strip() != '':
+            text = '\n' + text
+        self.margin = margin
 
         # Indent all lines
-        margin = ' ' * self.indent * (len(positions) - 1)
         lines = [margin + line for line in text.split('\n')]
         lines[0] = self.clear_line(lines[0])
         return '\n'.join(lines)
@@ -79,27 +92,55 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
                 else:
                     text = 'Starting from scratch'
 
+            if status.get('info') == 'process':
+                text = f'({status["step"] + 1}/{status["step_count"]}) Processing input: {status["input"]}'
+
+            if status.get('info') == 'start-stage':
+                text = f'Starting stage: {status["stage"]}'
+
             if status.get('info') == 'storing':
                 text = f'Storing results...'
 
             if status.get('info') == 'completed':
-                text = f'Results have been stored'
+                text = f'Results have been stored ✅'
 
             if status.get('info') == 'error':
-                text = f'An error occurred while processing task {status["task"]}:\n' + \
+                parts = ['\n🔴 An error occurred while processing']
+                if status.get('stage') is not None:
+                    parts.append(f'the stage "{status["stage"]} of')
+                parts.append(f'the task {status["task"]}:\n')
+                text = ' '.join(parts) + \
                     '-' * 80 + '\n' + \
                     status['traceback'] + \
                     '-' * 80
                 
             if status.get('info') == 'interrupted':
-                text = f'\nBatch run interrupted'
+                text = f'🔴 Batch run interrupted'
 
-            # FIXME: Handle `Status.progress` here
+            if status.get('info') == 'progress':
+                if status.get('step') == 0:
+                    self.progress_t0 = time.time()
+                    eta = ''
+                else:
+                    progress_t1 = time.time()
+                    speed = (progress_t1 - self.progress_t0) / status.get('step')
+                    eta = ', ETA: ' + format_hms(speed * (status.get('max_steps') - status.get('step')))
+                text = f'{100 * status.get("step") / status.get("max_steps"):.1f}% ({status.get("step")} / {status.get("max_steps")}{eta})'
+                progress_bar = ((self.progress_bar_length * status.get('step')) // status.get('max_steps')) * '='
+                progress_bar = progress_bar + (self.progress_bar_length - len(progress_bar)) * ' '
+                text = f'[{progress_bar}] {text}'
+                if details := status.get('details'):
+                    if isinstance(details, dict):
+                        details = self.format_progress_details(details)
+                    text = f'{details} {text}'
 
             return text if text else status
             
         else:
             return status
+        
+    def format_progress_details(self, details: dict) -> str:
+        return str(details)
 
 
 def run_cli(
@@ -130,11 +171,12 @@ def run_cli_ex(
         run: bool = False,
         tasks: List[PathLike] = list(),
         task_dirs: List[PathLike] = list(),
+        task_cls: Type[repype.task.Task] = repype.task.Task,
         status_reader_cls: Type[repype.status.StatusReader] = StatusReaderConsoleAdapter,
     ) -> bool:
 
     path  = pathlib.Path(path).resolve()
-    batch = repype.batch.Batch()
+    batch = repype.batch.Batch(task_cls)
     batch.load(path)
     
     if tasks or task_dirs:

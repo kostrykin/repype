@@ -120,10 +120,10 @@ class Stage:
 
     def __call__(
             self,
+            pipeline: 'repype.pipeline.Pipeline',
             data: DataDictionary,
             config: repype.config.Config,
             status: Optional[repype.status.Status] = None,
-            log_root_dir: Optional[pathlib.Path] = None,
             **kwargs) -> float:
 
         # Run the stage if it is enabled
@@ -146,8 +146,8 @@ class Stage:
             # Run the stage and measure the run time
             t0 = time.time()
             output_data = self.process(
+                pipeline = pipeline,
                 config = clean_config,
-                log_root_dir = log_root_dir,
                 status = status,
                 **input_data,
             )
@@ -179,8 +179,8 @@ class Stage:
 
     def process(
             self,
-            config: Optional[repype.config.Config] = None,
-            log_root_dir: Optional[pathlib.Path] = None,
+            pipeline: 'repype.pipeline.Pipeline',
+            config: repype.config.Config,
             status: Optional[repype.status.Status] = None,
             **inputs,
         ) -> DataDictionary:
@@ -191,7 +191,6 @@ class Stage:
 
         :param input_data: A dictionary containing the inputs required by this stage. Each key-value pair in the dictionary represents an input name and its corresponding value.
         :param config: A :py:class:`~repype.config.Config` object, containing the hyperparameters to be used by this stage.
-        :param log_root_dir: The path to the directory where log files will be written. If this parameter is ``None``, no log files will be written.
         :param status: A :py:class:`~repype.status.Status` object.
         :return: A dictionary containing the outputs produced by this stage. Each key-value pair in the dictionary represents an output name and its corresponding value.
         """
@@ -215,7 +214,7 @@ class Stage:
 
         # Iterate over all attributes of the stage (leaving out a few special ones)
         for key in dir(self):
-            if key in ('__doc__', '__weakref__', '__module__', '__dict__', 'signature', 'sha'): continue
+            if key in ('__doc__', '__weakref__', '__module__', '__dict__', '__slotnames__', 'signature', 'sha'): continue
             value = getattr(self, key)
 
             if isinstance(value, Iterable):
@@ -234,6 +233,12 @@ class Stage:
 
             # Add the item to the signature
             signature[key] = value
+
+        # Apply some "fixes" to the signature, apparently the order of the items is not guaranteed
+        # - https://github.com/kostrykin/repype/pull/15#issuecomment-2293154385
+        # - https://github.com/kostrykin/repype/pull/15#issuecomment-2293264509
+        for key in ('inputs', 'outputs', 'consumes'):
+            signature[key] = list(sorted(signature[key]))
 
         # Return the signature
         return signature

@@ -1,8 +1,10 @@
 import glob
-import os
+import multiprocessing
 import pathlib
+import sys
 import traceback
 
+import dill
 import repype.pipeline
 import repype.config
 import repype.status
@@ -27,10 +29,32 @@ class RunContext:
         self.config = task.create_config()
 
 
+def run_task_process(payload):
+    rc, status = dill.loads(payload)
+
+    # Run the task and exit the child process
+    try:
+        rc.task.run(rc.config, pipeline = rc.pipeline, status = status)
+        return
+
+    # If an exception occurs, update the status and re-raise the exception
+    except:
+        error = sys.exc_info()[0]
+        repype.status.update(
+            status = status,
+            info = 'error',
+            task = str(rc.task.path.resolve()),
+            traceback = traceback.format_exc(),
+            stage = error.stage.id if isinstance(error, repype.pipeline.StageError) else None,
+        )
+        sys.exit(1)  # Indicate a failure to the parent process
+
+
 class Batch:
 
-    def __init__(self):
+    def __init__(self, task_cls = repype.task.Task):
         self.tasks = dict()
+        self.task_cls = task_cls
 
     def task(self, path: PathLike, spec: Optional[dict] = None) -> Optional[repype.task.Task]:
         """
@@ -54,7 +78,7 @@ class Batch:
         # Retrieve the parent task and instantiate the requested task
         if task is None:
             parent = self.task(path.parent) if path.parent else None
-            task = repype.task.Task(path = path, spec = spec, parent = parent)
+            task = self.task_cls(path = path, spec = spec, parent = parent)
             assert path not in self.tasks
             self.tasks[path] = task
             return task
@@ -109,35 +133,20 @@ class Batch:
                 step_count = len(contexts),
             )
 
-            # Run the task in a forked process
-            newpid = os.fork()
-            if newpid == 0:
+            # Run the task in a separate process
+            task_process = multiprocessing.Process(target = run_task_process, args = (dill.dumps((rc, task_status),),))
+            task_process.start()
 
-                # Run the task and exit the child process
-                try:
-                    rc.task.run(rc.config, pipeline = rc.pipeline, status = task_status)
-                    os._exit(0)  # Indicate success to the parent process
+            # Wait for the task process to finish
+            task_process.join()
+            if task_process.exitcode != 0:
+                repype.status.update(
+                    status = status,
+                    info = 'interrupted',
+                )
 
-                # If an exception occurs, update the status and re-raise the exception
-                except:
-                    repype.status.update(
-                        status = task_status,
-                        info = 'error',
-                        task = str(rc.task.path.resolve()),
-                        traceback = traceback.format_exc(),
-                    )
-                    os._exit(1)  # Indicate a failure to the parent process
-
-            # Wait for the child process to finish
-            else:
-                if os.waitpid(newpid, 0)[1] != 0:
-                    repype.status.update(
-                        status = status,
-                        info = 'interrupted',
-                    )
-
-                    # Interrupt task execution due to an error
-                    return False
+                # Interrupt task execution due to an error
+                return False
 
         # All tasks were completed successfully
         return True

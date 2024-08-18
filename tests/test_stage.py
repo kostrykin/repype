@@ -1,12 +1,14 @@
+import json
+import multiprocessing
 import unittest
 from unittest.mock import (
     call,
     MagicMock,
 )
 
+import dill
 import repype.stage
 import repype.config
-
 from . import testsuite
 
 
@@ -34,10 +36,11 @@ class suggest_id(unittest.TestCase):
 class Stage(unittest.TestCase):
 
     def test_no_inputs_no_outputs(self):
-        stage = testsuite.create_stage(id = 'test')
-        data  = dict()
-        cfg   = repype.config.Config()
-        dt    = stage(data, cfg)
+        stage    = testsuite.create_stage(id = 'test')
+        data     = dict()
+        config   = repype.config.Config()
+        pipeline = MagicMock()
+        dt = stage(pipeline, data, config)
         self.assertIsInstance(dt, float)
         self.assertEqual(data, dict())
 
@@ -48,83 +51,96 @@ class Stage(unittest.TestCase):
 
     def test(self):
         stage = testsuite.create_stage(id = 'test', inputs = ['x1', 'x2'], outputs = ['y'], \
-            process = lambda x1, x2, config, log_root_dir = None, status = None: \
+            process = lambda pipeline, x1, x2, config, status = None: \
                 dict(y = \
                     x1 * config.get('x1_factor', 0) + \
                     x2 * config.get('x2_factor', 0))
             )
-        cfg = repype.config.Config()
+        config = repype.config.Config()
         for x1_factor in [0, 1]:
             for x2_factor in [0, 1]:
                 x1, x2 = 10, 20
                 with self.subTest(x1_factor = x1_factor, x2_factor = x2_factor):
-                    cfg['x1_factor'] = x1_factor
-                    cfg['x2_factor'] = x2_factor
+                    config['x1_factor'] = x1_factor
+                    config['x2_factor'] = x2_factor
                     data = dict(x1 = x1, x2 = x2)
                     status_mock = MagicMock()
-                    dt = stage(data, cfg, status = status_mock)
+                    pipeline = MagicMock()
+                    dt = stage(pipeline, data, config, status = status_mock)
                     self.assertEqual(data, dict(x1 = x1, x2 = x2, y = x1 * x1_factor + x2 * x2_factor))
                     self.assertIsInstance(dt, float)
 
     def test_missing_input(self):
         stage = testsuite.create_stage(id = 'test', outputs = ['y'], \
-            process = lambda x, config, log_root_dir = None, status = None: \
+            process = lambda pipeline, x, config, status = None: \
                 dict(y = x)
             )
         data = dict(x = 0)
         config = repype.config.Config()
-        self.assertRaises(TypeError, lambda: stage(data, config))
+        pipeline = MagicMock()
+        with self.assertRaises(TypeError):
+            stage(pipeline, data, config)
 
     def test_missing_output(self):
         stage = testsuite.create_stage(id = 'test', outputs = ['y'], \
-            process = lambda config, log_root_dir = None, status = None: \
+            process = lambda pipeline, config, status = None: \
                 dict()
             )
         data = dict()
         config = repype.config.Config()
-        self.assertRaises(AssertionError, lambda: stage(data, config))
+        pipeline = MagicMock()
+        with self.assertRaises(AssertionError):
+            stage(pipeline, data, config)
 
     def test_spurious_output(self):
         stage = testsuite.create_stage( id = 'test', \
-            process = lambda config, log_root_dir = None, status = None: \
+            process = lambda pipeline, config, status = None: \
                 dict(y = 0)
             )
         data = dict()
         config = repype.config.Config()
-        self.assertRaises(AssertionError, lambda: stage(data, config))
+        pipeline = MagicMock()
+        with self.assertRaises(AssertionError):
+            stage(pipeline, data, config)
 
     def test_missing_and_spurious_output(self):
         stage = testsuite.create_stage(id = 'test', outputs = ['y'], \
-            process = lambda config, log_root_dir = None, status = None: \
+            process = lambda pipeline, config, status = None: \
                 dict(z = 0)
             )
         data = dict()
         config = repype.config.Config()
-        self.assertRaises(AssertionError, lambda: stage(data, config))
+        pipeline = MagicMock()
+        with self.assertRaises(AssertionError):
+            stage(pipeline, data, config)
 
     def test_consumes(self):
         stage = testsuite.create_stage(id = 'test', consumes = ['x'], \
-            process = lambda x, config, log_root_dir = None, status = None: \
+            process = lambda pipeline, x, config, status = None: \
                 dict()
             )
         data = dict(x = 0, y = 1)
         config = repype.config.Config()
-        stage(data, config)
+        pipeline = MagicMock()
+        stage(pipeline, data, config)
         self.assertEqual(data, dict(y = 1))
 
     def test_missing_consumes(self):
         stage = testsuite.create_stage(id = 'test', consumes = ['x'], \
-            process = lambda x, config, log_root_dir = None, status = None: \
+            process = lambda pipeline, x, config, status = None: \
                 dict()
             )
         data = dict()
         config = repype.config.Config()
-        self.assertRaises(KeyError, lambda: stage(data, config))
+        pipeline = MagicMock()
+        with self.assertRaises(KeyError):
+            stage(pipeline, data, config)
 
 
 class Stage__callback(unittest.TestCase):
 
     def setUp(self):
+        self.pipeline = MagicMock()
         self.stage = testsuite.create_stage(id = 'test')
         self.callback = MagicMock()
         self.stage.add_callback('start', self.callback)
@@ -136,7 +152,7 @@ class Stage__callback(unittest.TestCase):
         )
 
     def test(self):
-        self.stage(data = self.data, config = self.config)
+        self.stage(pipeline = self.pipeline, data = self.data, config = self.config)
         self.assertEqual(
             self.callback.call_args_list,
             [
@@ -156,10 +172,50 @@ class Stage__callback(unittest.TestCase):
 
     def test_skip_disabled(self):
         self.config['enabled'] = False
-        self.stage(data = self.data, config = self.config)
+        self.stage(pipeline = self.pipeline, data = self.data, config = self.config)
         self.assertEqual(
             self.callback.call_args_list,
             [
                 call(self.stage, 'skip', self.data, status = None, config = self.config),
             ],
         )
+
+
+def write_signature(payload, filepath):
+    stage = dill.loads(payload)
+    with open(filepath, 'w') as file:
+        json.dump(stage.signature, file)
+
+
+class Stage__signature(unittest.TestCase):
+
+    def setUp(self):
+        self.stage = testsuite.create_stage(id = 'test')
+        self.signature = self.stage.signature
+
+    def test_serialization(self):
+        stage_serialized = dill.dumps(self.stage)
+        stage = dill.loads(stage_serialized)
+        self.assertEqual(self.signature, stage.signature)
+
+    @testsuite.with_temporary_paths(1)
+    def test_interprocess(self, path):
+        filepath = path / 'signature.json'
+        p = multiprocessing.Process(target = write_signature, args = (dill.dumps(self.stage), str(filepath)))
+        p.start()
+        p.join()
+        with filepath.open('r') as file:
+            signature = json.load(file)
+        self.assertEqual(self.signature, signature)
+
+
+class Stage__sha(unittest.TestCase):
+
+    def setUp(self):
+        self.stage = testsuite.create_stage(id = 'test')
+        self.sha = self.stage.sha
+
+    def test_serialization(self):
+        stage_serialized = dill.dumps(self.stage)
+        stage = dill.loads(stage_serialized)
+        self.assertEqual(self.sha, stage.sha)

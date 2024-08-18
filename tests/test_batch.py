@@ -150,11 +150,9 @@ class Batch__contexts(unittest.TestCase):
         )
         self.batch = repype.batch.Batch()
         self.batch.load(self.root_path)
-        self.testsuite_pid = os.getpid()
 
     def tearDown(self):
-        if os.getpid() == self.testsuite_pid:
-            self.tempdir.cleanup()
+        self.tempdir.cleanup()
 
     def test(self):
         contexts = self.batch.contexts
@@ -204,11 +202,9 @@ class Batch__run(unittest.TestCase):
         )
         self.batch = repype.batch.Batch()
         self.batch.load(self.root_path)
-        self.testsuite_pid = os.getpid()
 
     def tearDown(self):
-        if os.getpid() == self.testsuite_pid:
-            self.tempdir.cleanup()
+        self.tempdir.cleanup()
 
     @testsuite.with_temporary_paths(1)
     def test(self, path):

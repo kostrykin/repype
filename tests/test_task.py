@@ -13,6 +13,7 @@ import repype.pipeline
 import repype.task
 from . import testsuite
 import repype.status
+import yaml
 
 
 class decode_inputs(unittest.TestCase):
@@ -166,18 +167,29 @@ class Task__create_pipeline(unittest.TestCase):
         with self.assertRaises(AssertionError):
             task.create_pipeline()
 
-    @testsuite.with_temporary_paths(1)
-    def test_from_spec(self, path):
+    @testsuite.with_temporary_paths(2)
+    def test_from_spec(self, path1, path2):
         task = repype.task.Task(
-            path = path,
+            path = path1,
             parent = None,
             spec = dict(
                 pipeline = 'repype.pipeline.Pipeline',
+                scopes = dict(
+                    inputs = str(path2 / 'inputs'),
+                    outputs1 = 'outputs1',
+                    outputs2 = '{ROOTDIR}/outputs2',
+                ),
             ),
         )
-        self.assertIsInstance(
-            task.create_pipeline(),
-            repype.pipeline.Pipeline,
+        pipeline = task.create_pipeline()
+        self.assertIsInstance(pipeline, repype.pipeline.Pipeline)
+        self.assertEqual(
+            pipeline.scopes,
+            dict(
+                inputs = path2.resolve() / 'inputs',
+                outputs1 = task.path.resolve() / 'outputs1',
+                outputs2 = task.root.path.resolve() / 'outputs2',
+            ),
         )
 
     @testsuite.with_temporary_paths(1)
@@ -199,6 +211,7 @@ class Task__create_pipeline(unittest.TestCase):
         mock_Pipeline.assert_called_once_with(
             'arg1',
             'arg2',
+            scopes = dict(),
             kwarg1 = 'kwarg1',
             kwarg2 = 'kwarg2',
         )
@@ -917,25 +930,29 @@ class Task__run(unittest.TestCase):
             self.task.run(self.config)
 
     def test_nothing_to_pickup(self, mock_create_pipeline, mock_load, mock_store):
+        mock_create_pipeline.return_value.process.return_value = (dict(), None, None)
         self.task.run(self.config)
         mock_load.assert_not_called()
         mock_create_pipeline.assert_called_once_with()
         mock_create_pipeline.return_value.process.assert_any_call(
             input = 'file-0',
             data = dict(),
-            cfg = self.config,
+            config = self.config,
             first_stage = None,
+            status = None,
         )
         mock_create_pipeline.return_value.process.assert_any_call(
             input = 'file-1',
             data = dict(),
-            cfg = self.config,
+            config = self.config,
             first_stage = None,
+            status = None,
         )
         self.assertEqual(mock_create_pipeline.return_value.process.call_count, 2)
         mock_store.assert_called_once()
 
     def test_with_pickup(self, mock_create_pipeline, mock_load, mock_store):
+        mock_create_pipeline.return_value.process.return_value = (dict(), None, None)
         mock_load.return_value = {
             'file-0': dict(output = 'value1'),
             'file-1': dict(output = 'value2'),
@@ -952,14 +969,59 @@ class Task__run(unittest.TestCase):
         mock_create_pipeline.return_value.process.assert_any_call(
             input = 'file-0',
             data = dict(output = 'value1'),
-            cfg = self.config,
-            first_stage = stage1,
+            config = self.config,
+            first_stage = 'stage-1',
+            status = None,
         )
         mock_create_pipeline.return_value.process.assert_any_call(
             input = 'file-1',
             data = dict(output = 'value2'),
-            cfg = self.config,
-            first_stage = stage1,
+            config = self.config,
+            first_stage = 'stage-1',
+            status = None,
         )
         self.assertEqual(mock_create_pipeline.return_value.process.call_count, 2)
         mock_store.assert_called_once()
+
+
+class Task__final_config(unittest.TestCase):
+
+    @testsuite.with_temporary_paths(1)
+    def test(self, path):
+        task = repype.task.Task(
+            path = path,
+            parent = None,
+            spec = dict(
+                runnable = True,
+                pipeline = 'repype.pipeline.Pipeline',
+                inputs = [1, 2],
+                scopes = dict(
+                    config = 'cfg/%d.yml',
+                ),
+                config = dict(
+                    stage1 = dict(
+                        key1 = 'value1',
+                        key2 = 'value2',
+                    ),
+                ),
+            ),
+        )
+        pipeline = task.create_pipeline()
+        pipeline.append(testsuite.create_stage(id = 'stage1'))
+        task.run(task.create_config(), pipeline)
+        for input in [1, 2]:
+            with self.subTest(input = input):
+                with (path / 'cfg' / f'{input}.yml').open('r') as config_file:
+                    config = repype.config.Config(yaml.safe_load(config_file))
+                    self.assertEqual(
+                        config,
+                        repype.config.Config(
+                            dict(
+                                stage1 = dict(
+                                    enabled = True,
+                                    key1 = 'value1',
+                                    key2 = 'value2',
+                                ),
+                            ),
+                        ),
+                    )

@@ -35,6 +35,12 @@ jobs:
           name: release-dists
           path: dist/
 
+      - name: Check distribution files
+        run: |
+          python -m pip install twine
+          ls dist/
+          python -m twine check dist/*
+
   pypi-publish:
     runs-on: ubuntu-latest
     if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'

@@ -166,7 +166,7 @@ class Status__progress(TestCase):
     def test(self, path):
         intermediate_path = None
         status = Status(path = path)
-        for item_idx, item in enumerate(status.progress('description', range(3))):
+        for item_idx, item in enumerate(status.progress(range(3), details = 'details')):
 
             if intermediate_path is None:
                 with open(status.filepath) as file:
@@ -180,7 +180,8 @@ class Status__progress(TestCase):
                     data,
                     [
                         dict(
-                            description = 'description',
+                            info = 'progress',
+                            details = 'details',
                             progress = item_idx / 3,
                             step = item_idx,
                             max_steps = 3,
@@ -197,16 +198,10 @@ class Status__progress(TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_break(self, path):
-        # PyPy requires closing the generator explicitly, but assigning it to a variable
-        # somehow changes the behaviour of the garbage collector in CPython. We thus skip
-        # this test for PyPy.
-        if platform.python_implementation() == 'PyPy':
-            return
-
         intermediate_path = None
         status = Status(path = path)
 
-        for item_idx, item in (enumerate(status.progress('description', range(3)))):
+        for item_idx, item in (enumerate(status.progress(range(3), details = 'details'))):
 
             if intermediate_path is None:
                 with open(status.filepath) as file:
@@ -220,7 +215,8 @@ class Status__progress(TestCase):
                     data,
                     [
                         dict(
-                            description = 'description',
+                            info = 'progress',
+                            details = 'details',
                             progress = item_idx / 3,
                             step = item_idx,
                             max_steps = 3,
@@ -241,7 +237,7 @@ class Status__progress(TestCase):
     def test_len_override(self, path):
         status = Status(path = path)
         with self.assertRaises(AssertionError):
-            for item in status.progress('description', range(3), len_override = 2):
+            for item in status.progress(range(3), len_override = 2):
                 pass
 
         with open(status.filepath) as file:
@@ -251,12 +247,50 @@ class Status__progress(TestCase):
     @testsuite.with_temporary_paths(1)
     def test_empty(self, path):
         status = Status(path = path)
-        for item in status.progress('description', list()):
+        for item in status.progress(list()):
             pass
 
-        # Verify that there have been two iterations, i.e. `item_idx = 0` and `item_idx = 1`
+        # Verify that there have been no iterations
         self.assertFalse('item' in locals())
-                    
+
+        with open(status.filepath) as file:
+            data = json.load(file)
+            self.assertEqual(data, list())
+
+    @testsuite.with_temporary_paths(1)
+    def test_error(self, path):
+        intermediate_path = None
+        status = Status(path = path)
+
+        with self.assertRaises(testsuite.TestError):
+            for item_idx, item in (enumerate(status.progress(range(3), details = 'details'))):
+
+                if intermediate_path is None:
+                    with open(status.filepath) as file:
+                        data = json.load(file)
+                        intermediate_path = data[0]['expand']
+                        
+                with open(intermediate_path) as file:
+                    data = json.load(file)
+                    self.assertEqual(item, item_idx)
+                    self.assertEqual(
+                        data,
+                        [
+                            dict(
+                                info = 'progress',
+                                details = 'details',
+                                progress = item_idx / 3,
+                                step = item_idx,
+                                max_steps = 3,
+                            ),
+                        ],
+                    )
+
+                raise testsuite.TestError()
+
+        # Verify that there has been one iterations, i.e. `item_idx = 0`
+        self.assertEqual(item_idx, 0)
+        
         with open(status.filepath) as file:
             data = json.load(file)
             self.assertEqual(data, list())

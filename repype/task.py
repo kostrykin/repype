@@ -17,22 +17,21 @@ from repype.typing import (
     DataDictionary,
     Dict,
     FrozenSet,
+    Input,
     Iterator,
     List,
     Optional,
     PathLike,
     Self,
-    TypeVar,
     Union,
 )
 import yaml
 
 
-FileID = TypeVar('FileID', int, str)
-MultiDataDictionary = Dict[FileID, DataDictionary]
+MultiDataDictionary = Dict[Input, DataDictionary]
 
 
-def decode_inputs(spec: Union[str, List[FileID]]) -> List[FileID]:
+def decode_inputs(spec: Union[str, List[Input]]) -> List[Input]:
     """
     Convert a string of comma-separated inputs (or ranges thereof) to a list of integers.
 
@@ -219,13 +218,17 @@ class Task:
 
     def create_pipeline(self, *args, **kwargs) -> repype.pipeline.Pipeline:
         pipeline = self.full_spec.get('pipeline')
+        scopes = self.full_spec.get('scopes', dict())
         assert pipeline is not None
         assert isinstance(pipeline, (str, list))
+
+        # Resolve scopes
+        scopes = {key: self.resolve_path(value) for key, value in scopes.items()}
 
         # Load the pipeline from a module
         if isinstance(pipeline, str):
             pipeline_class = load_from_module(pipeline)
-            return pipeline_class(*args, **kwargs)
+            return pipeline_class(*args, scopes = scopes, **kwargs)
         
         # Create the pipeline from a list of stages
         if isinstance(pipeline, list):
@@ -233,7 +236,7 @@ class Task:
             for stage in pipeline:
                 stage_class = load_from_module(stage)
                 stages.append(stage_class())
-            return repype.pipeline.create_pipeline(stages, *args, **kwargs)
+            return repype.pipeline.create_pipeline(stages, *args, scopes = scopes, **kwargs)
     
     def is_pending(self, pipeline: repype.pipeline.Pipeline, config: repype.config.Config) -> bool:
         """
@@ -299,7 +302,7 @@ class Task:
 
         # Check if the data is consistent with the pipeline
         if pipeline is not None:
-            required_fields = pipeline.fields - self.get_marginal_fields(pipeline)
+            required_fields = pipeline.persistent_fields - self.get_marginal_fields(pipeline)
             assert all(
                 (frozenset(data[input].keys()) == required_fields for input in data.keys())
             ), 'Loaded data is inconsistent with the pipeline.'
@@ -447,10 +450,11 @@ class Task:
 
         # Run the pipeline for all inputs
         for input_idx, input in enumerate(self.inputs):
+            input_status = repype.status.derive(status)
             
             # Announce the status of the task
             repype.status.update(
-                status = status,
+                status = input_status,
                 info = 'process',
                 task = str(self.path.resolve()),
                 input = input,
@@ -460,15 +464,22 @@ class Task:
 
             # Process the input
             data_chunk = data.get(input, dict())
-            data_chunk = pipeline.process(
+            data_chunk, final_config, _ = pipeline.process(
                 input = input,
                 data = data_chunk,
-                cfg = config,
-                first_stage = first_stage,
+                config = config,
+                first_stage = first_stage.id if first_stage else None,
+                status = input_status,
             )
 
             if strip_marginals:
                 data_chunk = self.strip_marginals(pipeline, data_chunk)
+
+            # Store the final configuration used for the input, if a corresponding scope is defined
+            if final_config and (final_config_filepath := pipeline.resolve('config', input)):
+                final_config_filepath.parent.mkdir(parents = True, exist_ok = True)
+                with final_config_filepath.open('w') as final_config_file:
+                    yaml.dump(final_config.entries, final_config_file)
 
             data[input] = data_chunk
 
