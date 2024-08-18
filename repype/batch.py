@@ -29,8 +29,8 @@ class RunContext:
         self.config = task.create_config()
 
 
-def run_task_process(payload):
-    rc, status = dill.loads(payload)
+def run_task_process(args_serialized: bytes) -> None:
+    rc, status = dill.loads(args_serialized)
 
     # Run the task and exit the child process
     try:
