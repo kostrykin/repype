@@ -34,12 +34,12 @@
 
   This requires `coverage.py <https://coverage.readthedocs.io/en/7.4.0/#quick-start>`_ to be installed, like ``pip install coverage``.
 
-- To build the documentation locally:
+- To build the documentation locally::
 
       pip install -r docs/requirements.txt
       python -m sphinx -T -W --keep-going -b html docs/source docs/build -d docs/build -D language=en
-      
-  You can then open `docs/build/index.html` to view the documentation.
+
+  You can then open ``docs/build/index.html`` to view the documentation.
 
 ----
 
