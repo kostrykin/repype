@@ -3,10 +3,10 @@
   <div align="center">
     <h6>To support the sustainability of your software experiments</h6>
     <h1>
-      <a href="https://github.com/kostrykin/pypers">repype</a><br>
+      <a href="https://github.com/kostrykin/repype">repype</a><br>
       <a href="http://pypi.org/p/repype"><img alt="PyPI - Version" src="https://img.shields.io/pypi/v/repype"></a>
-      <a href="https://github.com/kostrykin/pypers/actions/workflows/tests.yml"><img src="https://github.com/kostrykin/pypers/actions/workflows/tests.yml/badge.svg" /></a>
-      <a href="https://github.com/kostrykin/pypers/actions/workflows/tests.yml"><img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/kostrykin/5f8b1433a1c405da22639f817d6a38d9/raw/pypers.json" /></a>
+      <a href="https://github.com/kostrykin/repype/actions/workflows/tests.yml"><img src="https://github.com/kostrykin/repype/actions/workflows/tests.yml/badge.svg" /></a>
+      <a href="https://github.com/kostrykin/repype/actions/workflows/tests.yml"><img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/kostrykin/5f8b1433a1c405da22639f817d6a38d9/raw/pypers.json" /></a>
       <a href="https://repype.readthedocs.io"><img src="https://readthedocs.org/projects/repype/badge/?version=latest" /></a><br>
     </h1>
   </div>
@@ -20,8 +20,8 @@
 
 .. code::
 
-    git clone git@github.com:kostrykin/pypers.git
-    cd pypers && python setup.py install
+    git clone git@github.com:kostrykin/repype.git
+    cd repype && python setup.py install
 
 **Documentation:** https://repype.readthedocs.io
 

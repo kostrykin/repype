@@ -50,7 +50,7 @@ setup(
     long_description_content_type = 'text/x-rst',
     author = 'Leonid Kostrykin',
     author_email = 'leonid.kostrykin@bioquant.uni-heidelberg.de',
-    url = 'https://github.com/kostrykin/pypers',
+    url = 'https://github.com/kostrykin/repype',
     license = 'MIT',
     packages = ['repype'],
 )
