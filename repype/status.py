@@ -34,6 +34,9 @@ else:
 
 
 class Status:
+    """
+    A status object that can be used to report and track the progress of a computation.
+    """
 
     def __init__(self, parent: Optional[Self] = None, path: Optional[PathLike] = None):
         assert (parent is None) != (path is None), 'Either parent or path must be provided'

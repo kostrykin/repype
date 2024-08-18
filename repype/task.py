@@ -89,6 +89,11 @@ def load_from_module(name: str) -> Any:
 
 class Task:
 
+    parent: Optional[Self]
+    """
+    The parent task of this task.
+    """
+
     def __init__(self, path: PathLike, spec: dict, parent: Optional[Self] = None):
         self.spec   = spec
         self.parent = parent
@@ -217,6 +222,11 @@ class Task:
         return path.resolve()
 
     def create_pipeline(self, *args, **kwargs) -> repype.pipeline.Pipeline:
+        """
+        Create the pipeline object based on the task specification.
+
+        Can be overridden in subclasses to create custom pipelines.
+        """
         pipeline = self.full_spec.get('pipeline')
         scopes = self.full_spec.get('scopes', dict())
         assert pipeline is not None

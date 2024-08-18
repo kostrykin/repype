@@ -66,7 +66,7 @@ class Stage:
 
     Each stage can be controlled by a separate set of hyperparameters. Refer to the documentation of the respective pipeline stages for details. Most hyperparameters reside in namespaces, which are uniquely associated with the corresponding pipeline stages.
 
-    :param id: The stage ID, used as the hyperparameter namespace. Defaults to the result of the :py:meth:`~.suggest_stage_id` function if not specified.
+    :param id: The stage ID, used as the hyperparameter namespace. Defaults to the result of the :py:meth:`suggest_stage_id` function if not specified.
     :param inputs: List of inputs required by this stage.
     :param consumes: List of inputs consumed by this stage (cannot be used by subsequent stages).
     :param outputs: List of outputs produced by this stage.

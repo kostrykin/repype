@@ -26,10 +26,9 @@ class ProcessingControl:
 
     This class keeps track of the first and last stages of a pipeline, and determines whether a given stage should be processed based on its position in the pipeline.
 
-    :param first_stage: The first stage of the pipeline. Processing starts from this stage. If None, processing starts from the beginning.
-    :type first_stage: str, optional
-    :param last_stage: The last stage of the pipeline. Processing stops after this stage. If None, processing goes until the end.
-    :type last_stage: str, optional
+    Arguments:
+        first_stage: The first stage of the pipeline. Processing starts from this stage. If None, processing starts from the beginning.
+        last_stage: The last stage of the pipeline. Processing stops after this stage. If None, processing goes until the end.
     """
 
     def __init__(self, first_stage: Optional[str]=None, last_stage: Optional[str]=None):
@@ -80,7 +79,7 @@ class Pipeline:
 
     This class defines a processing pipeline that consists of multiple stages. Each stage performs a specific operation on the input data. The pipeline processes the input data by executing the `process` method of each stage successively.
 
-    Note that hyperparameters are *not* set automatically if the :py:meth:`~.process_image` method is used directly. Hyperparameters are only set automatically if the :py:mod:`~.configure` method or batch processing is used.
+    Note that hyperparameters are *not* set automatically if the :py:meth:`~.process` method is used directly. Hyperparameters are only set automatically if the :py:meth:`~.configure` method or batch processing is used.
     """
     
     def __init__(

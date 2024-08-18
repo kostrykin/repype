@@ -8,5 +8,13 @@ else:
 
 
 DataDictionary = Dict[str, Any]
+
 Input = TypeVar('Input', int, str)
+"""
+Type hint for input objects. Each input object corresponds uniquely to a pipeline run.
+"""
+
 PathLike = TypeVar('PathLike', str, pathlib.Path)
+"""
+Type hint for path-like objects.
+"""
