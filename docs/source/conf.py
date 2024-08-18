@@ -45,6 +45,4 @@ nitpick_ignore = [
     ('py:class', 'watchdog.events.FileSystemEventHandler'),
     ('py:class', 'watchdog.events.DirModifiedEvent'),
     ('py:class', 'watchdog.events.FileModifiedEvent'),
-    ('py:class', 'DirModifiedEvent'),
-    ('py:class', 'FileModifiedEvent'),
 ]

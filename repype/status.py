@@ -351,6 +351,12 @@ class StatusReader(FileSystemEventHandler):
             return True
 
     def on_modified(self, event: Union[DirModifiedEvent, FileModifiedEvent]) -> None:
+        """
+        Handle file modification events.
+
+        Arguments:
+            event: The file modification event.
+        """
         if isinstance(event, FileModifiedEvent):
             filepath = pathlib.Path(event.src_path).resolve()
             if self.update(filepath):
