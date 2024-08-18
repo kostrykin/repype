@@ -2,7 +2,9 @@ repype API
 ==========
 
 .. toctree::
-    repype.pipeline
-    repype.config
     repype.batch
-    repype.output
+    repype.cli
+    repype.config
+    repype.pipeline
+    repype.status
+    repype.task
