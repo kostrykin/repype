@@ -7,7 +7,7 @@
       <a href="http://pypi.org/p/repype"><img alt="PyPI - Version" src="https://img.shields.io/pypi/v/repype"></a>
       <a href="https://github.com/kostrykin/pypers/actions/workflows/tests.yml"><img src="https://github.com/kostrykin/pypers/actions/workflows/tests.yml/badge.svg" /></a>
       <a href="https://github.com/kostrykin/pypers/actions/workflows/tests.yml"><img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/kostrykin/5f8b1433a1c405da22639f817d6a38d9/raw/pypers.json" /></a>
-      <a href="https://pypers-batch.readthedocs.io"><img src="https://readthedocs.org/projects/pypers-batch/badge/?version=latest" /></a><br>
+      <a href="https://repype.readthedocs.io"><img src="https://readthedocs.org/projects/repype/badge/?version=latest" /></a><br>
     </h1>
   </div>
 
