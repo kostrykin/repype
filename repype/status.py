@@ -352,7 +352,7 @@ class StatusReader(FileSystemEventHandler):
 
     def on_modified(self, event: Union[DirModifiedEvent, FileModifiedEvent]) -> None:
         """
-        Handle file modification events.
+        Handle status file updates.
 
         Arguments:
             event: The file modification event.
