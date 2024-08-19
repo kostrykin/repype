@@ -158,7 +158,7 @@ class Status:
             self._intermediate = None
             self.update()
 
-    def progress(self, iterable: Iterable, len_override: Optional[int] = None, details: Optional[Union[str, dict]] = None) -> Iterator[dict]:
+    def progress(self, iterable: Iterable, iterations: Optional[int] = None, details: Optional[Union[str, dict]] = None) -> Iterator[dict]:
         """
         Write an intermediate progress update for each item in the iterable.
 
@@ -167,13 +167,13 @@ class Status:
 
         Arguments:
             iterable: The iterable to be processed.
-            len_override: The number of iterations to make (e.g., if this cannot be determined by calling `len` on the iterable).
+            iterations: The number of iterations to make (e.g., if this cannot be determined by calling `len` on the iterable).
             details: Additional status details.
 
         Yields:
             The items from the `iterable`, while making intermediate progress updates to the status object.
         """
-        max_steps = len_override or len(iterable)
+        max_steps = iterations or len(iterable)
         try:
             for step, item in enumerate(iterable):
                 assert step < max_steps
@@ -579,7 +579,7 @@ def derive(status: Optional[Status]) -> Optional[Status]:
 def progress(
         status: Optional[Status],
         iterable: Iterable,
-        len_override: Optional[int] = None,
+        iterations: Optional[int] = None,
         details: Optional[Union[str, dict]] = None,
     ) -> Iterator[dict]:
     """
@@ -591,4 +591,4 @@ def progress(
     if status is None:
         return iterable
     else:
-        return status.progress(iterable, len_override, details)
+        return status.progress(iterable, iterations, details)

@@ -206,10 +206,10 @@ class Status__progress(TestCase):
             self.assertEqual(data, list())
 
     @testsuite.with_temporary_paths(1)
-    def test_len_override(self, path):
+    def test_iterations(self, path):
         status = Status(path = path)
         with self.assertRaises(AssertionError):
-            for item in status.progress(range(3), len_override = 2):
+            for item in status.progress(range(3), iterations = 2):
                 pass
 
         with open(status.filepath) as file:
