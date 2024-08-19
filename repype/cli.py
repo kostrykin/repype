@@ -16,6 +16,9 @@ from repype.typing import (
 
 
 def format_hms(seconds):
+    """
+    Format a duration in seconds as hours, minutes, and seconds.
+    """
     seconds = round(seconds)
     h, m, s = seconds // 3600, (seconds % 3600) // 60, (seconds % 60)
     ms = f'{m:02d}:{s:02d}'
@@ -25,9 +28,32 @@ def format_hms(seconds):
 class StatusReaderConsoleAdapter(repype.status.StatusReader):
     """
     Writes status updates to stdout.
+
+    The status updates are indented according to the level of the nesting hierarchy.
+    In addition, an empty line is printed when the level of indentation changes.
+
+    Arguments:
+        *args: Passed through to the base class.
+        indent: Indentation level for each line of the status (for each level of the nesting hierarchy).
+        **kwargs: Passed through to the base class.
     """
 
     progress_bar_length = 20
+    """
+    Length of the progress bar displayed for :func:`repype.status.progress` status updates.
+    """
+
+    indent: int
+    """
+    Indentation level for each line of the status (for each level of the nesting hierarchy).
+    """
+
+    margin: Optional[str]
+    """
+    Last margin used for the status (corresponds to the total indentation).
+
+    None if no status has been printed yet.
+    """
 
     def __init__(self, *args, indent: int = 2, **kwargs):
         self.indent = indent
@@ -36,6 +62,9 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
         super().__init__(*args, **kwargs)
 
     def clear_line(self, line: str) -> str:
+        """
+        Clear any previously printed intermediate line by appending the proper number of spaces.
+        """
         line = line.replace('\n', ' ')
         return line + ' ' * max((0, self._intermediate_line_length - len(line)))
 
@@ -63,6 +92,9 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
             self._intermediate_line_length = 0
 
     def full_format(self, parents: List[Union[str, dict]], positions: List[int], status: Union[str, dict], intermediate: bool) -> str:
+        """
+        Format the status update as a string, including indentation and empty lines between blocks of different indentation.
+        """
         text = str(self.format(parents, positions, status, intermediate))
 
         # Compute indentation, and add an extra line if the margin changes
@@ -77,6 +109,9 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
         return '\n'.join(lines)
 
     def format(self, parents: List[Union[str, dict]], positions: List[int], status: Union[str, dict], intermediate: bool) -> str:
+        """
+        Format a status update as a string.
+        """
         if isinstance(status, dict):
 
             text = None
@@ -141,14 +176,28 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
             
         else:
             return status
-        
+
     def format_progress_details(self, details: dict) -> str:
+        """
+        Format the details of a progress status update as a string.
+        """
         return str(details)
 
 
 def run_cli(
+        task_cls: Type[repype.task.Task] = repype.task.Task,
         status_reader_cls: Type[repype.status.StatusReader] = StatusReaderConsoleAdapter,
     ) -> bool:
+    """
+    Run the command-line interface for batch processing, parsing options from the command line.
+    
+    Arguments:
+        task_cls: The task class to use for loading tasks.
+        status_reader_cls: The status reader implementation to use for displaying status updates.
+
+    Returns:
+        True if the batch processing was successful, False if an error occurred.
+    """
 
     if parser is None:
         import argparse
@@ -165,6 +214,7 @@ def run_cli(
         args.run,
         args.task,
         args.task_dir,
+        task_cls,
         status_reader_cls,
     )
 
@@ -177,6 +227,20 @@ def run_cli_ex(
         task_cls: Type[repype.task.Task] = repype.task.Task,
         status_reader_cls: Type[repype.status.StatusReader] = StatusReaderConsoleAdapter,
     ) -> bool:
+    """
+    Run the command-line interface for batch processing, with options given explicitly.
+    
+    Arguments:
+        path: The root directory for batch processing. Tasks will be loaded recursively from this directory.
+        run: Whether to run the batch processing. If False, the tasks will be loaded, but not executed.
+        tasks: List of tasks to run. Tasks are identified by their paths. If given, only these tasks will be run.
+        task_dirs: List of task directories to run. If given, only tasks from these directories and their sub-directories will be run.
+        task_cls: The task class to use for loading tasks.
+        status_reader_cls: The status reader implementation to use for displaying status updates.
+
+    Returns:
+        True if the batch processing was successful, False if an error occurred.
+    """
 
     path  = pathlib.Path(path).resolve()
     batch = repype.batch.Batch(task_cls)
