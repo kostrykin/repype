@@ -180,6 +180,9 @@ class Pipeline:
         Returns:
             Tuple ``(data, config, timings)``, where ``data`` is the *pipeline data object* comprising all final and intermediate results, ``config`` are the finally used hyperparameters, and ``timings`` is a dictionary containing the execution time of each individual pipeline stage (in seconds).
 
+        Raises:
+            StageError: If an error occurs during the execution of a stage of the pipeline.
+
         The parameter `data` is required if and only if `first_stage` is not None, or `input` is None. In the former case, the outputs produced by the missing stages of the pipeline must be obtained from a previous execution of this method, and provided via the `data` parameter.
         """
         config = config.copy()
@@ -216,7 +219,7 @@ class Pipeline:
             if ctrl.step(stage.id) or stage.id in extra_stages:
                 stage_config = config.get(stage.id, {})
                 try:
-                    dt = stage(self, data, stage_config, status = status, **kwargs)
+                    dt = stage.run(self, data, stage_config, status = status, **kwargs)
                 except:
                     raise StageError(stage)
                 timings[stage.id] = dt

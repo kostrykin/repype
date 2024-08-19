@@ -162,15 +162,31 @@ class Stage:
             if event in self.event_callbacks:
                 self.event_callbacks[event].remove(callback)
 
-    def __call__(
+    def run(
             self,
             pipeline: 'repype.pipeline.Pipeline',
             data: DataDictionary,
             config: repype.config.Config,
             status: Optional[repype.status.Status] = None,
-            **kwargs) -> float:
+            **kwargs,
+        ) -> float:
         """
-        Run the current stage of the pipeline if it is enabled.
+        Run this stage of the `pipeline` by calling :meth:`process`, if the stage is enabled.
+
+        The stage is enabled if the ``enabled`` hyperparameter is set to ``True``, or
+        the ``enabled`` hyperparameter is not set and :attr:`enabled_by_default` is True.
+
+        Arguments:
+            pipeline: The pipeline object that this stage is a part of.
+            data: The *pipeline data object* to be used for this stage.
+                This is a dictionary that contains all required inputs.
+                The outputs of this stage are added to this dictionary.
+            config: The hyperparameters to be used for this stage.
+            status: A status object to report the progress of the computations.
+
+        Returns:
+            The duration of the stage run in seconds, if the stage is enabled,
+            and 0 otherwise.
         """
 
         # Run the stage if it is enabled
@@ -215,7 +231,15 @@ class Stage:
             self.skip(data, status = status, config = config, **kwargs)
             return 0.
         
-    def skip(self, data, status = None, **kwargs):
+    def skip(self, data: DataDictionary, status: Optional[repype.status.Status] = None, **kwargs) -> None:
+        """
+        Skips this stage of the pipeline.
+
+        Arguments:
+            data: The *pipeline data object* to be used for this stage.
+                This is a dictionary that contains all required inputs.
+            status: A status object to report the progress of the computations.
+        """
         repype.status.update(
             status = status,
             info = 'skip-stage',
@@ -232,14 +256,23 @@ class Stage:
             **inputs,
         ) -> DataDictionary:
         """
-        Executes the current pipeline stage.
+        Processes the inputs of this stage of the `pipeline`.
 
-        This method runs the current stage of the pipeline with the provided inputs, configuration parameters, and logging settings. It then returns the outputs produced by this stage.
+        This method implements a stage of the pipeline with the provided inputs and configuration parameters.
+        It then returns the outputs produced by this stage.
 
-        :param input_data: A dictionary containing the inputs required by this stage. Each key-value pair in the dictionary represents an input name and its corresponding value.
-        :param config: A :py:class:`~repype.config.Config` object, containing the hyperparameters to be used by this stage.
-        :param status: A :py:class:`~repype.status.Status` object.
-        :return: A dictionary containing the outputs produced by this stage. Each key-value pair in the dictionary represents an output name and its corresponding value.
+        Arguments:
+            pipeline: The pipeline object that this stage is a part of.
+            config: The hyperparameters to be used for this stage.
+            status: A status object to report the progress of the computations.
+            **inputs: The inputs of this stage. Each key-value pair represents an input field and the corresponding value.
+
+        Returns:
+            A dictionary containing the outputs of this stage.
+            Each key-value pair in the dictionary represents an output field and the corresponding value.
+
+        Raises:
+            NotImplementedError: If the method is not implemented by the subclass.
         """
         raise NotImplementedError()
 

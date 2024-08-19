@@ -212,19 +212,19 @@ class Pipeline__process(unittest.TestCase):
                 MagicMock(id = 'stage3', inputs = ['x1', 'x2'], outputs = ['x3'], consumes = []), # stage3 takes `x1` and `x2` and produces `x3`
             ]
         )
-        self.pipeline.stages[0].side_effect = self.stage1
-        self.pipeline.stages[1].side_effect = self.stage2
-        self.pipeline.stages[2].side_effect = self.stage3
+        self.pipeline.stages[0].run.side_effect = self.stage1_run
+        self.pipeline.stages[1].run.side_effect = self.stage2_run
+        self.pipeline.stages[2].run.side_effect = self.stage3_run
 
-    def stage1(self, pipeline, data, config, status = None,  **kwargs):
+    def stage1_run(self, pipeline, data, config, status = None,  **kwargs):
         config.set_default('enabled', True)
         data['x1'] = config.get('x1_factor', 1) * data['input']
 
-    def stage2(self, pipeline, data, config, status = None, **kwargs):
+    def stage2_run(self, pipeline, data, config, status = None, **kwargs):
         config.set_default('enabled', True)
         data['x2'] = config.get('x2_factor', 1) * data['input']
 
-    def stage3(self, pipeline, data, config, status = None, **kwargs):
+    def stage3_run(self, pipeline, data, config, status = None, **kwargs):
         config.set_default('enabled', True)
         data['x3'] = data['x1'] + data['x2'] + config.get('constant', 0)
 
@@ -297,9 +297,9 @@ class Pipeline__process(unittest.TestCase):
                         # Verify that the skipped stages were not called
                         for stage_idx, stage in enumerate(self.pipeline.stages):
                             if stage_idx < first_stage_idx + offset:
-                                stage.assert_not_called()
+                                stage.run.assert_not_called()
                             else:
-                                stage.assert_called_once()
+                                stage.run.assert_called_once()
 
     def test_with_first_stage_and_missing_inputs(self):
         config = repype.config.Config()
@@ -343,9 +343,9 @@ class Pipeline__process(unittest.TestCase):
                     # Verify that the skipped stages were not called
                     for stage_idx, stage in enumerate(self.pipeline.stages):
                         if stage_idx < first_stage_idx and stage.id != marginal_stage.id:
-                            stage.assert_not_called()
+                            stage.run.assert_not_called()
                         else:
-                            stage.assert_called_once()
+                            stage.run.assert_called_once()
 
 
 class Pipeline__get_extra_stages(unittest.TestCase):
