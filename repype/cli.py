@@ -39,14 +39,17 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
         line = line.replace('\n', ' ')
         return line + ' ' * max((0, self._intermediate_line_length - len(line)))
 
-    def handle_new_status(self, parents: List[Union[str, dict]], positions: List[int], element: Union[str, dict]):
-        # If status is intermediate, print the last line of the status accordingly
-        if isinstance(element, dict) and element.get('content_type') == 'intermediate':
+    def handle_new_status(self, parents: List[Union[str, dict]], positions: List[int], status: Optional[Union[str, dict]], intermediate: bool) -> None:
+        # If status is intermediate, ...
+        if intermediate:
             
-            if element['content'] is None:
+            # ...clear the last line
+            if status is None:
                 text = self.clear_line('')
+
+            # ...print the last line of the status accordingly
             else:
-                text = self.full_format(parents, positions, element['content'][0], intermediate = True)
+                text = self.full_format(parents, positions, status, intermediate = True)
 
             lines = text.split('\n')
             if len(lines) > 1:
@@ -54,9 +57,9 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
             print(lines[-1], end='\r')
             self._intermediate_line_length = len(lines[-1])
 
-        # Print a regular line
+        # Otherwise, print a regular line
         else:
-            print(self.full_format(parents, positions, element, intermediate = False))
+            print(self.full_format(parents, positions, status, intermediate = False))
             self._intermediate_line_length = 0
 
     def full_format(self, parents: List[Union[str, dict]], positions: List[int], status: Union[str, dict], intermediate: bool) -> str:
