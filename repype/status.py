@@ -13,6 +13,7 @@ from watchdog.events import (
 )
 
 from repype.typing import (
+    Dict,
     Iterable,
     Iterator,
     List,
@@ -341,12 +342,45 @@ class Cursor:
 
 class StatusReader(FileSystemEventHandler):
     """
-    A status reader that can be used to monitor the progress of a computation by tracking the updates of a :class:`Status` object.
+    A status reader that can be used to monitor the progress of a computation by tracking the updates of a :class:`Status` object, including its nested status objects.
 
     The monitored status object can reside in a different process and is accessed by reading the corresponding status file.
+    The progress of the computation is represented by a nested list structure, where each list directly corresponds to the state of a nested status object.
+
+    Arguments:
+        filepath: The status file written by the status object to be monitored.
 
     See also:
         :attr:`repype.status.Status.filepath` is the status file written by a status object.
+
+    See also:
+        The implementation :class:`repype.cli.StatusReaderConsoleAdapter` writes status updates to the standard output.
+    """
+
+    filepath: PathLike
+    """
+    The status file written by the monitored status object.
+    """
+
+    data: list
+    """
+    The data structure that represents the progress of the computation.
+    """
+
+    data_frames: Dict[pathlib.Path, list]
+    """
+    The data structures that represent the progress of the nested status objects, indexed by the paths to the corresponding status files.
+    This also contains the progress of the status object that corresponds to the :attr:`filepath` attribute.
+    """
+
+    file_hashes: Dict[pathlib.Path, str]
+    """
+    The hashes of the status files when they were last read.
+    """
+
+    cursor: Cursor
+    """
+    Points to the latest permanent (i.e. non-intermediate) status update within :attr:`data`.
     """
 
     def __init__(self, filepath: PathLike):
@@ -371,6 +405,18 @@ class StatusReader(FileSystemEventHandler):
         self.observer.join()
 
     def update(self, filepath: pathlib.Path) -> bool:
+        """
+        Update the nested list structure that represents the progress of the computation.
+
+        Only the list in :attr:`data_frames` is updated that corresponds to the status object that writes the status file at `filepath`.
+        The status file is only read if its content has changed according to the :attr:`file_hashes`.
+
+        Arguments:
+            filepath: The path to the status file to be read.
+
+        Returns:
+            True if the status data has changed, and False otherwise.
+        """
         data_frame = self.data_frames.get(filepath)
 
         if data_frame is None:
@@ -423,7 +469,11 @@ class StatusReader(FileSystemEventHandler):
 
     def on_modified(self, event: Union[DirModifiedEvent, FileModifiedEvent]) -> None:
         """
-        Handle status file updates.
+        Handle status file updates within the directory of the monitored status file.
+
+        If the monitored or a nested status file is updated, the status data is reloaded by the :meth:`update` method.
+        Only if the status data has changed according to the :attr:`file_hashes`,
+        the new status data is processed by the :meth:`check_new_status` method.
 
         Arguments:
             event: The file modification event.
@@ -434,6 +484,14 @@ class StatusReader(FileSystemEventHandler):
                 self.check_new_status()
 
     def check_new_status(self) -> None:
+        """
+        Check the :attr:`data` for new status updates, based on the current position of the :attr:`cursor`.
+
+        The :attr:`cursor` is advanced to the next element (if any), and the new status update is processed by the :meth:`handle_new_status` method.
+        This procedure is repated until the :attr:`cursor` points to the end of :attr:`data`.
+        If the :attr:`cursor` then points to an intermediate status, it is rewinded to the last non-intermediate position (i.e. permanent).
+        This assures that future intermediate status updates will be again proclaimed to the :meth:`handle_new_status` method.
+        """
         new_data = False
         while (cursor := self.cursor.find_next_element()):
             elements = cursor.get_elements()
@@ -458,7 +516,17 @@ class StatusReader(FileSystemEventHandler):
             self.handle_new_status(*self._intermediate)
             self._intermediate = None
 
-    def handle_new_status(self, parents: List[Union[str, dict]], positions: List[int], element: Union[str, dict]):
+    def handle_new_status(self, parents: List[Union[str, dict]], positions: List[int], element: Union[str, dict]) -> None:
+        """
+        Process a new status update.
+
+        Arguments:
+            parents: The sequence of elements along the path to the element, that this cursor points to (except the element itself).
+            positions: The sequence of elements along the path, represented by the positions of the elements within the parent lists.
+            element: The new status update. If the status update is intermediate, then `element` is a ``dict`` so that
+                ``element.get('content_type') == 'intermediate'`` is True, and ``element['content'][0]`` is either the content of the update,
+                or None if the intermediate status is cleared.
+        """
         pass
     
 

@@ -41,7 +41,7 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
 
     def handle_new_status(self, parents: List[Union[str, dict]], positions: List[int], element: Union[str, dict]):
         # If status is intermediate, print the last line of the status accordingly
-        if  isinstance(element, dict) and element.get('content_type') == 'intermediate':
+        if isinstance(element, dict) and element.get('content_type') == 'intermediate':
             
             if element['content'] is None:
                 text = self.clear_line('')
