@@ -226,7 +226,18 @@ class Pipeline:
         # Return the pipeline data object, the final config, and timings
         return data, config, timings
     
-    def get_extra_stages(self, first_stage, last_stage, available_inputs):
+    def get_extra_stages(self, first_stage: Optional[str], last_stage: Optional[str], available_inputs: Iterable[str]) -> List[str]:
+        """
+        Returns the stages that are required to be executed in addition, in order to process the pipeline from `first_stage` to `last_stage`.
+
+        Arguments:
+            first_stage: The ID of the first stage to be executed (or None to start with the first).
+            last_stage: The ID of the last stage to be executed (or None to end with the last).
+            available_inputs: The fields that are already available (e.g., from previous computations).
+
+        Returns:
+            The IDs of the stages that are required to be executed in addition, in order to process the pipeline from `first_stage` to `last_stage`.
+        """
         required_inputs, available_inputs = set(), set(available_inputs) | {'input'}
         stage_by_output = dict()
         extra_stages    = list()
@@ -247,20 +258,32 @@ class Pipeline:
 
     def find(self, stage_id: str, not_found_dummy: Any = float('inf')) -> repype.stage.Stage:
         """
-        Returns the position of the stage identified by ``stage_id``.
+        Returns the position of the stage identified by `stage_id`.
 
-        Returns ``not_found_dummy`` if the stage is not found.
+        Returns `not_found_dummy` if the stage is not found.
         """
         try:
             return [stage.id for stage in self.stages].index(stage_id)
         except ValueError:
             return not_found_dummy
         
-    def stage(self, stage_id):
+    def stage(self, stage_id: str) -> Optional[repype.stage.Stage]:
+        """
+        Returns the stage identified by `stage_id`, or None if there is none.
+        """
         idx = self.find(stage_id, None)
         return self.stages[idx] if idx is not None else None
 
-    def append(self, stage: repype.stage.Stage, after: Optional[Union[str, int]] = None):
+    def append(self, stage: repype.stage.Stage, after: Optional[Union[str, int]] = None) -> int:
+        """
+        Adds a stage to the pipeline.
+
+        By default, the stage is appended to the end of the pipeline.
+        If `after` is given, the stage is instead inserted after the stage with the given ID or index.
+
+        Returns:
+            The index of the added stage.
+        """
         for stage2 in self.stages:
             if stage2 is stage: raise RuntimeError(f'stage {stage.id} already added')
             if stage2.id == stage.id: raise RuntimeError(f'stage with ID {stage.id} already added')
@@ -325,9 +348,14 @@ class Pipeline:
 
 def create_pipeline(stages: Sequence[repype.stage.Stage], *args, pipeline_cls: Type[Pipeline] = Pipeline, **kwargs) -> Pipeline:
     """
-    Creates and returns a new :py:class:`.Pipeline` object configured for the given stages.
+    Creates and returns a new pipeline configured for the given `stages`.
 
-    The stage order is determined automatically.
+    Arguments:
+        stages: The stages of the pipeline, the order is determined automatically.
+        pipeline_cls: The class to be used for the pipeline.
+
+    Returns:
+        Object of the `pipeline_cls` class.
     """
     available_inputs = set(['input'])
     remaining_stages = list(stages)
