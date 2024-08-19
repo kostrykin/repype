@@ -31,6 +31,11 @@ class Config:
             Defaults to None, for which a blank configuration is created.
     """
 
+    entries: dict
+    """
+    Nested dictionaries of hyperparameters.
+    """
+
     def __init__(self, other: Optional[Union[dict, Self]] = None):
         if other is None:
             other = dict()
