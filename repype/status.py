@@ -183,16 +183,6 @@ class Status:
                 yield item
         finally:
             self.intermediate(None)
-
-    @staticmethod
-    def get(status: Optional[Self] = None) -> Self:
-        if status is None:
-            path = pathlib.Path('.status')
-            assert not path.is_file()
-            path.mkdir(exist_ok = True)
-            status = Status(path = path)
-            print(f'Status written to: {status.filepath.resolve()}')
-        return status
     
 
 class Cursor:

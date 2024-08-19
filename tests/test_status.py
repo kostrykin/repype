@@ -132,34 +132,6 @@ class Status__derive(TestCase):
         self.assertIs(child.parent, status)
 
 
-class Status__get(TestCase):
-
-    def setUp(self):
-        self.tempdir = tempfile.TemporaryDirectory()
-        self.cwd = os.getcwd()
-        os.chdir(self.tempdir.name)
-
-    def tearDown(self):
-        self.tempdir.cleanup()
-        os.chdir(self.cwd)
-
-    @testsuite.with_temporary_paths(1)
-    def test_instance(self, path):
-        status1 = Status(path = path)
-        status2 = Status.get(status1)
-        self.assertIs(status1, status2)
-
-    def test_none(self):
-        stdout = io.StringIO()
-        with contextlib.redirect_stdout(stdout):
-            status = Status.get()
-        self.assertTrue(stdout.getvalue().startswith('Status written to: /'))
-        self.assertTrue(stdout.getvalue().endswith(f'/.status/{status.id}.json\n'))
-        status.update()
-        self.assertEqual(os.listdir('.'), ['.status'])
-        self.assertEqual(os.listdir('.status'), [f'{status.id}.json'])
-
-
 class Status__progress(TestCase):
 
     @testsuite.with_temporary_paths(1)
