@@ -167,7 +167,8 @@ class Status:
 
         Arguments:
             iterable: The iterable to be processed.
-            iterations: The number of iterations to make (e.g., if this cannot be determined by calling `len` on the iterable).
+            iterations: The number of iterations to make (e.g., if this cannot be determined by calling `len` on the `iterable`).
+                Defaults to ``len(iterable)``.
             details: Additional status details.
 
         Yields:
