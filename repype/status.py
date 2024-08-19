@@ -39,7 +39,7 @@ class Status:
     """
     A status object that can be used to report the progress of a computation.
 
-    Status updates should be made via the :func:`repype.status.update` and :func:`repype.status.progress` shortcuts.
+    Status updates should be made via the :func:`repype.status.update`, :func:`repype.status.progress`, and :func:`repype.status.derive` shortcuts.
     The updates can be monitored by a :class:`StatusReader` object.
 
     Status objects can be nested, so that the progress of a sub-computation can be reported within the progress of a parent computation.
@@ -164,6 +164,11 @@ class Status:
 
         The intermediate status is cleared after yielding the last item from the `iterable`,
         after exiting the generator (e.g., breaking the loop), or if an error is raised.
+
+        Arguments:
+            iterable: The iterable to be processed.
+            len_override: The number of iterations to make (e.g., if this cannot be determined by calling `len` on the iterable).
+            details: Additional status details.
 
         Yields:
             The items from the `iterable`, while making intermediate progress updates to the status object.
@@ -538,6 +543,7 @@ class StatusReader(FileSystemEventHandler):
 
         Arguments:
             parents: The sequence of elements along the path to the element, that this cursor points to (except the element itself).
+                Elements corresponding to intermediate statuses are represented as dictionaries with the key ``content`` for the status, and ``content_type`` set to ``intermediate``.
             positions: The sequence of elements along the path, represented by the positions of the elements within the parent lists.
             status: The new status update. Can only be None if `intermediate` is True, indicating that the intermediate status is cleared.
             intermediate: True if the status update is intermediate, and False otherwise.
@@ -548,6 +554,11 @@ class StatusReader(FileSystemEventHandler):
 # Define some shortcuts
 
 def update(status: Optional[Status], intermediate: bool = False, **kwargs) -> None:
+    """
+    Shortcut for :meth:`Status.write` and :meth:`Status.intermediate`.
+
+    Does nothing if `status` is None.
+    """
     if status is not None:
         if intermediate:
             status.intermediate(dict(**kwargs))
@@ -556,6 +567,11 @@ def update(status: Optional[Status], intermediate: bool = False, **kwargs) -> No
 
 
 def derive(status: Optional[Status]) -> Optional[Status]:
+    """
+    Shortcut for :meth:`Status.derive`.
+
+    Does nothing if `status` is None.
+    """
     if status is not None:
         return status.derive()
 
@@ -566,6 +582,11 @@ def progress(
         len_override: Optional[int] = None,
         details: Optional[Union[str, dict]] = None,
     ) -> Iterator[dict]:
+    """
+    Shortcut for :meth:`Status.progress`.
+
+    Yields the items from the `iterable` directly if `status` is None.
+    """
 
     if status is None:
         return iterable
