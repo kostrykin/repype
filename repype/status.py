@@ -36,7 +36,34 @@ else:
 
 class Status:
     """
-    A status object that can be used to report and track the progress of a computation.
+    A status object that can be used to report the progress of a computation.
+
+    Status updates should be made via the :func:`repype.status.update` and :func:`repype.status.progress` shortcuts.
+    The updates can be monitored by a :class:`StatusReader` object.
+
+    Status objects can be nested, so that the progress of a sub-computation can be reported within the progress of a parent computation.
+    In addition, since each status object fosters its own status file, the amount of I/O operations required to write and read status updates is reduced.
+    """
+
+    id: uuid.UUID
+    """
+    The unique identifier of the status object.
+    """
+
+    path: Optional[pathlib.Path]
+    """
+    The path to the directory where the status file is written by this status object,
+    or None if the path of the :attr:`parent` status object is adopted.
+    """
+
+    parent: Optional[Self]
+    """
+    The parent status object, if this status object is nested within another status object.
+    """
+
+    data: list
+    """
+    The data structure that represents the progress of the computation.
     """
 
     def __init__(self, parent: Optional[Self] = None, path: Optional[PathLike] = None):
@@ -49,13 +76,22 @@ class Status:
 
     @property
     def root(self) -> Optional[pathlib.Path]:
+        """
+        The path to the directory where the status file is written by this status object.
+        """
         return self.parent.root if self.parent else self
 
     @property
     def filepath(self) -> pathlib.Path:
+        """
+        The path to the status file written by this status object.
+        """
         return self.root.path / f'{self.id}.json'
     
     def update(self) -> None:
+        """
+        Write the status data to the status file.
+        """
         if self._intermediate:
             data = self.data + [
                 dict(
@@ -69,6 +105,9 @@ class Status:
             json.dump(data, file)
 
     def derive(self) -> Self:
+        """
+        Create a child status object that is nested within this status object.
+        """
         child = Status(self)
         self.data.append(
             dict(
@@ -80,11 +119,20 @@ class Status:
         return child
     
     def write(self, status: Union[str, dict, list]) -> None:
+        """
+        Write a permanent status update to the status object.
+        """
         self._intermediate = None
         self.data.append(status)
         self.update()
 
     def intermediate(self, status: Optional[Union[str, dict]] = None) -> None:
+        """
+        Write an intermediate status update to the status object.
+
+        Intermediate status updates are overwritten by subsequent status updates (intermediate or permanent).
+        If `status` is None, any previous intermediate status is cleared without writing a new one.
+        """
         # An intermediate status object is created, and then linked within this status object
         # The order of the two operations is crucial, because otherwise an empty intermediate object might be detected initially
         if status is not None:
@@ -110,6 +158,15 @@ class Status:
             self.update()
 
     def progress(self, iterable: Iterable, len_override: Optional[int] = None, details: Optional[Union[str, dict]] = None) -> Iterator[dict]:
+        """
+        Write an intermediate progress update for each item in the iterable.
+
+        The intermediate status is cleared after yielding the last item from the `iterable`,
+        after exiting the generator (e.g., breaking the loop), or if an error is raised.
+
+        Yields:
+            The items from the `iterable`, while making intermediate progress updates to the status object.
+        """
         max_steps = len_override or len(iterable)
         try:
             for step, item in enumerate(iterable):
@@ -143,6 +200,16 @@ class Cursor:
     A cursor to navigate nested list structures.
     """
 
+    data: list
+    """
+    The data structure that the cursor navigates.
+    """
+
+    path: List[int]
+    """
+    Sequence of elements along the path to where this cursor points, represented by the positions of the elements within the parent lists.
+    """
+
     def __init__(self, data: Optional[list] = None, other: Optional[Self] = None):
         assert (data is None) != (other is None)
         if other is None:
@@ -157,7 +224,7 @@ class Cursor:
         Move the cursor to the next sibling.
 
         Returns:
-            Cursor: The cursor, if it points to a valid element, or None otherwise.
+            The cursor, if it points to a valid element, or None otherwise.
         """
         self.path[-1] += 1
         if self.valid:
@@ -172,7 +239,7 @@ class Cursor:
         This cursor is not changed, but a new cursor is returned.
 
         Returns:
-            Cursor: The cursor to the next child or sibling, if such exists, or None otherwise.
+            The cursor to the next child or sibling, if such exists, or None otherwise.
         """
         cursor = Cursor(other = self)
         if not cursor.increment():
@@ -198,7 +265,7 @@ class Cursor:
         This cursor is not changed, but a new cursor is returned.
 
         Returns:
-            Cursor: The cursor to the next element, if such exists, or None otherwise.
+            The cursor to the next element, if such exists, or None otherwise.
         """
         cursor = self.find_next_child_or_sibling()
         if cursor:
@@ -212,6 +279,12 @@ class Cursor:
         return None
     
     def has_subsequent_non_intermediate(self) -> bool:
+        """
+        Check if there is a subsequent non-intermediate element.
+
+        Returns:
+            True if calling :meth:`find_next_element` once or repeatedly will yield a non-intermediate element, and False otherwise.
+        """
         cursor = self
         while cursor := cursor.find_next_element():
             if not cursor.intermediate:
@@ -223,7 +296,7 @@ class Cursor:
         Get the sequence of elements which represent the path to the element, that this cursor points to.
 
         Returns:
-            List[list]: The sequence of elements, if the cursor points to a valid element, or None otherwise.
+            The sequence of elements along the path to where this cursor points, if the cursor points to a valid element, or None otherwise.
         """
         elements = [self.data]
         for pos in self.path:
@@ -236,7 +309,7 @@ class Cursor:
     @property
     def valid(self) -> bool:
         """
-        Check if the cursor points to a valid element.
+        Check if the cursor points to an existing element.
         """
         return self.get_elements() is not None
     
@@ -277,6 +350,14 @@ class Cursor:
 
 
 class StatusReader(FileSystemEventHandler):
+    """
+    A status reader that can be used to monitor the progress of a computation by tracking the updates of a :class:`Status` object.
+
+    The monitored status object can reside in a different process and is accessed by reading the corresponding status file.
+
+    See also:
+        :attr:`repype.status.Status.filepath` is the status file written by a status object.
+    """
 
     def __init__(self, filepath: PathLike):
         self.filepath = pathlib.Path(filepath).resolve()
