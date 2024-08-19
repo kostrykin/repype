@@ -1,7 +1,13 @@
 import json
 import hashlib
 
-from typing import Union
+from repype.typing import (
+    Any,
+    Callable,
+    Optional,
+    Self,
+    Union,
+)
 
 
 def _cleanup_value(value):
@@ -9,7 +15,8 @@ def _cleanup_value(value):
 
 
 class Config:
-    """Represents a set of hyperparameters.
+    """
+    Represents a set of hyperparameters.
 
     Hyperparameters can be worked with as follows:
 
@@ -19,11 +26,14 @@ class Config:
        config['stage1/param1'] = 1000
        config['stage2/param2'] = 5
 
-    A dictionary can be wrapped into a :py:class:`Config` object by passing it to the constructor (no copying occurs). If another :py:class:`Config` object is passed to the constructor, a deep copy is created.
+    Arguments:
+        other: A dictionary to be wrapped (no copying occurs), or another :py:class:`Config` object (a deep copy is created).
+            Defaults to None, for which a blank configuration is created.
     """
 
-    def __init__(self, other: Union[dict, 'Config'] = None):
-        if other is None: other = dict()
+    def __init__(self, other: Optional[Union[dict, Self]] = None):
+        if other is None:
+            other = dict()
         if isinstance(other, dict):
             self.entries = other
         elif isinstance(other, Config):
@@ -31,12 +41,16 @@ class Config:
         else:
             raise ValueError(f'Unknown argument: {other}')
 
-    def pop(self, key, default):
-        """Removes a hyperparameter from this configuration.
+    def pop(self, key: str, default: Any) -> Any:
+        """
+        Removes a hyperparameter from this configuration.
 
-        :param key: The hyperparameter to be removed.
-        :param default: Returned if the hyperparameter ``key`` is not set.
-        :return: The value of the hyperparameter ``key`` or ``default`` if ``key`` is not set.
+        Arguments:
+            key: The hyperparameter to be removed.
+            default: Returned if the hyperparameter `key` is not set.
+
+        Returns:
+            The value of the hyperparameter `key`, or the `default` if `key` is not set.
         """
         if '/' in key:
             keys = key.split('/')
@@ -47,13 +61,17 @@ class Config:
         else:
             return self.entries.pop(key, default)
 
-    def set_default(self, key, default, override_none=False):
-        """Sets a hyperparameter if it is not set yet.
+    def set_default(self, key: str, default: Any, override_none: bool = False):
+        """
+        Sets a hyperparameter if it is not set yet.
 
-        :param key: The hyperparameter to be set.
-        :param default: Returned if the hyperparameter ``key`` is not set.
-        :param override_none: ``True`` if a hyperparameter set to ``None`` should be treated as not set.
-        :return: The value of the hyperparameter ``key`` after the method invocation is finished.
+        Arguments:
+            key: The hyperparameter to be set.
+            default: Returned if the hyperparameter `key` is not set.
+            override_none: True if a hyperparameter set to None should be treated as not set.
+
+        Returns:
+            The new or unmodified value of the hyperparameter `key`.
         """
         if '/' in key:
             keys = key.split('/')
@@ -66,12 +84,16 @@ class Config:
                 self.entries[key] = _cleanup_value(default)
             return self[key]
 
-    def get(self, key, default):
-        """Returns the value of a hyperparameter.
+    def get(self, key: str, default: Any) -> Any:
+        """
+        Returns the value of a hyperparameter.
 
-        :param key: The hyperparameter to be queried.
-        :param default: Returned if the hyperparameter ``key`` is not set.
-        :return: The value of the hyperparameter ``key`` or ``default`` if ``key`` is not set.
+        Arguments:
+            key: The hyperparameter to be queried.
+            default: Returned if the hyperparameter `key` is not set.
+
+        Returns:
+            The value of the hyperparameter `key`, or `default` if `key` is not set.
         """
         if '/' in key:
             keys = key.split('/')
@@ -84,12 +106,18 @@ class Config:
             value = self.entries[key]
             return Config(value) if isinstance(value, dict) else value
 
-    def __getitem__(self, key):
-        """Returns the value of a hyperparameter.
+    def __getitem__(self, key: str) -> Any:
+        """
+        Returns the value of a hyperparameter.
 
-        :param key: The hyperparameter to be queried.
-        :return: The value of the hyperparameter ``key``.
-        :raises KeyError: Raised if the hyperparameter ``key`` is not set.
+        Arguments:
+            key: The hyperparameter to be queried.
+
+        Returns:
+            The value of the hyperparameter `key`, or `default` if `key` is not set.
+
+        Raises:
+            KeyError: Raised if the hyperparameter `key` is not set.
         """
         if '/' in key:
             keys = key.split('/')
@@ -101,11 +129,15 @@ class Config:
             value = self.entries[key]
             return Config(value) if isinstance(value, dict) else value
 
-    def __contains__(self, key):
-        """Checks whether a hyperparameter is set.
+    def __contains__(self, key: str) -> bool:
+        """
+        Checks whether a hyperparameter is set.
 
-        :param key: The hyperparameter to be queried.
-        :return: ``True`` if the hyperparameter ``key`` is set and ``False`` otherwise.
+        Arguments:
+            key: The hyperparameter to be queried.
+
+        Returns:
+            True if the hyperparameter `key` is set and False otherwise.
         """
         try:
             self.__getitem__(key)
@@ -113,12 +145,16 @@ class Config:
         except KeyError:
             return False
 
-    def update(self, key, func):
-        """Updates a hyperparameter by mapping it to a new value.
+    def update(self, key: str, func: Callable[[Any], Any]) -> Any:
+        """
+        Updates a hyperparameter by mapping it to a new value.
 
-        :param key: The hyperparameter to be set.
-        :param func: Function which maps the previous value to the new value.
-        :return: The new value.
+        Arguments:
+            key: The hyperparameter to be updated.
+            func: Function which maps the previous value to the new value.
+
+        Returns:
+            The new value.
         """
         if '/' in key:
             keys = key.split('/')
@@ -130,25 +166,34 @@ class Config:
             self.entries[key] = _cleanup_value(func(self.entries.get(key, None)))
             return self.entries[key]
 
-    def __setitem__(self, key, value):
-        """Sets the value of a hyperparameter.
+    def __setitem__(self, key: str, value: Any) -> Self:
+        """
+        Sets the value of a hyperparameter.
 
-        :param key: The hyperparameter to be set.
-        :param value: The new value of the hyperparameter.
-        :return: The updated :py:class:`~.Config` object (itself).
+        Arguments:
+            key: The hyperparameter to be set.
+            value: The new value of the hyperparameter.
+
+        Returns:
+            Itself.
         """
         self.update(key, lambda *args: value)
         return self
 
-    def merge(self, config_override):
-        """Updates this configuration using the hyperparameters set in another configuration.
-
-        The hyperparameters of this configuration are set to the values from ``config_override``. If a hyperparameter was previously not set in this configuration, it is set to the value from ``config_override``.
-
-        :param config_override: A :py:class:`~.Config` object corresponding to the configuration which is to be merged.
-        :return: The updated :py:class:`~.Config` object (itself).
+    def merge(self, other: Self) -> Self:
         """
-        for key, val in _cleanup_value(config_override).items():
+        Updates this configuration using the hyperparameters from another configuration.
+
+        The hyperparameters of this configuration are set to the values from the `other` configuration.
+        If a hyperparameter was previously not set in this configuration, it is set to the value from the `other` configuration.
+
+        Arguments:
+            other: The configuration which is to be merged into this configuration.
+
+        Returns:
+            Itself.
+        """
+        for key, val in _cleanup_value(other).items():
             if not isinstance(val, dict):
                 self.entries[key] = val
             else:
@@ -156,41 +201,14 @@ class Config:
         return self
 
     def copy(self):
-        """Returns a deep copy.
+        """
+        Returns a deep copy.
         """
         return Config(self)
-
-    def derive(self, config_override):
-        """Creates and returns an updated deep copy of this configuration.
-
-        The configuration ``config_override`` is merged into a deep copy of this configuration (see the :py:meth:`~.merge` method).
-
-        :param config_override: A :py:class:`~.Config` object corresponding to the configuration which is to be merged.
-        :return: The updated deep copy.
-        """
-        return self.copy().merge(config_override)
-
-    def dump_json(self, fp):
-        """Writes the JSON representation of this configuration.
-
-        :param fp: The file pointer where the JSON representation is to be written to.
-        """
-        json.dump(self.entries, fp)
-        
-    @property
-    def md5(self):
-        """The MD5 hash code associated with the hyperparameters set in this configuration.
-        """
-        return hashlib.md5(json.dumps(self.entries).encode('utf8'))
-        
-    @property
-    def sha(self):
-        """The SHA1 hash code associated with the hyperparameters set in this configuration.
-        """
-        return hashlib.sha1(json.dumps(self.entries).encode('utf8'))
     
     def __str__(self):
-        """Readable representation of this configuration.
+        """
+        Readable representation of this configuration.
         """
         return json.dumps(self.entries, indent=2)
 
