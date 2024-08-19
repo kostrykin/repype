@@ -165,7 +165,7 @@ class Pipeline:
             **kwargs,
         ) -> Tuple[DataDictionary, repype.config.Config, Dict[str, float]]:
         """
-        Processes the input.
+        Processes the input using this pipeline.
 
         The :py:meth:`stage.process() <repype.stage.Stage.process>` method of each stage of the pipeline is executed successively.
 
@@ -181,7 +181,7 @@ class Pipeline:
             Tuple ``(data, config, timings)``, where ``data`` is the *pipeline data object* comprising all final and intermediate results, ``config`` are the finally used hyperparameters, and ``timings`` is a dictionary containing the execution time of each individual pipeline stage (in seconds).
 
         Raises:
-            StageError: If an error occurs during the execution of a stage of the pipeline.
+            StageError: If an error occurs during the execution of a pipeline stage.
 
         The parameter `data` is required if and only if `first_stage` is not None, or `input` is None. In the former case, the outputs produced by the missing stages of the pipeline must be obtained from a previous execution of this method, and provided via the `data` parameter.
         """
