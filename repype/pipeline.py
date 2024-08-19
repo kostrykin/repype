@@ -183,14 +183,34 @@ class Pipeline:
         The parameter `data` is required if and only if `first_stage` is not None, or `input` is None. In the former case, the outputs produced by the missing stages of the pipeline must be obtained from a previous execution of this method, and provided via the `data` parameter.
         """
         config = config.copy()
-        if first_stage == self.stages[0].id and data is None: first_stage = None
-        if first_stage is not None and first_stage.endswith('+'): first_stage = self.stages[1 + self.find(first_stage[:-1])].id
-        if first_stage is not None and last_stage is not None and self.find(first_stage) > self.find(last_stage): return data, config, {}
-        if first_stage is not None and first_stage != self.stages[0].id and data is None: raise ValueError('data argument must be provided if first_stage is used')
-        if data is None: data = dict()
-        if input is not None: data['input'] = input
+
+        # The canonical representation for starting the pipeline from the beginning is to set the `first_stage` to None
+        if first_stage == self.stages[0].id:
+            first_stage = None
+
+        # If the `first_stage` ends with `+`, the pipeline is started from the next stage
+        if first_stage is not None and first_stage.endswith('+'):
+            first_stage = self.stages[1 + self.find(first_stage[:-1])].id
+
+        # There is nothing to process if `first_stage` is after `last_stage`
+        if first_stage is not None and last_stage is not None and self.find(first_stage) > self.find(last_stage):
+            return data, config, dict()
+        
+        # The `data` parameter is required if `first_stage` is not None
+        if first_stage is not None and first_stage != self.stages[0].id and data is None:
+            raise ValueError('Argument "data" must be provided if "first_stage" is used')
+        
+        # The `input` parameter is required if `data` is not provided
+        if data is None:
+            data = dict()
+        if input is not None:
+            data['input'] = input
+
+        # Determine the stages to be executed
         extra_stages = self.get_extra_stages(first_stage, last_stage, data.keys())
         ctrl = ProcessingControl(first_stage, last_stage)
+
+        # Run the stages of the pipeline
         timings = {}
         for stage in self.stages:
             if ctrl.step(stage.id) or stage.id in extra_stages:
@@ -202,6 +222,8 @@ class Pipeline:
                 timings[stage.id] = dt
             else:
                 stage.skip(data, status = status, **kwargs)
+
+        # Return the pipeline data object, the final config, and timings
         return data, config, timings
     
     def get_extra_stages(self, first_stage, last_stage, available_inputs):
