@@ -8,6 +8,7 @@ import pathlib
 import re
 
 import frozendict
+import mergedeep
 import repype.pipeline
 import repype.config
 import repype.stage
@@ -131,7 +132,7 @@ class Task:
         """
         The full specification of the task, including the parent task specifications.
         """
-        return (self.parent.full_spec | self.spec) if self.parent else self.spec
+        return mergedeep.merge(dict(), self.parent.full_spec, self.spec) if self.parent else self.spec
     
     @property
     def runnable(self) -> bool:
@@ -233,8 +234,8 @@ class Task:
         The hyperparameters are combined from three sources, in the following order, where the later sources take precedence:
 
         #. The hyperparameters of the parent task.
-        #. The `base_config` file specified in the task specification (if any).
-        #. The `config` section of the task specification (if any).
+        #. The ``base_config`` file specified in the task specification (if any).
+        #. The ``config`` section of the task specification (if any).
 
         The hyperparameters can be adopted by making changes to the returned object before running the task,
         but the changes are not reflected in the task specification.

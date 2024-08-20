@@ -48,6 +48,7 @@ setup(
     install_requires = [
         'dill>=0.3.2',
         'frozendict>=2.4',
+        'mergedeep>=1.3.4',
         'pyyaml>=6.0.1',
         'watchdog>=4.0.2',
     ],
