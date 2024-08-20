@@ -283,7 +283,7 @@ class Stage:
         Returns the rules to adopt hyperparameters based on the input data.
 
         Sometimes it can be necessary to automatically adopt hyperparameters based on the input data.
-        For such cases, this method can be overridden to return the rules which specify how to adopt the hyperparameters.
+        For those cases where linear adoptation is suitable, this method can be overridden to return the rules which specify how to adopt the hyperparameters.
         The rules are then applied by the :meth:`repype.pipeline.Pipeline.configure` method.
 
         The rules must be specified by the following structure::

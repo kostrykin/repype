@@ -904,18 +904,17 @@ class Task__run(unittest.TestCase):
         self.task.run(self.config)
         mock_load.assert_not_called()
         mock_create_pipeline.assert_called_once_with()
-        print('***', mock_create_pipeline.return_value.process.call_args_list)
         mock_create_pipeline.return_value.process.assert_any_call(
             input = 'file-0',
             data = dict(),
-            config = mock_create_pipeline.configure(self.config, 'file-0'),
+            config = mock_create_pipeline.return_value.configure(self.config, 'file-0'),
             first_stage = None,
             status = None,
         )
         mock_create_pipeline.return_value.process.assert_any_call(
             input = 'file-1',
             data = dict(),
-            config = mock_create_pipeline.configure(self.config, 'file-1'),
+            config = mock_create_pipeline.return_value.configure(self.config, 'file-1'),
             first_stage = None,
             status = None,
         )
@@ -940,14 +939,14 @@ class Task__run(unittest.TestCase):
         mock_create_pipeline.return_value.process.assert_any_call(
             input = 'file-0',
             data = dict(output = 'value1'),
-            config = self.config,
+            config = mock_create_pipeline.return_value.configure(self.config, 'file-0'),
             first_stage = 'stage-1',
             status = None,
         )
         mock_create_pipeline.return_value.process.assert_any_call(
             input = 'file-1',
             data = dict(output = 'value2'),
-            config = self.config,
+            config = mock_create_pipeline.return_value.configure(self.config, 'file-1'),
             first_stage = 'stage-1',
             status = None,
         )
