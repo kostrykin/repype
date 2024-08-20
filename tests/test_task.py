@@ -262,36 +262,6 @@ class Task__create_pipeline(unittest.TestCase):
         self.assertEqual(frozenset([stage.id for stage in task.create_pipeline().stages]), {'stage1', 'stage2'})
 
 
-class Task__get_path_pattern(unittest.TestCase):
-
-    @testsuite.with_temporary_paths(1)
-    def test_defined(self, path):
-        task = repype.task.Task(
-            path = path,
-            parent = None,
-            spec = dict(cfg_pathpattern = 'cfg/%s.yml'),
-        )
-        self.assertEqual(task.get_path_pattern('cfg_pathpattern'), path / 'cfg/%s.yml')
-
-    @testsuite.with_temporary_paths(1)
-    def test_undefined(self, path):
-        task = repype.task.Task(
-            path = path,
-            parent = None,
-            spec = dict(),
-        )
-        self.assertIsNone(task.get_path_pattern('cfg_pathpattern'))
-
-    @testsuite.with_temporary_paths(1)
-    def test_undefined_with_default(self, path):
-        task = repype.task.Task(
-            path = path,
-            parent = None,
-            spec = dict(),
-        )
-        self.assertEqual(task.get_path_pattern('cfg_pathpattern', default = 'cfg/%s.yml'), path / 'cfg/%s.yml')
-
-
 class Task__create_config(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
@@ -937,14 +907,14 @@ class Task__run(unittest.TestCase):
         mock_create_pipeline.return_value.process.assert_any_call(
             input = 'file-0',
             data = dict(),
-            config = self.config,
+            config = mock_create_pipeline.return_value.configure(self.config, 'file-0'),
             first_stage = None,
             status = None,
         )
         mock_create_pipeline.return_value.process.assert_any_call(
             input = 'file-1',
             data = dict(),
-            config = self.config,
+            config = mock_create_pipeline.return_value.configure(self.config, 'file-1'),
             first_stage = None,
             status = None,
         )
@@ -969,14 +939,14 @@ class Task__run(unittest.TestCase):
         mock_create_pipeline.return_value.process.assert_any_call(
             input = 'file-0',
             data = dict(output = 'value1'),
-            config = self.config,
+            config = mock_create_pipeline.return_value.configure(self.config, 'file-0'),
             first_stage = 'stage-1',
             status = None,
         )
         mock_create_pipeline.return_value.process.assert_any_call(
             input = 'file-1',
             data = dict(output = 'value2'),
-            config = self.config,
+            config = mock_create_pipeline.return_value.configure(self.config, 'file-1'),
             first_stage = 'stage-1',
             status = None,
         )

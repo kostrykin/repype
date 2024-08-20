@@ -6,6 +6,10 @@ project = 'repype'
 copyright = '2017-2024 Leonid Kostrykin, Biomedical Computer Vision Group, Heidelberg University'
 author = 'Leonid Kostrykin'
 
+# -- Add directory which contains the project to sys.path
+import os, sys
+sys.path.insert(0, os.path.abspath('../..'))
+
 # -- General configuration
 
 extensions = [
@@ -14,6 +18,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
+    'sphinx.ext.napoleon',
     'sphinx_autorun',
 ]
 
@@ -37,3 +42,11 @@ html_theme = 'sphinx_rtd_theme'
 
 # -- Options for EPUB output
 epub_show_urls = 'footnote'
+
+# -- Report broken links
+nitpicky = True
+nitpick_ignore = [
+    ('py:class', 'watchdog.events.FileSystemEventHandler'),
+    ('py:class', 'watchdog.events.DirModifiedEvent'),
+    ('py:class', 'watchdog.events.FileModifiedEvent'),
+]

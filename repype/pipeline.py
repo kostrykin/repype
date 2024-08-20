@@ -1,5 +1,5 @@
 import builtins
-import os
+import numbers
 import pathlib
 
 import repype.config
@@ -7,8 +7,9 @@ import repype.stage
 import repype.status
 from repype.typing import (
     Any,
-    DataDictionary,
+    PipelineData,
     Dict,
+    FrozenSet,
     Input,
     Iterable,
     List,
@@ -22,39 +23,82 @@ from repype.typing import (
 
 class ProcessingControl:
     """
-    A class used to control the processing of stages in a pipeline.
+    Class used to control the processing of stages in a pipeline.
 
-    This class keeps track of the first and last stages of a pipeline, and determines whether a given stage should be processed based on its position in the pipeline.
+    This class keeps track of the first and last stages of a pipeline,
+    and determines whether a given stage should be processed based on its position in the pipeline.
 
-    :param first_stage: The first stage of the pipeline. Processing starts from this stage. If None, processing starts from the beginning.
-    :type first_stage: str, optional
-    :param last_stage: The last stage of the pipeline. Processing stops after this stage. If None, processing goes until the end.
-    :type last_stage: str, optional
+    Arguments:
+        first_stage: The first stage of the pipeline. Processing starts from this stage. If None, processing starts from the beginning.
+        last_stage: The last stage of the pipeline. Processing ends after this stage. If None, processing goes until the end.
     """
 
-    def __init__(self, first_stage: Optional[str]=None, last_stage: Optional[str]=None):
+    started: bool
+    """
+    Indicates whether processing has started (and not ended yet).
+    """
+
+    first_stage: Optional[str]
+    """
+    The first stage of the pipeline. Processing starts from this stage. If None, processing starts from the beginning.
+    """
+
+    last_stage: Optional[str]
+    """
+    The last stage of the pipeline. Processing ends after this stage. If None, processing goes until the end.
+    """
+
+    def __init__(self, first_stage: Optional[str] = None, last_stage: Optional[str] = None):
         self.started     = True if first_stage is None else False
         self.first_stage = first_stage
         self.last_stage  =  last_stage
     
-    def step(self, stage):
+    def step(self, stage: str) -> bool:
         """
         Determines whether the given stage should be processed.
 
-        If the stage is the first stage of the pipeline, processing starts. If the stage is the last stage of the pipeline, processing stops after this stage.
+        If the stage is the first stage of the pipeline, processing starts.
+        If the stage is the last stage of the pipeline, processing ends after this stage.
+        The attribute :attr:`started` is updated accordingly.
 
-        :param stage: The stage to check.
-        :type stage: str
-        :return: True if the stage should be processed, False otherwise.
-        :rtype: bool
+        Arguments:
+            stage: The stage to check.
+            
+        Returns:
+            True if the stage should be processed, False otherwise.
         """
-        if not self.started and stage == self.first_stage: self.started = True
+        if not self.started and stage == self.first_stage:
+            self.started = True
         do_step = self.started
-        if stage == self.last_stage: self.started = False
+        if stage == self.last_stage:
+            self.started = False
         return do_step
 
 
-def create_config_entry(config, key, factor, default_user_factor, type=None, min=None, max=None):
+def create_config_entry(
+        config: repype.config.Config,
+        key: str,
+        factor: numbers.Real,
+        default_user_factor: numbers.Real,
+        type: Optional[Type[numbers.Real]] = None,
+        min: Optional[numbers.Real] = None,
+        max: Optional[numbers.Real] = None,
+    ) -> None:
+    """
+    Creates the hyperparameter `key` in the `config` if it does not exist yet.
+
+    The value of the hyperparameter is set to `factor` times the value of the hyperparameter ``AF_key``,
+    where ``AF_key`` is the hyperparameter with the same key but prefixed with ``AF_``.
+
+    In addition, the value of the hyperparameter is updated according to the following rules:
+
+    - If `type` is not None, the value is converted to the specified type.
+    - If `min` is not None, the value is set to the maximum of the value and `min`.
+    - If `max` is not None, the value is set to the minimum of the value and `max`.
+
+    See also:
+        This function is used by the :py:meth:`Pipeline.configure` method to automatically configure the hyperparameters of the pipeline.
+    """
     keys = key.split('/')
     af_key = f'{"/".join(keys[:-1])}/AF_{keys[-1]}'
     config.set_default(key, factor * config.get(af_key, default_user_factor), True)
@@ -67,6 +111,12 @@ class StageError(Exception):
     """
     An error raised when a stage fails to execute.
     """
+
+    stage: repype.stage.Stage
+    """
+    The stage that failed to execute.
+    """
+
     def __init__(self, stage: repype.stage.Stage):
         super().__init__(
             f'An error occured while executing the stage: {stage.id}'
@@ -78,9 +128,22 @@ class Pipeline:
     """
     Defines a processing pipeline.
 
-    This class defines a processing pipeline that consists of multiple stages. Each stage performs a specific operation on the input data. The pipeline processes the input data by executing the `process` method of each stage successively.
+    This class defines a processing pipeline that consists of multiple `stages`.
+    Each stage performs a specific operation on the fields of the pipeline (i.e. the input data, or the data computed by a previous stage).
+    The pipeline processes the input data by executing the :meth:`stage.process() <repype.stage.Stage.process>` method of each stage successively.
 
-    Note that hyperparameters are *not* set automatically if the :py:meth:`~.process_image` method is used directly. Hyperparameters are only set automatically if the :py:mod:`~.configure` method or batch processing is used.
+    In addition, the pipeline can be configured to use different `scopes` for resolving file paths using the :meth:`resolve` method
+    (e.g., logs, debug information, or results to be written).
+    """
+
+    stages: List[repype.stage.Stage]
+    """
+    The stages of the pipeline.
+    """
+
+    scopes: Dict[str, pathlib.Path]
+    """
+    The scopes used to resolve file paths.
     """
     
     def __init__(
@@ -93,52 +156,90 @@ class Pipeline:
 
     def process(
             self,
-            input: Input,
+            input: Optional[Input],
             config: repype.config.Config,
             first_stage: Optional[str] = None,
             last_stage: Optional[str] = None,
-            data: Optional[DataDictionary] = None,
+            data: Optional[PipelineData] = None,
             status: Optional[repype.status.Status] = None,
             **kwargs,
-        ) -> Tuple[DataDictionary, repype.config.Config, Dict[str, float]]:
+        ) -> Tuple[PipelineData, repype.config.Config, Dict[str, float]]:
         """
-        Processes the input.
+        Processes the input using this pipeline.
 
-        The :py:meth:`~.Stage.process` methods of the stages of the pipeline are executed successively.
+        The :py:meth:`stage.process() <repype.stage.Stage.process>` method of each stage of the pipeline is executed successively.
 
-        :param input: The input to be processed (can be ``None`` if and only if ``data`` is not ``None``).
-        :param config: A :py:class:`~repype.config.Config` object that represents the hyperparameters.
-        :param first_stage: The name of the first stage to be executed.
-        :param last_stage: The name of the last stage to be executed.
-        :param data: The results of a previous execution.
-        :param status: A :py:class:`~repype.status.Status` object.
-        :return: Tuple ``(data, cfg, timings)``, where ``data`` is the *pipeline data object* comprising all final and intermediate results, ``cfg`` are the finally used hyperparameters, and ``timings`` is a dictionary containing the execution time of each individual pipeline stage (in seconds).
+        Arguments:
+            input: The input to be processed. Can be None if and only if `data` is not None (then the input is deduced from `data`).
+            config: The hyperparameters to be used.
+            first_stage: The ID of the first stage to run (defaults to the first).
+                Earlier stages may still be required to run due to consumed inputs, marginal fields, or if `data` is None.
+            last_stage: The ID of the last stage to run (defaults to the last).
+            data: The *pipeline data object* from previous processing.
+            status: A status object to report the progress of the computations.
 
-        The parameter ``data`` is used if and only if ``first_stage`` is not ``None``. In this case, the outputs produced by the stages of the pipeline which are being skipped must be fed in using the ``data`` parameter obtained from a previous execution of this method.
+        Returns:
+            Tuple ``(data, config, timings)``, where ``data`` is the *pipeline data object* comprising all final and intermediate results, ``config`` are the finally used hyperparameters, and ``timings`` is a dictionary containing the run time of each individual pipeline stage (in seconds).
+
+        Raises:
+            StageError: If an error occurs during the run of a pipeline stage.
         """
         config = config.copy()
-        if first_stage == self.stages[0].id and data is None: first_stage = None
-        if first_stage is not None and first_stage.endswith('+'): first_stage = self.stages[1 + self.find(first_stage[:-1])].id
-        if first_stage is not None and last_stage is not None and self.find(first_stage) > self.find(last_stage): return data, config, {}
-        if first_stage is not None and first_stage != self.stages[0].id and data is None: raise ValueError('data argument must be provided if first_stage is used')
-        if data is None: data = dict()
-        if input is not None: data['input'] = input
+
+        # The canonical representation for starting the pipeline from the beginning is to set the `first_stage` to None
+        if first_stage == self.stages[0].id:
+            first_stage = None
+
+        # If the `first_stage` ends with `+`, the pipeline is started from the next stage
+        if first_stage is not None and first_stage.endswith('+'):
+            first_stage = self.stages[1 + self.find(first_stage[:-1])].id
+
+        # There is nothing to process if `first_stage` is after `last_stage`
+        if first_stage is not None and last_stage is not None and self.find(first_stage) > self.find(last_stage):
+            return data, config, dict()
+        
+        # The `data` parameter is required if `first_stage` is not None
+        if first_stage is not None and first_stage != self.stages[0].id and data is None:
+            raise ValueError('Argument "data" must be provided if "first_stage" is used')
+        
+        # The `input` parameter is required if `data` is not provided
+        if data is None:
+            data = dict()
+        if input is not None:
+            data['input'] = input
+
+        # Determine the stages to be executed
         extra_stages = self.get_extra_stages(first_stage, last_stage, data.keys())
         ctrl = ProcessingControl(first_stage, last_stage)
+
+        # Run the stages of the pipeline
         timings = {}
         for stage in self.stages:
             if ctrl.step(stage.id) or stage.id in extra_stages:
                 stage_config = config.get(stage.id, {})
                 try:
-                    dt = stage(self, data, stage_config, status = status, **kwargs)
+                    dt = stage.run(self, data, stage_config, status = status, **kwargs)
                 except:
                     raise StageError(stage)
                 timings[stage.id] = dt
             else:
                 stage.skip(data, status = status, **kwargs)
+
+        # Return the pipeline data object, the final config, and timings
         return data, config, timings
     
-    def get_extra_stages(self, first_stage, last_stage, available_inputs):
+    def get_extra_stages(self, first_stage: Optional[str], last_stage: Optional[str], available_inputs: Iterable[str]) -> List[str]:
+        """
+        Returns the stages that are required to be executed in addition, in order to process the pipeline from `first_stage` to `last_stage`.
+
+        Arguments:
+            first_stage: The ID of the first stage to be executed (or None to start with the first).
+            last_stage: The ID of the last stage to be executed (or None to end with the last).
+            available_inputs: The fields that are already available (e.g., from previous computations).
+
+        Returns:
+            The IDs of the stages that are required to be executed in addition, in order to process the pipeline from `first_stage` to `last_stage`.
+        """
         required_inputs, available_inputs = set(), set(available_inputs) | {'input'}
         stage_by_output = dict()
         extra_stages    = list()
@@ -159,20 +260,32 @@ class Pipeline:
 
     def find(self, stage_id: str, not_found_dummy: Any = float('inf')) -> repype.stage.Stage:
         """
-        Returns the position of the stage identified by ``stage_id``.
+        Returns the position of the stage identified by `stage_id`.
 
-        Returns ``not_found_dummy`` if the stage is not found.
+        Returns `not_found_dummy` if the stage is not found.
         """
         try:
             return [stage.id for stage in self.stages].index(stage_id)
         except ValueError:
             return not_found_dummy
         
-    def stage(self, stage_id):
+    def stage(self, stage_id: str) -> Optional[repype.stage.Stage]:
+        """
+        Returns the stage identified by `stage_id`, or None if there is none.
+        """
         idx = self.find(stage_id, None)
         return self.stages[idx] if idx is not None else None
 
-    def append(self, stage: repype.stage.Stage, after: Optional[Union[str, int]] = None):
+    def append(self, stage: repype.stage.Stage, after: Optional[Union[str, int]] = None) -> int:
+        """
+        Adds a stage to the pipeline.
+
+        By default, the stage is appended to the end of the pipeline.
+        If `after` is given, the stage is instead inserted after the stage with the given ID or index.
+
+        Returns:
+            The index of the added stage.
+        """
         for stage2 in self.stages:
             if stage2 is stage: raise RuntimeError(f'stage {stage.id} already added')
             if stage2.id == stage.id: raise RuntimeError(f'stage with ID {stage.id} already added')
@@ -185,13 +298,25 @@ class Pipeline:
             self.stages.insert(after + 1, stage)
             return after + 1
 
-    def configure(self, base_config: repype.config.Config, *args, **kwargs) -> repype.config.Config:
+    def configure(self, base_config: repype.config.Config, input: Input, *args, **kwargs) -> repype.config.Config:
         """
-        Automatically configures hyperparameters.
+        Automatically adopts hyperparameters by applying linear adoptation rules.
+
+        The hyperparameters are configured by the :py:func:`create_config_entry` function,
+        and the arguments (rules) are determined by calling :py:meth:`stage.configure() <repype.stage.Stage.configure>` for each stage.
+
+        Arguments:
+            base_config: The base hyperparameters to be used (not modified).
+            input: The input to adopt the hyperparameters for.
+            *args: Sequential arguments passed to :py:meth:`stage.configure() <repype.stage.Stage.configure>`.
+            **kwargs: Keyword arguments passed to :py:meth:`stage.configure() <repype.stage.Stage.configure>`.
+
+        Returns:
+            The adopted hyperparameters.
         """
         config = base_config.copy()
         for stage in self.stages:
-            specs = stage.configure(*args, **kwargs)
+            specs = stage.configure(self, input, *args, **kwargs)
             for key, spec in specs.items():
                 assert len(spec) in (2,3), \
                     f'{type(stage).__name__}.configure returned tuple of unsupported length: {len(spec)}'
@@ -212,9 +337,9 @@ class Pipeline:
             return pathlib.Path(str(scope) % input).resolve()
     
     @property
-    def fields(self):
+    def fields(self) -> FrozenSet[str]:
         """
-        Compute all fields that are produced by the pipeline.
+        List all fields that are produced by the pipeline.
         """
         fields = set(['input'])
         for stage in self.stages:
@@ -222,9 +347,9 @@ class Pipeline:
         return frozenset(fields)
     
     @property
-    def persistent_fields(self):
+    def persistent_fields(self) -> FrozenSet[str]:
         """
-        Compute all fields that are produced by the pipeline, minus those which are consumed.
+        List all fields that are produced by the pipeline, minus those which are consumed.
         """
         fields = self.fields
         for stage in self.stages:
@@ -234,9 +359,14 @@ class Pipeline:
 
 def create_pipeline(stages: Sequence[repype.stage.Stage], *args, pipeline_cls: Type[Pipeline] = Pipeline, **kwargs) -> Pipeline:
     """
-    Creates and returns a new :py:class:`.Pipeline` object configured for the given stages.
+    Creates and returns a new pipeline configured for the given `stages`.
 
-    The stage order is determined automatically.
+    Arguments:
+        stages: The stages of the pipeline, the order is determined automatically.
+        pipeline_cls: The class to be used for the pipeline.
+
+    Returns:
+        Object of the `pipeline_cls` class.
     """
     available_inputs = set(['input'])
     remaining_stages = list(stages)

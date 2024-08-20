@@ -1,7 +1,7 @@
-repype.output
+repype.status
 =============
 
-.. automodule:: repype.output
+.. automodule:: repype.status
     :members:
     :undoc-members:
     :show-inheritance:

@@ -12,7 +12,7 @@ import repype.pipeline
 import repype.stage
 import repype.status
 from repype.typing import (
-    DataDictionary,
+    PipelineData,
     Optional,
 )
 import scipy.ndimage as ndi
@@ -29,7 +29,7 @@ class Download(repype.stage.Stage):
             pipeline: repype.pipeline.Pipeline,
             config: repype.config.Config,
             status: Optional[repype.status.Status] = None,
-        ) -> DataDictionary:
+        ) -> PipelineData:
         url = config['url']
         with urllib.request.urlopen(url) as file:
             data = file.read()
@@ -51,7 +51,7 @@ class Unzip(repype.stage.Stage):
             pipeline: repype.pipeline.Pipeline,
             config: repype.config.Config,
             status: Optional[repype.status.Status] = None,
-        ) -> DataDictionary:
+        ) -> PipelineData:
         contents = zipfile.ZipFile(io.BytesIO(download))
         with contents.open(input) as file:
             data = file.read()
@@ -71,7 +71,7 @@ class Segmentation(repype.stage.Stage):
             pipeline: repype.pipeline.Pipeline,
             config: repype.config.Config,
             status: Optional[repype.status.Status] = None,
-        ) -> DataDictionary:
+        ) -> PipelineData:
         image = skimage.filters.gaussian(image, sigma = config.get('sigma', 1.))
         threshold = skimage.filters.threshold_otsu(image)
         return dict(
@@ -90,7 +90,7 @@ class Output(repype.stage.Stage):
             pipeline: repype.pipeline.Pipeline,
             config: repype.config.Config,
             status: Optional[repype.status.Status] = None,
-        ) -> DataDictionary:
+        ) -> PipelineData:
         filepath = pipeline.resolve('segmentation', input)
         filepath.parent.mkdir(parents = True, exist_ok = True)
         skimage.io.imsave(filepath, segmentation)

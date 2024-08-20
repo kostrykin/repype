@@ -132,34 +132,6 @@ class Status__derive(TestCase):
         self.assertIs(child.parent, status)
 
 
-class Status__get(TestCase):
-
-    def setUp(self):
-        self.tempdir = tempfile.TemporaryDirectory()
-        self.cwd = os.getcwd()
-        os.chdir(self.tempdir.name)
-
-    def tearDown(self):
-        self.tempdir.cleanup()
-        os.chdir(self.cwd)
-
-    @testsuite.with_temporary_paths(1)
-    def test_instance(self, path):
-        status1 = Status(path = path)
-        status2 = Status.get(status1)
-        self.assertIs(status1, status2)
-
-    def test_none(self):
-        stdout = io.StringIO()
-        with contextlib.redirect_stdout(stdout):
-            status = Status.get()
-        self.assertTrue(stdout.getvalue().startswith('Status written to: /'))
-        self.assertTrue(stdout.getvalue().endswith(f'/.status/{status.id}.json\n'))
-        status.update()
-        self.assertEqual(os.listdir('.'), ['.status'])
-        self.assertEqual(os.listdir('.status'), [f'{status.id}.json'])
-
-
 class Status__progress(TestCase):
 
     @testsuite.with_temporary_paths(1)
@@ -234,10 +206,10 @@ class Status__progress(TestCase):
             self.assertEqual(data, list())
 
     @testsuite.with_temporary_paths(1)
-    def test_len_override(self, path):
+    def test_iterations(self, path):
         status = Status(path = path)
         with self.assertRaises(AssertionError):
-            for item in status.progress(range(3), len_override = 2):
+            for item in status.progress(range(3), iterations = 2):
                 pass
 
         with open(status.filepath) as file:
@@ -317,8 +289,8 @@ class StatusReader__init(TestCase):
             self.assertEqual(
                 mock_handle_new_status.call_args_list,
                 [
-                    call([['write1', ['write2']]], [0], 'write1'),
-                    call([['write1', ['write2']], ['write2']], [1, 0], 'write2'),
+                    call([['write1', ['write2']]], [0], status = 'write1', intermediate = False),
+                    call([['write1', ['write2']], ['write2']], [1, 0], status = 'write2', intermediate = False),
                 ]
             )
 
@@ -329,7 +301,7 @@ class StatusReader__init(TestCase):
             self.assertEqual(
                 mock_handle_new_status.call_args_list,
                 [
-                    call([['write1', ['write2', 'write3']], ['write2', 'write3']], [1, 1], 'write3'),
+                    call([['write1', ['write2', 'write3']], ['write2', 'write3']], [1, 1], status = 'write3', intermediate = False),
                 ]
             )
 
@@ -341,7 +313,7 @@ class StatusReader__init(TestCase):
             self.assertEqual(
                 mock_handle_new_status.call_args_list,
                 [
-                    call([['write1', ['write2', 'write3'], ['write4']], ['write4']], [2, 0], 'write4'),
+                    call([['write1', ['write2', 'write3'], ['write4']], ['write4']], [2, 0], status = 'write4', intermediate = False),
                 ]
             )
 
@@ -352,7 +324,7 @@ class StatusReader__init(TestCase):
             self.assertEqual(
                 mock_handle_new_status.call_args_list,
                 [
-                    call([['write1', ['write2', 'write3'], ['write4'], 'write5']], [3], 'write5'),
+                    call([['write1', ['write2', 'write3'], ['write4'], 'write5']], [3], status = 'write5', intermediate = False),
                 ]
             )
 
@@ -408,10 +380,8 @@ class StatusReader__init(TestCase):
                             ],
                         ],
                         [1, 2],
-                        dict(
-                            content_type = 'intermediate',
-                            content = ['interm1'],
-                        ),
+                        status = 'interm1',
+                        intermediate = True,
                     ),
                 ]
             )
@@ -459,10 +429,8 @@ class StatusReader__init(TestCase):
                             ],
                         ],
                         [1, 2],
-                        dict(
-                            content_type = 'intermediate',
-                            content = ['interm2'],
-                        ),
+                        status = 'interm2',
+                        intermediate = True,
                     ),
                 ]
             )
@@ -498,10 +466,8 @@ class StatusReader__init(TestCase):
                             ],
                         ],
                         [1, 2],
-                        dict(
-                            content_type = 'intermediate',
-                            content = None,
-                        ),
+                        status = None,
+                        intermediate = True,
                     ),
                 ]
             )
@@ -529,7 +495,8 @@ class StatusReader__init(TestCase):
                             ],
                         ],
                         [1, 2],
-                        'write4',
+                        status = 'write4',
+                        intermediate = False,
                     ),
                 ]
             )

@@ -3,10 +3,10 @@
   <div align="center">
     <h6>To support the sustainability of your software experiments</h6>
     <h1>
-      <a href="https://github.com/kostrykin/pypers">repype</a><br>
+      <a href="https://github.com/kostrykin/repype">repype</a><br>
       <a href="http://pypi.org/p/repype"><img alt="PyPI - Version" src="https://img.shields.io/pypi/v/repype"></a>
-      <a href="https://github.com/kostrykin/pypers/actions/workflows/tests.yml"><img src="https://github.com/kostrykin/pypers/actions/workflows/tests.yml/badge.svg" /></a>
-      <a href="https://github.com/kostrykin/pypers/actions/workflows/tests.yml"><img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/kostrykin/5f8b1433a1c405da22639f817d6a38d9/raw/pypers.json" /></a>
+      <a href="https://github.com/kostrykin/repype/actions/workflows/tests.yml"><img src="https://github.com/kostrykin/repype/actions/workflows/tests.yml/badge.svg" /></a>
+      <a href="https://github.com/kostrykin/repype/actions/workflows/tests.yml"><img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/kostrykin/5f8b1433a1c405da22639f817d6a38d9/raw/pypers.json" /></a>
       <a href="https://repype.readthedocs.io"><img src="https://readthedocs.org/projects/repype/badge/?version=latest" /></a><br>
     </h1>
   </div>
@@ -20,19 +20,31 @@
 
 .. code::
 
-    git clone git@github.com:kostrykin/pypers.git
-    cd pypers && python setup.py install
+    git clone git@github.com:kostrykin/repype.git
+    cd repype && python setup.py install
 
-**Documentation:** https://pypers-batch.readthedocs.io
+**Documentation:** https://repype.readthedocs.io
 
 **Development instructions:**
 
-- Use ``python -m unittest`` in the root directory of the repository to run the test suite.
-- Or use coverage.py instead to also produce a test coverage report::
+- To run the test suite, first install the testing dependencies::
+
+      pip install -r tests/requirements.txt
+      python -m unittest
+
+- Instead of using ``python -m unittest``, use coverage.py to also produce a test coverage report::
 
       coverage run -m unittest && python -m coverage html
 
-  This requires `coverage.py <https://coverage.readthedocs.io/en/7.4.0/#quick-start>`_ to be installed, like ``pip install coverage``.
+  This requires `coverage.py <https://coverage.readthedocs.io/en/7.4.0/#quick-start>`_ to be installed additionally, like ``pip install coverage``.
+
+- To build the documentation locally::
+
+      pip install -r docs/requirements.txt
+      cd docs
+      make html
+
+  You can then open ``build/html/index.html`` to view the documentation.
 
 ----
 

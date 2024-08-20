@@ -10,9 +10,11 @@ import repype.config
 import repype.status
 import repype.task
 from repype.typing import (
+    Dict,
     List,
     Optional,
     PathLike,
+    Type,
 )
 import yaml
     
@@ -20,17 +22,46 @@ import yaml
 class RunContext:
     """
     The pipeline and the hyperparameters used to run a task.
+
+    Arguments:
+        task: The task to run.
     """
 
-    def __init__(self, task):
+    task: repype.task.Task
+    """
+    The task to run.
+    """
+
+    pipeline: repype.pipeline.Pipeline
+    """
+    The pipeline to run the task with. Defaults to :meth:`task.create_pipeline()<repype.task.Task.create_pipeline()>`.
+    """
+
+    config: repype.config.Config
+    """
+    The hyperparameters to run the task with. Defaults to :meth:`task.create_config()<repype.task.Task.create_config()>`.
+    """
+
+    def __init__(self, task: repype.task.Task):
         assert task.runnable
         self.task = task
         self.pipeline = task.create_pipeline()
         self.config = task.create_config()
 
 
-def run_task_process(payload):
-    rc, status = dill.loads(payload)
+def run_task_process(args_serialized: bytes) -> None:
+    """
+    Run a task using specific :class:`RunContext` and :class:`repype.status.Status` objects.
+
+    Arguments:
+        args_serialized: The serialized arguments to run the task.
+            This should be a tuple of the shape ``(rc, status)``, where ``rc`` is a :class:`RunContext` object
+            and ``status`` is a :class:`repype.status.Status` object, serialized using dill.
+    
+    This is to be used to run a task in in a separate process.
+    Upon unsuccessful completion, the process will exit with status code 1.
+    """
+    rc, status = dill.loads(args_serialized)
 
     # Run the task and exit the child process
     try:
@@ -51,14 +82,42 @@ def run_task_process(payload):
 
 
 class Batch:
+    """
+    A collection of tasks to run.
+    Each task is uniquely identified by its path.
 
-    def __init__(self, task_cls = repype.task.Task):
+    Arguments:
+        task_cls: The class to use for tasks. Defaults to :class:`repype.task.Task`.
+    """
+
+    tasks: Dict[pathlib.Path, repype.task.Task]
+    """
+    A dictionary of tasks, indexed by their path.
+    """
+
+    task_cls: Type[repype.task.Task]
+    """
+    The class to use for tasks.
+    """
+
+    def __init__(self, task_cls: Type[repype.task.Task] = repype.task.Task):
         self.tasks = dict()
         self.task_cls = task_cls
 
     def task(self, path: PathLike, spec: Optional[dict] = None) -> Optional[repype.task.Task]:
         """
         Retrieve a task by its path.
+
+        The task is loaded from the task specification if it has not been loaded before.
+        Otherwise, the previously loaded task is returned.
+        The task specification is either the `spec` argument, or the ``task.yml`` file in the task directory.
+        The former is precedencial over the latter.
+
+        The `path` argument is used to later:
+
+        #. Identitfy the task using this method
+        #. Establish parential relations, see :attr:`repype.task.Task.parent`
+        #. Resolve filepaths, see :meth:`repype.pipeline.Pipeline.resolve`
         """
         path = pathlib.Path(path)
         task = self.tasks.get(path)
@@ -113,13 +172,17 @@ class Batch:
 
     def run(self, contexts: Optional[List[RunContext]] = None, status: Optional[repype.status.Status] = None) -> bool:
         """
-        Run all pending tasks.
+        Run all pending tasks (or a subset).
 
-        Each task is run in a forked process.
+        Each task is run in a separate process using :meth:`run_task_process`.
         This ensures that each task runs with a clean environment, and no memory is leaked in between of tasks.
 
+        Arguments:
+            contexts: List of run contexts to run. Defaults to all pending tasks.
+            status: The status object to update during task execution. Defaults to a new status object.
+
         Returns:
-            bool: True if all tasks were completed successfully, and False otherwise
+            True if all tasks were completed successfully, and False otherwise
         """
         contexts = self.pending if contexts is None else contexts
         for rc_idx, rc in enumerate(contexts):
