@@ -160,6 +160,10 @@ class Task:
         The stages which are considered marginal.
 
         Outputs of marginal stages are removed from the *pipeline data objects* when storing the results of the task.
+        The default implementation reads the list of marginal stages from the field ``marginal_stages`` in the task specification.
+
+        Returns:
+            List of the stage identifiers corresponding to the marginal stages.
         """
         return self.full_spec.get('marginal_stages', [])
         

@@ -43,7 +43,7 @@ class StageCallback(Protocol):
 
 def suggest_stage_id(class_name: str) -> str:
     """
-    Suggest stage ID based on a class name.
+    Suggests a stage identifier based on a class name.
 
     This function validates the class name, then finds and groups tokens in the class name.
     Tokens are grouped if they are consecutive and alphanumeric, but do not start with numbers.
@@ -90,7 +90,7 @@ class Stage:
     The input field ``input`` is provided by the pipeline itself via the :meth:`repype.pipeline.Pipeline.process` method.
 
     Arguments:
-        id: The stage ID, used as the hyperparameter namespace.
+        id: The stage identifier, used as the hyperparameter namespace.
             Defaults to the result of the :py:func:`suggest_stage_id` function.
         inputs: List of inputs required by this stage.
         consumes: List of inputs consumed by this stage (cannot be used by subsequent stages).
@@ -117,6 +117,11 @@ class Stage:
     Whether the stage is enabled by default.
 
     The default value can be overridden by the ``enabled`` hyperparameter of the stage.
+    """
+
+    id: str
+    """
+    The stage identifier.
     """
 
     def __init__(self):
@@ -378,7 +383,7 @@ class Stage:
 
     def __str__(self) -> str:
         """
-        Get a brief string representation of the stage (this is the stage ID).
+        Get a brief string representation of the stage (this is the stage identifier).
         """
         return self.id
 
