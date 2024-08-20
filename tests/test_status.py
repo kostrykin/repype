@@ -206,7 +206,19 @@ class Status__progress(TestCase):
             self.assertEqual(data, list())
 
     @testsuite.with_temporary_paths(1)
-    def test_iterations(self, path):
+    def test_iterations_generator(self, path):
+        status = Status(path = path)
+        def generator():
+            for item in []:
+                yield item
+        for item in status.progress(generator(), iterations = 0):
+            pass
+
+        # Verify that there have been no iterations
+        self.assertFalse('item' in locals())
+
+    @testsuite.with_temporary_paths(1)
+    def test_iterations_assertion_error(self, path):
         status = Status(path = path)
         with self.assertRaises(AssertionError):
             for item in status.progress(range(3), iterations = 2):

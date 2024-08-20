@@ -173,8 +173,11 @@ class Status:
 
         Yields:
             The items from the `iterable`, while making intermediate progress updates to the status object.
+
+        Raises:
+            AssertionError: If the `iterable` has more items than the number of `iterations`.
         """
-        max_steps = iterations or len(iterable)
+        max_steps = len(iterable) if iterations is None else iterations
         try:
             for step, item in enumerate(iterable):
                 assert step < max_steps
