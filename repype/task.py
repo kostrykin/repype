@@ -160,7 +160,7 @@ class Task:
         The stages which are considered marginal.
 
         Outputs of marginal stages are removed from the *pipeline data objects* when storing the results of the task.
-        The default implementation reads the list of marginal stages from the field ``marginal_stages`` in the task specification.
+        The default implementation reads the list of marginal stages from the ``marginal_stages`` field in the task specification.
 
         Returns:
             List of the stage identifiers corresponding to the marginal stages.
@@ -362,7 +362,7 @@ class Task:
             pipeline: The pipeline object.
 
         Returns:
-            dict: The previously stored *task data object*.
+            The previously stored *task data object*.
         """
         assert self.runnable
         assert self.data_filepath.is_file()
