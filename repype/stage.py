@@ -10,7 +10,9 @@ from repype.typing import (
     PipelineData,
     Dict,
     Optional,
+    Pipeline,
     Protocol,
+    Input,
     Iterable,
     List,
     Literal,
@@ -164,7 +166,7 @@ class Stage:
 
     def run(
             self,
-            pipeline: 'repype.pipeline.Pipeline',
+            pipeline: Pipeline,
             data: PipelineData,
             config: repype.config.Config,
             status: Optional[repype.status.Status] = None,
@@ -250,7 +252,7 @@ class Stage:
 
     def process(
             self,
-            pipeline: 'repype.pipeline.Pipeline',
+            pipeline: Pipeline,
             config: repype.config.Config,
             status: Optional[repype.status.Status] = None,
             **inputs,
@@ -276,7 +278,7 @@ class Stage:
         """
         raise NotImplementedError()
 
-    def configure(self, *args, **kwargs) -> dict:
+    def configure(self, pipeline: Pipeline, input: Input, *args, **kwargs) -> dict:
         """
         Returns the rules to adopt hyperparameters based on the input data.
 
@@ -314,6 +316,8 @@ class Stage:
             }
 
         Arguments:
+            pipeline: The pipeline object that this stage is a part of.
+            input: The input to adopt the hyperparameters for.
             *args: Sequential arguments passed to :meth:`Pipeline.configure <repype.pipeline.Pipeline.configure>`.
             **kwargs: Keyword arguments passed to :meth:`Pipeline.configure <repype.pipeline.Pipeline.configure>`.
         """

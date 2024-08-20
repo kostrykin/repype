@@ -299,7 +299,7 @@ class Pipeline:
             self.stages.insert(after + 1, stage)
             return after + 1
 
-    def configure(self, base_config: repype.config.Config, *args, **kwargs) -> repype.config.Config:
+    def configure(self, base_config: repype.config.Config, input: Input, *args, **kwargs) -> repype.config.Config:
         """
         Automatically adopts hyperparameters.
 
@@ -308,6 +308,7 @@ class Pipeline:
 
         Arguments:
             base_config: The base hyperparameters to be used (not modified).
+            input: The input to adopt the hyperparameters for.
             *args: Sequential arguments passed to :py:meth:`stage.configure() <repype.stage.Stage.configure>`.
             **kwargs: Keyword arguments passed to :py:meth:`stage.configure() <repype.stage.Stage.configure>`.
 
@@ -316,7 +317,7 @@ class Pipeline:
         """
         config = base_config.copy()
         for stage in self.stages:
-            specs = stage.configure(*args, **kwargs)
+            specs = stage.configure(self, input, *args, **kwargs)
             for key, spec in specs.items():
                 assert len(spec) in (2,3), \
                     f'{type(stage).__name__}.configure returned tuple of unsupported length: {len(spec)}'

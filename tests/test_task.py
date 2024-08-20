@@ -904,17 +904,18 @@ class Task__run(unittest.TestCase):
         self.task.run(self.config)
         mock_load.assert_not_called()
         mock_create_pipeline.assert_called_once_with()
+        print('***', mock_create_pipeline.return_value.process.call_args_list)
         mock_create_pipeline.return_value.process.assert_any_call(
             input = 'file-0',
             data = dict(),
-            config = self.config,
+            config = mock_create_pipeline.configure(self.config, 'file-0'),
             first_stage = None,
             status = None,
         )
         mock_create_pipeline.return_value.process.assert_any_call(
             input = 'file-1',
             data = dict(),
-            config = self.config,
+            config = mock_create_pipeline.configure(self.config, 'file-1'),
             first_stage = None,
             status = None,
         )

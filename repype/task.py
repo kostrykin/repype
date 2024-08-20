@@ -572,12 +572,15 @@ class Task:
                 step_count = len(self.inputs),
             )
 
+            # Automatically adopt hyperparameters
+            input_config = pipeline.configure(config, input)
+
             # Process the input
             data_chunk = data.get(input, dict())
             data_chunk, final_config, _ = pipeline.process(
                 input = input,
                 data = data_chunk,
-                config = config,
+                config = input_config,
                 first_stage = first_stage.id if first_stage else None,
                 status = input_status,
             )

@@ -7,6 +7,11 @@ else:
     from typing import *
 
 
+Pipeline = TypeVar('..pipeline.Pipeline')
+"""
+Forward declaration of the :class:`repype.pipeline.Pipeline` class.
+"""
+
 PipelineData = Dict[str, Any]
 """
 Pipeline data object. A dictionary with string keys and arbitrary values.

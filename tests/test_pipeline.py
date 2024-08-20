@@ -37,7 +37,7 @@ class Pipeline__configure(unittest.TestCase):
 
     def test_configure(self):
         base_config = repype.config.Config()
-        config = self.pipeline.configure(base_config)
+        config = self.pipeline.configure(base_config, 'input')
         self.assertEqual(
             config.entries,
             dict(
@@ -55,7 +55,7 @@ class Pipeline__configure(unittest.TestCase):
     def test_configure_x1_factor(self):
         base_config = repype.config.Config()
         base_config['stage1/x1_factor'] = 100
-        config = self.pipeline.configure(base_config)
+        config = self.pipeline.configure(base_config, 'input')
         self.assertEqual(
             config.entries,
             dict(
@@ -73,7 +73,7 @@ class Pipeline__configure(unittest.TestCase):
     def test_configure_AF_x1_factor(self):
         base_config = repype.config.Config()
         base_config['stage1/AF_x1_factor'] = 10
-        config = self.pipeline.configure(base_config)
+        config = self.pipeline.configure(base_config, 'input')
         self.assertEqual(
             config.entries,
             dict(
@@ -101,7 +101,7 @@ class Pipeline__configure(unittest.TestCase):
             ),
         )
         base_config = repype.config.Config()
-        config = self.pipeline.configure(base_config)
+        config = self.pipeline.configure(base_config, 'input')
         self.assertEqual(
             config.entries['stage2'],
             dict(
@@ -123,7 +123,7 @@ class Pipeline__configure(unittest.TestCase):
             ),
         )
         base_config = repype.config.Config()
-        config = self.pipeline.configure(base_config)
+        config = self.pipeline.configure(base_config, 'input')
         self.assertEqual(
             config.entries['stage2'],
             dict(
