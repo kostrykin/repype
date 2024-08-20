@@ -530,7 +530,7 @@ class StatusReader(FileSystemEventHandler):
         if isinstance(element, dict) and element.get('content_type') == 'intermediate':
 
             # If the intermediate status is cleared, handle it accordingly
-            if element['content'] is None:
+            if not element['content']:
                 self.handle_new_status(parents, positions, status = None, intermediate = True)
 
             # Otherwise, handle the intermediate status update
