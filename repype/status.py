@@ -557,17 +557,22 @@ class StatusReader(FileSystemEventHandler):
 
 # Define some shortcuts
 
-def update(status: Optional[Status], intermediate: bool = False, **kwargs) -> None:
+def update(status: Optional[Status], text = None, intermediate: bool = False, **kwargs) -> None:
     """
     Shortcut for :meth:`Status.write` and :meth:`Status.intermediate`.
 
     Does nothing if `status` is None.
+
+    Raises:
+        AssertionError: If both `text` and `kwargs` are provided (or neither, and `intermediate` is True).
     """
+    assert text is None or len(kwargs) == 0, 'Cannot specify both `text` and `kwargs`'
     if status is not None:
         if intermediate:
-            status.intermediate(dict(**kwargs))
+            status.intermediate(dict(**kwargs) if kwargs else text)
         else:
-            status.write(dict(**kwargs))
+            assert text is not None or len(kwargs) > 0, 'Either `text` or `kwargs` must be provided'
+            status.write(dict(**kwargs) if kwargs else text)
 
 
 def derive(status: Optional[Status]) -> Optional[Status]:
