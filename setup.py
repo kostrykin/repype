@@ -45,6 +45,12 @@ setup(
     name = 'repype',
     version = VERSION,
     python_requires = '>=3.9',
+    install_requires = [
+        'dill>=0.3.2',
+        'frozendict>=2.4',
+        'pyyaml>=6.0.1',
+        'watchdog>=4.0.2',
+    ],
     description = 'Reproducible batch processing using pipelines for scientific computing.',
     long_description = strip_raw(open('README.rst').read()),
     long_description_content_type = 'text/x-rst',
