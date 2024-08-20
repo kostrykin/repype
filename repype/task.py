@@ -20,6 +20,7 @@ from repype.typing import (
     Input,
     Iterator,
     List,
+    Mapping,
     Optional,
     PathLike,
     Self,
@@ -29,13 +30,16 @@ import yaml
 
 
 MultiDataDictionary = Dict[Input, DataDictionary]
+"""
+Task data object. A dictionary with input objects as keys and *pipeline data objects* as values.
+"""
 
 
 def decode_inputs(spec: Union[str, List[Input]]) -> List[Input]:
     """
     Convert a string of comma-separated inputs (or ranges thereof) to a list of integers.
 
-    If ``spec`` is a list already, it is returned as is.
+    If `spec` is a list already, it is returned as is.
     """
     # Convert a string of comma-separated inputs (or ranges thereof) to a list of integers
     if isinstance(spec, str):
@@ -72,6 +76,9 @@ def decode_inputs(spec: Union[str, List[Input]]) -> List[Input]:
     
 
 def load_from_module(name: str) -> Any:
+    """
+    Load an object from a module.
+    """
     path = name.split('.')
     for i in range(1, len(path)):
         module_name = '.'.join(path[:-i])
@@ -88,10 +95,30 @@ def load_from_module(name: str) -> Any:
 
 
 class Task:
+    """
+    Task in batch processing.
+
+    Each task can have a parent task, so each task is part of a task tree.
+
+    Arguments:
+        path: The path to the task directory.
+        spec: The task specification.
+        parent: The parent task of this task.
+    """
 
     parent: Optional[Self]
     """
     The parent task of this task.
+    """
+
+    path: pathlib.Path
+    """
+    The path to the task directory.
+    """
+
+    spec: Dict[str, Any]
+    """
+    The task specification.
     """
 
     def __init__(self, path: PathLike, spec: dict, parent: Optional[Self] = None):
@@ -100,15 +127,24 @@ class Task:
         self.path   = pathlib.Path(path)
 
     @property
-    def full_spec(self) -> dict:
+    def full_spec(self) -> Dict[str, Any]:
+        """
+        The full specification of the task, including the parent task specifications.
+        """
         return (self.parent.full_spec | self.spec) if self.parent else self.spec
     
     @property
     def runnable(self) -> bool:
+        """
+        True if the task is runnable, and False otherwise.
+        """
         return bool(self.full_spec.get('runnable'))
     
     @property
     def inputs(self):
+        """
+        The inputs of the task.
+        """
         return decode_inputs(self.full_spec.get('inputs', []))
     
     @property
@@ -120,24 +156,43 @@ class Task:
     
     @property
     def marginal_stages(self) -> List[str]:
+        """
+        The stages which are considered marginal.
+
+        Outputs of marginal stages are removed from the *pipeline data objects* when storing the results of the task.
+        """
         return self.full_spec.get('marginal_stages', [])
         
     @property
-    def data_filepath(self):
+    def data_filepath(self) -> pathlib.Path:
+        """
+        The path to the stored *task data object* of the task.
+        """
         return self.resolve_path('data.dill.gz')
         
     @property
-    def digest_task_filepath(self):
+    def digest_task_filepath(self) -> pathlib.Path:
+        """
+        The path to the full task specification of the task completion.
+
+        This is the full task specification adopted for the configuration which was used to complete the task.
+        """
         return self.resolve_path('.task.json')
         
     @property
-    def digest_sha_filepath(self):
+    def digest_sha_filepath(self) -> pathlib.Path:
+        """
+        The path to the hash values of the task completion.
+
+        This contains the SHA-1 hashes of the full task specification adopted for the configuration which was used to complete the task,
+        and the hashes of the stages of the pipeline.
+        """
         return self.resolve_path('.sha.json')
 
     @property
-    def digest(self):
+    def digest(self) -> Mapping[str, Any]:
         """
-        Immutable full specification which this task was previously completed with (or None).
+        Immutable full specification of the task completion (or None).
         """
         if not self.digest_task_filepath.is_file():
             return None
@@ -154,10 +209,16 @@ class Task:
             yield task
             task = task.parent
 
-    def get_full_spec_with_config(self, config: repype.config.Config) -> dict:
+    def get_full_spec_with_config(self, config: repype.config.Config) -> Dict[str, Any]:
+        """
+        Get the full specification of the task adopted for the `config`.
+        """
         return self.full_spec | dict(config = config.entries)
     
     def compute_sha(self, config: Optional[repype.config.Config] = None) -> str:
+        """
+        Compute the SHA-1 hash of the full task specification adopted for the `config`.
+        """
         full_spec = self.full_spec if config is None else self.get_full_spec_with_config(config)
         return hashlib.sha1(json.dumps(full_spec).encode('utf8')).hexdigest()
     
@@ -166,11 +227,13 @@ class Task:
         Creates object which represents the hyperparameters of this task.
 
         The hyperparameters are combined from three sources, in the following order, where the later sources take precedence:
-        1. The hyperparameters of the parent task.
-        2. The base config file specified in the task spec.
-        2. The config section of the task spec.
 
-        Changes to the hyperparameters are not reflected in the spec of the task.
+        #. The hyperparameters of the parent task.
+        #. The `base_config` file specified in the task specification (if any).
+        #. The `config` section of the task specification (if any).
+
+        The hyperparameters can be adopted by making changes to the returned object before running the task,
+        but the changes are not reflected in the task specification.
         """
         config = repype.config.Config(self.spec.get('config', dict())).copy()
 
@@ -190,19 +253,13 @@ class Task:
             return parent_config.merge(config)
         else:
             return config
-    
-    def get_path_pattern(self, key: str, default: Optional[str] = None) -> Optional[pathlib.Path]:
-        path_pattern = self.full_spec.get(key)
-        if path_pattern is None:
-            return self.path / default if default else None
-        else:
-            return self.path / path_pattern
 
-    def resolve_path(self, path):
+    def resolve_path(self, path: Optional[PathLike]) -> Optional[pathlib.Path]:
         """
-        Resolves a path relative to the task directory.
+        Resolves a path relatively to the task directory.
 
         In addition, following placeholders are replaced:
+
         - ``{DIRNAME}``: The name of the task directory.
         - ``{ROOTDIR}``: The root directory of the task tree.
         """
@@ -223,7 +280,7 @@ class Task:
 
     def create_pipeline(self, *args, **kwargs) -> repype.pipeline.Pipeline:
         """
-        Create the pipeline object based on the task specification.
+        Instantiates and returns the pipeline from the task specification.
 
         Can be overridden in subclasses to create custom pipelines.
         """
@@ -278,29 +335,30 @@ class Task:
 
         The marginal fields are all outputs produced by marginal stages.
         Marginal stages are those stages which are listed in the :attr:`marginal_stages` property.
+        Marginal fields are removed from the *pipeline data objects* when storing the results of the task.
 
         Args:
-            pipeline (Pipeline): The pipeline object.
+            pipeline: The pipeline object.
 
         Returns:
-            set: A set of marginal fields.
+            Set of marginal fields.
         """
         marginal_fields = sum((list(stage.outputs) for stage in pipeline.stages if stage.id in self.marginal_stages), list())
         return frozenset(marginal_fields)
     
     def load(self, pipeline: Optional[repype.pipeline.Pipeline] = None) -> MultiDataDictionary:
         """
-        Load the previously computed data of the task.
+        Load the previously computed *task data object*.
 
         To ensure consistency with the task specification, it is verified that the loaded data contains results for all inputs of the task, and no additional inputs.
-        If pipeline is not None, a check for consistency of the data with the pipeline is performed.
-        The loaded data is consistent with the pipeline if the data contains all fields which are not marginal according to the :meth:`get_marginal_fields` method, and no additional fields.
+        If the `pipeline` is not None, a check for consistency of the data with the `pipeline` is also performed.
+        The loaded *task data object* is consistent with the `pipeline` if the data contains all fields which are not marginal according to the :meth:`get_marginal_fields` method, and no additional fields.
 
         Args:
-            pipeline (Pipeline): The pipeline object.
+            pipeline: The pipeline object.
 
         Returns:
-            dict: A dictionary of data dictionaries.
+            dict: The previously stored *task data object*.
         """
         assert self.runnable
         assert self.data_filepath.is_file()
@@ -322,23 +380,28 @@ class Task:
     
     def strip_marginals(self, pipeline: repype.pipeline.Pipeline, data_chunk: MultiDataDictionary) -> DataDictionary:
         """
-        Strip the marginal fields from the data.
+        Strip the marginal fields from the *task data object*.
 
         Args:
-            data (dict): A dictionary of data dictionaries.
-            pipeline (Pipeline): The pipeline object.
+            pipeline: The pipeline object.
+            data_chunk: The *task data object* (not modified).
 
         Returns:
-            dict: A dictionary of data dictionaries without the marginal fields.
+            Shallow copy of the *task data object* without the marginal fields.
         """
         marginal_fields = self.get_marginal_fields(pipeline)
         return {
             field: data_chunk[field] for field in data_chunk if field not in marginal_fields
         }
         
-    def store(self, pipeline: repype.pipeline.Pipeline, data: MultiDataDictionary, config: repype.config.Config):
+    def store(self, pipeline: repype.pipeline.Pipeline, data: MultiDataDictionary, config: repype.config.Config) -> None:
         """
-        Store the results of the task and the metadata.
+        Store the computed *task data object*.
+
+        Arguments:
+            pipeline: The pipeline used to compute `data`.
+            data: The *task data object*.
+            config: The hyperparameters used to vcompute `data`.
         """
         assert self.runnable
         assert frozenset(data.keys()) == frozenset(self.inputs)
@@ -365,6 +428,19 @@ class Task:
             json.dump(hashes, digest_sha_file)
 
     def find_first_diverging_stage(self, pipeline: repype.pipeline.Pipeline, config: repype.config.Config) -> Optional[repype.stage.Stage]:
+        """
+        Find the first diverging stage of the task.
+
+        Stages are considered diverging if they are new, or if their implementation or hyperparameters have changed.
+        Changes of the implementation or hyperparameters of a stage are detected by comparing the SHA-1 hashes of the :meth:`stage.signature <repype.stage.Stage.signature>` and hyperparameters of the stage.
+        
+        Arguments:
+            pipeline: The pipeline object.
+            config: The hyperparameters.
+
+        Returns:
+            The first diverging stage of the task, or None if there is no diverging stage.
+        """
         # If the task is not completed, the first diverging stage is the first stage of the pipeline
         if not self.digest_sha_filepath.is_file():
             return pipeline.stages[0]
@@ -392,7 +468,19 @@ class Task:
         # There is no diverging stage
         return None
             
-    def find_pickup_task(self, pipeline: repype.pipeline.Pipeline, config: repype.config.Config) -> Dict:
+    def find_pickup_task(self, pipeline: repype.pipeline.Pipeline, config: repype.config.Config) -> Dict[str, Union[Self, repype.stage.Stage]]:
+        """
+        Find a previosly completed task to pick up computations from.
+
+        Returns a dictionary with the following keys:
+
+        - ``task``: The task to pick up from, or None if there is no task to pick up from.
+        - ``first_diverging_stage``: The first stage of the `pipeline` which needs to run, or None if no further computations are required.
+        
+        Arguments:
+            pipeline: The pipeline object.
+            config: The hyperparameters.
+        """
         candidates = list(self.parents) + [self]
         first_diverging_stages = {task: task.find_first_diverging_stage(pipeline, config) for task in candidates}
 
@@ -430,7 +518,19 @@ class Task:
             strip_marginals: bool = True,
             status: Optional[repype.status.Status] = None,
         ) -> MultiDataDictionary:
+        """
+        Run the task.
 
+        Arguments:
+            config: The hyperparameters to run the task with.
+            pipeline: The pipeline to run the task with. Defaults to :meth:`create_pipeline`.
+            pickup: If True, pick up computations from a previously completed task.
+            strip_marginals: If True, strip the marginal fields from the *task data object* before storing it.
+            status: The status object to update.
+
+        Raises:
+            AssertionError: If the task is not runnable.
+        """
         assert self.runnable
         if pipeline is None:
             pipeline = self.create_pipeline()

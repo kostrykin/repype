@@ -8,6 +8,9 @@ else:
 
 
 DataDictionary = Dict[str, Any]
+"""
+Pipeline data object. A dictionary with string keys and arbitrary values.
+"""
 
 Input = TypeVar('Input', int, str)
 """
