@@ -172,18 +172,17 @@ class Pipeline:
         Arguments:
             input: The input to be processed. Can be None if and only if `data` is not None (then the input is deduced from `data`).
             config: The hyperparameters to be used.
-            first_stage: The ID of the first stage to be executed (or None to start with the first).
-            last_stage: The ID of the last stage to be executed (or None to end with the last).
-            data: The *pipeline data object* from a previous execution.
+            first_stage: The ID of the first stage to run (defaults to the first).
+                Earlier stages may still be required to run due to consumed inputs, marginal fields, or if `data` is None.
+            last_stage: The ID of the last stage to run (defaults to the last).
+            data: The *pipeline data object* from previous processing.
             status: A status object to report the progress of the computations.
 
         Returns:
-            Tuple ``(data, config, timings)``, where ``data`` is the *pipeline data object* comprising all final and intermediate results, ``config`` are the finally used hyperparameters, and ``timings`` is a dictionary containing the execution time of each individual pipeline stage (in seconds).
+            Tuple ``(data, config, timings)``, where ``data`` is the *pipeline data object* comprising all final and intermediate results, ``config`` are the finally used hyperparameters, and ``timings`` is a dictionary containing the run time of each individual pipeline stage (in seconds).
 
         Raises:
-            StageError: If an error occurs during the execution of a pipeline stage.
-
-        The parameter `data` is required if and only if `first_stage` is not None, or `input` is None. In the former case, the outputs produced by the missing stages of the pipeline must be obtained from a previous execution of this method, and provided via the `data` parameter.
+            StageError: If an error occurs during the run of a pipeline stage.
         """
         config = config.copy()
 
