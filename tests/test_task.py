@@ -129,6 +129,9 @@ class Task__full_spec(unittest.TestCase):
             spec = dict(
                 field2 = 3,
                 field3 = 4,
+                scopes = dict(
+                    scope1 = 'scope1',
+                )
             ),
         )
         task3 = repype.task.Task(
@@ -136,6 +139,9 @@ class Task__full_spec(unittest.TestCase):
             parent = task2,
             spec = dict(
                 field2 = 5,
+                scopes = dict(
+                    scope2 = 'scope2',
+                )
             ),
         )
         self.assertEqual(
@@ -144,6 +150,9 @@ class Task__full_spec(unittest.TestCase):
                 field1 = 1,
                 field2 = 3,
                 field3 = 4,
+                scopes = dict(
+                    scope1 = 'scope1',
+                )
             ),
         )
         self.assertEqual(
@@ -152,6 +161,10 @@ class Task__full_spec(unittest.TestCase):
                 field1 = 1,
                 field2 = 5,
                 field3 = 4,
+                scopes = dict(
+                    scope1 = 'scope1',
+                    scope2 = 'scope2',
+                )
             ),
         )
 
