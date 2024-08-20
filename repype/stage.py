@@ -277,7 +277,46 @@ class Stage:
         raise NotImplementedError()
 
     def configure(self, *args, **kwargs) -> dict:
-        # FIXME: add documentation
+        """
+        Returns the rules to adopt hyperparameters based on the input data.
+
+        Sometimes it can be necessary to automatically adopt hyperparameters based on the input data.
+        For such cases, this method can be overridden to return the rules which specify how to adopt the hyperparameters.
+        The rules are then applied by the :meth:`repype.pipeline.Pipeline.configure` method.
+
+        The rules must be specified by the following structure::
+
+            {
+                'key': [
+                    factor,
+                    default_user_factor,
+                ],
+            }
+
+        The rules are resolved by mapping the above structure to the arguments of the :func:`repype.pipeline.create_config_entry` function.
+        In this example, two new hyperparameters are created:
+        
+        #. The hyperparameter ``AF_key`` is created and defaults to the value of ``default_user_factor``.
+        #. The hyperparameter ``key`` is created and defaults to the value of the hyperparameter ``AF_key`` times the value of ``factor``.
+
+        In addition, a third element can be added to the list to further constrain the resulting values::
+
+            {
+                'key': [
+                    factor,
+                    default_user_factor,
+                    {
+                        type: 'float',
+                        min: 0.0,
+                        max: 1.0,
+                    },
+                ],
+            }
+
+        Arguments:
+            *args: Sequential arguments passed to :meth:`Pipeline.configure <repype.pipeline.Pipeline.configure>`.
+            **kwargs: Keyword arguments passed to :meth:`Pipeline.configure <repype.pipeline.Pipeline.configure>`.
+        """
         return dict()
     
     @property

@@ -301,10 +301,18 @@ class Pipeline:
 
     def configure(self, base_config: repype.config.Config, *args, **kwargs) -> repype.config.Config:
         """
-        Automatically configures hyperparameters.
+        Automatically adopts hyperparameters.
 
         The hyperparameters are configured by the :py:func:`create_config_entry` function,
         and the arguments are determined by calling :py:meth:`stage.configure() <repype.stage.Stage.configure>` for each stage.
+
+        Arguments:
+            base_config: The base hyperparameters to be used (not modified).
+            *args: Sequential arguments passed to :py:meth:`stage.configure() <repype.stage.Stage.configure>`.
+            **kwargs: Keyword arguments passed to :py:meth:`stage.configure() <repype.stage.Stage.configure>`.
+
+        Returns:
+            The adopted hyperparameters.
         """
         config = base_config.copy()
         for stage in self.stages:
