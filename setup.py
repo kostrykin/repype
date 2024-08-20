@@ -44,7 +44,7 @@ def strip_raw(rst):
 setup(
     name = 'repype',
     version = VERSION,
-    python_requires = '>3.8',  # requires setuptools>=24.2.0 and pip>=9.0.0
+    python_requires = '>=3.9',
     description = 'Reproducible batch processing using pipelines for scientific computing.',
     long_description = strip_raw(open('README.rst').read()),
     long_description_content_type = 'text/x-rst',
