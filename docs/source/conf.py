@@ -6,6 +6,10 @@ project = 'repype'
 copyright = '2017-2024 Leonid Kostrykin, Biomedical Computer Vision Group, Heidelberg University'
 author = 'Leonid Kostrykin'
 
+# -- Add directory which contains the project to sys.path
+import os, sys
+sys.path.insert(0, os.path.abspath('../..'))
+
 # -- General configuration
 
 extensions = [

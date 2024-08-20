@@ -41,9 +41,10 @@
 - To build the documentation locally::
 
       pip install -r docs/requirements.txt
-      python -m sphinx -T -W -b html docs/source docs/build -d docs/build -D language=en
+      cd docs
+      make html
 
-  You can then open ``docs/build/index.html`` to view the documentation.
+  You can then open ``build/html/index.html`` to view the documentation.
 
 ----
 
