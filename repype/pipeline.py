@@ -7,7 +7,7 @@ import repype.stage
 import repype.status
 from repype.typing import (
     Any,
-    DataDictionary,
+    PipelineData,
     Dict,
     FrozenSet,
     Input,
@@ -160,10 +160,10 @@ class Pipeline:
             config: repype.config.Config,
             first_stage: Optional[str] = None,
             last_stage: Optional[str] = None,
-            data: Optional[DataDictionary] = None,
+            data: Optional[PipelineData] = None,
             status: Optional[repype.status.Status] = None,
             **kwargs,
-        ) -> Tuple[DataDictionary, repype.config.Config, Dict[str, float]]:
+        ) -> Tuple[PipelineData, repype.config.Config, Dict[str, float]]:
         """
         Processes the input using this pipeline.
 

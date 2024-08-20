@@ -7,7 +7,7 @@ else:
     from typing import *
 
 
-DataDictionary = Dict[str, Any]
+PipelineData = Dict[str, Any]
 """
 Pipeline data object. A dictionary with string keys and arbitrary values.
 """

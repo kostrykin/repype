@@ -14,7 +14,7 @@ import repype.stage
 import repype.status
 from repype.typing import (
     Any,
-    DataDictionary,
+    PipelineData,
     Dict,
     FrozenSet,
     Input,
@@ -29,7 +29,7 @@ from repype.typing import (
 import yaml
 
 
-MultiDataDictionary = Dict[Input, DataDictionary]
+TaskData = Dict[Input, PipelineData]
 """
 Task data object. A dictionary with input objects as keys and *pipeline data objects* as values.
 """
@@ -346,7 +346,7 @@ class Task:
         marginal_fields = sum((list(stage.outputs) for stage in pipeline.stages if stage.id in self.marginal_stages), list())
         return frozenset(marginal_fields)
     
-    def load(self, pipeline: Optional[repype.pipeline.Pipeline] = None) -> MultiDataDictionary:
+    def load(self, pipeline: Optional[repype.pipeline.Pipeline] = None) -> TaskData:
         """
         Load the previously computed *task data object*.
 
@@ -378,7 +378,7 @@ class Task:
         # Return the loaded data
         return data
     
-    def strip_marginals(self, pipeline: repype.pipeline.Pipeline, data_chunk: MultiDataDictionary) -> DataDictionary:
+    def strip_marginals(self, pipeline: repype.pipeline.Pipeline, data_chunk: TaskData) -> PipelineData:
         """
         Strip the marginal fields from the *task data object*.
 
@@ -394,7 +394,7 @@ class Task:
             field: data_chunk[field] for field in data_chunk if field not in marginal_fields
         }
         
-    def store(self, pipeline: repype.pipeline.Pipeline, data: MultiDataDictionary, config: repype.config.Config) -> None:
+    def store(self, pipeline: repype.pipeline.Pipeline, data: TaskData, config: repype.config.Config) -> None:
         """
         Store the computed *task data object*.
 
@@ -517,7 +517,7 @@ class Task:
             pickup: bool = True,
             strip_marginals: bool = True,
             status: Optional[repype.status.Status] = None,
-        ) -> MultiDataDictionary:
+        ) -> TaskData:
         """
         Run the task.
 

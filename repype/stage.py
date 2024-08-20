@@ -7,7 +7,7 @@ import repype.config
 import repype.status
 from repype.typing import (
     Collection,
-    DataDictionary,
+    PipelineData,
     Dict,
     Optional,
     Protocol,
@@ -165,7 +165,7 @@ class Stage:
     def run(
             self,
             pipeline: 'repype.pipeline.Pipeline',
-            data: DataDictionary,
+            data: PipelineData,
             config: repype.config.Config,
             status: Optional[repype.status.Status] = None,
             **kwargs,
@@ -231,7 +231,7 @@ class Stage:
             self.skip(data, status = status, config = config, **kwargs)
             return 0.
         
-    def skip(self, data: DataDictionary, status: Optional[repype.status.Status] = None, **kwargs) -> None:
+    def skip(self, data: PipelineData, status: Optional[repype.status.Status] = None, **kwargs) -> None:
         """
         Skips this stage of the pipeline.
 
@@ -254,7 +254,7 @@ class Stage:
             config: repype.config.Config,
             status: Optional[repype.status.Status] = None,
             **inputs,
-        ) -> DataDictionary:
+        ) -> PipelineData:
         """
         Processes the inputs of this stage of the `pipeline`.
 
