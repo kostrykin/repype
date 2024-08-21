@@ -1,6 +1,7 @@
 import dill
 import gzip
 import json
+import os
 import pathlib
 import tempfile
 import unittest
@@ -381,7 +382,7 @@ class Task__root(unittest.TestCase):
 class Task__resolve_path(unittest.TestCase):
 
     @testsuite.with_temporary_paths(2)
-    def test(self, path1, path2):
+    def test_absolute(self, path1, path2):
         task1 = repype.task.Task(
             path = path1,
             parent = None,
@@ -398,6 +399,31 @@ class Task__resolve_path(unittest.TestCase):
         self.assertEqual(task2.resolve_path('../{DIRNAME}.txt'), (path2 / 'subdir.txt').resolve())
         self.assertEqual(task2.resolve_path('{ROOTDIR}/file.txt'), (path1 / 'file.txt').resolve())
         self.assertEqual(task2.resolve_path('{ROOTDIR}/{DIRNAME}.txt'), (path1 / 'subdir.txt').resolve())
+
+    @testsuite.with_temporary_paths(1)
+    def test_relative(self, path):
+        cwd = os.getcwd()
+        os.chdir(path)
+        try:
+            os.makedirs('task1/task2')
+            task1 = repype.task.Task(
+                path = 'task1',
+                parent = None,
+                spec = dict(),
+            )
+            task2 = repype.task.Task(
+                path = 'task1/task2',
+                parent = task1,
+                spec = dict(),
+            )
+            self.assertEqual(task2.resolve_path('file.txt'), (task2.path / 'file.txt').resolve())
+            self.assertEqual(task2.resolve_path('./file.txt'), (task2.path / 'file.txt').resolve())
+            self.assertEqual(task2.resolve_path('../file.txt'), (task1.path / 'file.txt').resolve())
+            self.assertEqual(task2.resolve_path('../{DIRNAME}.txt'), (task1.path / 'task2.txt').resolve())
+            self.assertEqual(task2.resolve_path('{ROOTDIR}/file.txt'), (task1.path / 'file.txt').resolve())
+            self.assertEqual(task2.resolve_path('{ROOTDIR}/{DIRNAME}.txt'), (task1.path / 'task2.txt').resolve())
+        finally:
+            os.chdir(cwd)
 
 
 class Task__is_pending(unittest.TestCase):

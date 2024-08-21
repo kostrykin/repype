@@ -274,7 +274,7 @@ class Task:
         # Replace placeholders in the path
         path = pathlib.Path(os.path.expanduser(str(path))
             .replace('{DIRNAME}', self.path.name)
-            .replace('{ROOTDIR}', str(self.root.path)))
+            .replace('{ROOTDIR}', str(self.root.path.resolve())))
         
         # If the path is not absolute, treat it as relative to the task directory
         if not path.is_absolute():
