@@ -100,9 +100,15 @@ class Batch:
     The class to use for tasks.
     """
 
+    task_process: Optional[multiprocessing.Process]
+    """
+    The process running the current task.
+    """
+
     def __init__(self, task_cls: Type[repype.task.Task] = repype.task.Task):
         self.tasks = dict()
         self.task_cls = task_cls
+        self.task_process = None
 
     def task(self, path: PathLike, spec: Optional[dict] = None) -> Optional[repype.task.Task]:
         """
@@ -184,32 +190,48 @@ class Batch:
         Returns:
             True if all tasks were completed successfully, and False otherwise
         """
-        contexts = self.pending if contexts is None else contexts
-        for rc_idx, rc in enumerate(contexts):
-            task_status = status.derive()
- 
-            repype.status.update(
-                status = task_status,
-                info = 'enter',
-                task = str(rc.task.path.resolve()),
-                step = rc_idx,
-                step_count = len(contexts),
-            )
-
-            # Run the task in a separate process
-            task_process = multiprocessing.Process(target = run_task_process, args = (dill.dumps((rc, task_status),),))
-            task_process.start()
-
-            # Wait for the task process to finish
-            task_process.join()
-            if task_process.exitcode != 0:
+        assert self.task_process is None, 'A task is already running'
+        try:
+            
+            contexts = self.pending if contexts is None else contexts
+            for rc_idx, rc in enumerate(contexts):
+                task_status = status.derive()
+    
                 repype.status.update(
-                    status = status,
-                    info = 'interrupted',
+                    status = task_status,
+                    info = 'enter',
+                    task = str(rc.task.path.resolve()),
+                    step = rc_idx,
+                    step_count = len(contexts),
                 )
 
-                # Interrupt task execution due to an error
-                return False
+                # Run the task in a separate process
+                self.task_process = multiprocessing.Process(target = run_task_process, args = (dill.dumps((rc, task_status),),))
+                self.task_process.start()
 
-        # All tasks were completed successfully
-        return True
+                # Wait for the task process to finish
+                self.task_process.join()
+                if self.task_process.exitcode != 0:
+                    repype.status.update(
+                        status = status,
+                        info = 'interrupted',
+                    )
+
+                    # Interrupt task execution due to an error
+                    return False
+
+            # All tasks were completed successfully
+            return True
+        
+        finally:
+            self.task_process = None
+    
+
+    def cancel(self) -> None:
+        """
+        Cancel currently running tasks.
+        """
+        if self.task_process:
+            self.task_process.terminate()
+            self.task_process.join()
+            self.task_process = None
