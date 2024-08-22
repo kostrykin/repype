@@ -226,7 +226,6 @@ class Batch:
         
         finally:
             self.task_process = None
-    
 
     def cancel(self) -> None:
         """
