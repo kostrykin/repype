@@ -234,4 +234,3 @@ class Batch:
         if self.task_process:
             self.task_process.terminate()
             self.task_process.join()
-            self.task_process = None
