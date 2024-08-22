@@ -209,5 +209,6 @@ class Batch__run(unittest.TestCase):
     @testsuite.with_temporary_paths(1)
     def test(self, path):
         status = repype.status.Status(path = path)
-        self.batch.run(status = status)
+        ret = self.batch.run(status = status)
+        self.assertTrue(ret)
         self.assertEqual([list(item.keys()) for item in status.data], [['expand']] * 3, '\n' + pprint.pformat(status.data))
