@@ -36,11 +36,11 @@ Task data object. A dictionary with input objects as keys and *pipeline data obj
 """
 
 
-def decode_inputs(spec: Union[str, List[Input]]) -> List[Input]:
+def decode_inputs(spec: Union[Input, List[Input]]) -> List[Input]:
     """
-    Convert a string of comma-separated inputs (or ranges thereof) to a list of integers.
+    Convert a string of comma-separated integers (or ranges thereof) to a list of integers.
 
-    If `spec` is a list already, it is returned as is.
+    If `spec` is a list already, or a single input identifier, it is returned as is.
     """
     # Convert a string of comma-separated inputs (or ranges thereof) to a list of integers
     if isinstance(spec, str):
@@ -71,9 +71,13 @@ def decode_inputs(spec: Union[str, List[Input]]) -> List[Input]:
 
         return sorted(frozenset(inputs))
     
-    # Otherwise, treat the input as a list of inputs
-    else:
+    # Treat the input as a list of inputs, if it is a list
+    elif isinstance(spec, list):
         return sorted(frozenset(spec))
+    
+    # Otherwise, treat the input as a single input
+    else:
+        return [spec]
     
 
 def load_from_module(name: str) -> Any:

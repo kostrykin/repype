@@ -22,8 +22,11 @@ class decode_inputs(unittest.TestCase):
     def test_empty(self):
         self.assertEqual(repype.task.decode_inputs(''), [])
 
-    def test_single(self):
+    def test_single_str(self):
         self.assertEqual(repype.task.decode_inputs('1'), [1])
+
+    def test_single_int(self):
+        self.assertEqual(repype.task.decode_inputs(1), [1])
 
     def test_range(self):
         self.assertEqual(repype.task.decode_inputs('1-2'), [1, 2])
