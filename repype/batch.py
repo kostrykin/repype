@@ -215,6 +215,7 @@ class Batch:
                     repype.status.update(
                         status = status,
                         info = 'interrupted',
+                        exit_code = self.task_process.exitcode,
                     )
 
                     # Interrupt task execution due to an error
