@@ -238,8 +238,15 @@ class Batch:
         Cancel currently running tasks.
         """
         if self.task_process:
+
+            # Try to terminate the process using SIGTERM (wait at most 1 second)
             self.task_process.terminate()
-            self.task_process.join()
+            self.task_process.join(1)
+
+            # Check whether the process ended, if not, ultimately kill it using SIGKILL
+            if self.task_process.exitcode is None:
+                self.task_process.kill()
+                self.task_process.join()
 
             # The `run` method is sitll waiting for the exit code, so send a value to unblock it
             self.task_pipe[1].send(2)
