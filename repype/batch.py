@@ -1,5 +1,6 @@
 import glob
 import multiprocessing
+import multiprocessing.connection
 import pathlib
 import sys
 import traceback
@@ -49,24 +50,27 @@ class RunContext:
         self.config = task.create_config()
 
 
-def run_task_process(args_serialized: bytes) -> None:
+def run_task_process(exit_code: multiprocessing.connection.Connection, args_serialized: bytes) -> None:
     """
-    Run a task using specific :class:`RunContext` and :class:`repype.status.Status` objects.
+    Run a task using specific :class:`RunContext` and :class:`repype.status.Status` objects inside a separate process.
+
+    The exit code of the process is sent to the parent process using the `exit_code` connection.
+    This is to bypass some interference between the `exitcode` attribute of ``multiprocessing.Process`` objects and threaded workers in Textual:
+    https://github.com/Textualize/textual/discussions/4923
+    The exit code is 0 upon successful completion, and 1 indicates failure.
 
     Arguments:
+        exit_code: The connection to send the exit code to.
         args_serialized: The serialized arguments to run the task.
             This should be a tuple of the shape ``(rc, status)``, where ``rc`` is a :class:`RunContext` object
             and ``status`` is a :class:`repype.status.Status` object, serialized using dill.
-    
-    This is to be used to run a task in in a separate process.
-    Upon unsuccessful completion, the process will exit with status code 1.
     """
     rc, status = dill.loads(args_serialized)
 
     # Run the task and exit the child process
     try:
         rc.task.run(rc.config, pipeline = rc.pipeline, status = status)
-        return
+        exit_code.send(0)  # Indicate success to the parent process
 
     # If an exception occurs, update the status and re-raise the exception
     except:
@@ -78,7 +82,7 @@ def run_task_process(args_serialized: bytes) -> None:
             traceback = traceback.format_exc(),
             stage = error.stage.id if isinstance(error, repype.pipeline.StageError) else None,
         )
-        sys.exit(1)  # Indicate a failure to the parent process
+        exit_code.send(1)  # Indicate a failure to the parent process
 
 
 class Batch:
@@ -206,16 +210,18 @@ class Batch:
                 )
 
                 # Run the task in a separate process
-                self.task_process = multiprocessing.Process(target = run_task_process, args = (dill.dumps((rc, task_status),),))
+                pipe = multiprocessing.Pipe(duplex = False)
+                self.task_process = multiprocessing.Process(target = run_task_process, args = (pipe[1], dill.dumps((rc, task_status),),))
                 self.task_process.start()
 
                 # Wait for the task process to finish
                 self.task_process.join()
-                if self.task_process.exitcode != 0:
+                exit_code = pipe[0].recv()
+                if exit_code != 0:
                     repype.status.update(
                         status = status,
                         info = 'interrupted',
-                        exit_code = self.task_process.exitcode,
+                        exit_code = exit_code,
                     )
 
                     # Interrupt task execution due to an error
