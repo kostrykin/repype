@@ -1,3 +1,4 @@
+import asyncio
 import copy
 import json
 import pathlib
@@ -489,8 +490,10 @@ class StatusReader(FileSystemEventHandler):
         """
         if isinstance(event, FileModifiedEvent):
             filepath = pathlib.Path(event.src_path).resolve()
-            if self.update(filepath):
-                self.check_new_status()
+            async def update(filepath):
+                if self.update(filepath):
+                    self.check_new_status()
+            asyncio.get_event_loop().call_soon_threadsafe(update, filepath)
 
     def check_new_status(self) -> None:
         """
