@@ -393,7 +393,8 @@ class StatusReader(FileSystemEventHandler):
     Points to the latest permanent (i.e. non-intermediate) status update within :attr:`data`.
     """
 
-    def __init__(self, filepath: PathLike):
+    def __init__(self, filepath: PathLike, loop: asyncio.AbstractEventLoop = None):
+        self.loop = loop if loop else asyncio.get_running_loop()
         self.filepath = pathlib.Path(filepath).resolve()
         self.data = list()
         self.data_frames = {self.filepath: self.data}
@@ -490,10 +491,10 @@ class StatusReader(FileSystemEventHandler):
         """
         if isinstance(event, FileModifiedEvent):
             filepath = pathlib.Path(event.src_path).resolve()
-            async def update(filepath):
+            def update(filepath):
                 if self.update(filepath):
                     self.check_new_status()
-            asyncio.get_event_loop().call_soon_threadsafe(update, filepath)
+            self.loop.call_soon_threadsafe(update, filepath)
 
     def check_new_status(self) -> None:
         """
