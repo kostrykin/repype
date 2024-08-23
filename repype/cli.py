@@ -1,4 +1,4 @@
-import argparse
+import asyncio
 import pathlib
 import sys
 import tempfile
@@ -269,7 +269,7 @@ def run_cli_ex(
         with status_reader:
 
             if run:
-                return batch.run(contexts, status = status)
+                return asyncio.run(batch.run(contexts, status = status))
             
             else:
                 return True
