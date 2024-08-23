@@ -240,3 +240,6 @@ class Batch:
         if self.task_process:
             self.task_process.terminate()
             self.task_process.join()
+
+            # The `run` method is sitll waiting for the exit code, so send a value to unblock it
+            self.task_pipe[1].send(2)
