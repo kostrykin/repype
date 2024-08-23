@@ -210,13 +210,13 @@ class Batch:
                 )
 
                 # Run the task in a separate process
-                pipe = multiprocessing.Pipe(duplex = False)
-                self.task_process = multiprocessing.Process(target = run_task_process, args = (pipe[1], dill.dumps((rc, task_status),),))
+                self.task_pipe = multiprocessing.Pipe(duplex = False)
+                self.task_process = multiprocessing.Process(target = run_task_process, args = (self.task_pipe[1], dill.dumps((rc, task_status),),))
                 self.task_process.start()
 
                 # Wait for the task process to finish
                 self.task_process.join()
-                exit_code = pipe[0].recv()
+                exit_code = self.task_pipe[0].recv()
                 if exit_code != 0:
                     repype.status.update(
                         status = status,
