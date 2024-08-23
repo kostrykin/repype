@@ -354,7 +354,7 @@ class StatusReader__init(IsolatedAsyncioTestCase):
 
     @patch.object(repype.status.StatusReader, 'handle_new_status')
     async def test_without_intermediates(self, mock_handle_new_status):
-        with repype.status.StatusReader(self.status1.filepath) as status:
+        async with repype.status.StatusReader(self.status1.filepath) as status:
             self.assertEqual(status, ['write1', ['write2']])
 
             await wait_for_watchdog()

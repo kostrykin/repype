@@ -404,14 +404,14 @@ class StatusReader(FileSystemEventHandler):
         self.update(self.filepath)
         self.check_new_status()
 
-    def __enter__(self) -> dict:
+    async def __aenter__(self) -> dict:
         self.observer = Observer()
         self.observer.schedule(self, self.filepath.parent, recursive = False)
         self.observer.start()
         return self.data
     
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
-        time.sleep(1)  # Give the WatchDog observer some extra time
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        await asyncio.sleep(1)  # Give the WatchDog observer some extra time
         self.observer.stop()
         self.observer.join()
 
