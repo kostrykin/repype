@@ -8,6 +8,7 @@ import pathlib
 import re
 
 import frozendict
+import mergedeep
 import repype.pipeline
 import repype.config
 import repype.stage
@@ -35,11 +36,11 @@ Task data object. A dictionary with input objects as keys and *pipeline data obj
 """
 
 
-def decode_inputs(spec: Union[str, List[Input]]) -> List[Input]:
+def decode_inputs(spec: Union[Input, List[Input]]) -> List[Input]:
     """
-    Convert a string of comma-separated inputs (or ranges thereof) to a list of integers.
+    Convert a string of comma-separated integers (or ranges thereof) to a list of integers.
 
-    If `spec` is a list already, it is returned as is.
+    If `spec` is a list already, or a single input identifier, it is returned as is.
     """
     # Convert a string of comma-separated inputs (or ranges thereof) to a list of integers
     if isinstance(spec, str):
@@ -70,9 +71,13 @@ def decode_inputs(spec: Union[str, List[Input]]) -> List[Input]:
 
         return sorted(frozenset(inputs))
     
-    # Otherwise, treat the input as a list of inputs
-    else:
+    # Treat the input as a list of inputs, if it is a list
+    elif isinstance(spec, list):
         return sorted(frozenset(spec))
+    
+    # Otherwise, treat the input as a single input
+    else:
+        return [spec]
     
 
 def load_from_module(name: str) -> Any:
@@ -131,7 +136,7 @@ class Task:
         """
         The full specification of the task, including the parent task specifications.
         """
-        return (self.parent.full_spec | self.spec) if self.parent else self.spec
+        return mergedeep.merge(dict(), self.parent.full_spec, self.spec) if self.parent else self.spec
     
     @property
     def runnable(self) -> bool:
@@ -160,6 +165,10 @@ class Task:
         The stages which are considered marginal.
 
         Outputs of marginal stages are removed from the *pipeline data objects* when storing the results of the task.
+        The default implementation reads the list of marginal stages from the ``marginal_stages`` field in the task specification.
+
+        Returns:
+            List of the stage identifiers corresponding to the marginal stages.
         """
         return self.full_spec.get('marginal_stages', [])
         
@@ -229,8 +238,8 @@ class Task:
         The hyperparameters are combined from three sources, in the following order, where the later sources take precedence:
 
         #. The hyperparameters of the parent task.
-        #. The `base_config` file specified in the task specification (if any).
-        #. The `config` section of the task specification (if any).
+        #. The ``base_config`` file specified in the task specification (if any).
+        #. The ``config`` section of the task specification (if any).
 
         The hyperparameters can be adopted by making changes to the returned object before running the task,
         but the changes are not reflected in the task specification.
@@ -269,7 +278,7 @@ class Task:
         # Replace placeholders in the path
         path = pathlib.Path(os.path.expanduser(str(path))
             .replace('{DIRNAME}', self.path.name)
-            .replace('{ROOTDIR}', str(self.root.path)))
+            .replace('{ROOTDIR}', str(self.root.path.resolve())))
         
         # If the path is not absolute, treat it as relative to the task directory
         if not path.is_absolute():
@@ -358,7 +367,7 @@ class Task:
             pipeline: The pipeline object.
 
         Returns:
-            dict: The previously stored *task data object*.
+            The previously stored *task data object*.
         """
         assert self.runnable
         assert self.data_filepath.is_file()

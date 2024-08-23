@@ -199,9 +199,8 @@ def run_cli(
         True if the batch processing was successful, False if an error occurred.
     """
 
-    if parser is None:
-        import argparse
-        parser = argparse.ArgumentParser()
+    import argparse
+    parser = argparse.ArgumentParser()
 
     parser.add_argument('path', help='Root directory for batch processing.')
     parser.add_argument('--run', help='Run batch processing.', action='store_true')

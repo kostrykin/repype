@@ -11,7 +11,7 @@ from unittest.mock import (
     patch,
 )
 
-from repype.status import Status, StatusReader
+import repype.status
 from . import testsuite
 
 
@@ -24,24 +24,24 @@ class Status__init(TestCase):
 
     def test__parent_path_none(self):
         with self.assertRaises(AssertionError):
-            Status()
+            repype.status.Status()
 
     @testsuite.with_temporary_paths(2)
     def test__parent_path_not_none(self, path1, path2):
-        status = Status(path = path1)
+        status = repype.status.Status(path = path1)
         with self.assertRaises(AssertionError):
-            Status(parent = status, path = path2)
+            repype.status.Status(parent = status, path = path2)
 
     @testsuite.with_temporary_paths(1)
     def test__with_path(self, path):
-        status = Status(path = path)
+        status = repype.status.Status(path = path)
         self.assertEqual(status.path, path)
         self.assertIsNone(status.parent)
 
     @testsuite.with_temporary_paths(1)
     def test__with_parent(self, path):
-        status1 = Status(path = path)
-        status2 = Status(parent = status1)
+        status1 = repype.status.Status(path = path)
+        status2 = repype.status.Status(parent = status1)
         self.assertIs(status2.parent, status1)
         self.assertIsNone(status2.path)
 
@@ -50,13 +50,13 @@ class Status__root(TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test__no_parent(self, path):
-        status = Status(path = path)
+        status = repype.status.Status(path = path)
         self.assertIs(status.root, status)
 
     @testsuite.with_temporary_paths(1)
     def test__with_parent(self, path):
-        status1 = Status(path = path)
-        status2 = Status(parent = status1)
+        status1 = repype.status.Status(path = path)
+        status2 = repype.status.Status(parent = status1)
         self.assertIs(status2.root, status1)
 
 
@@ -64,13 +64,13 @@ class Status__filepath(TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test__no_parent(self, path):
-        status = Status(path = path)
+        status = repype.status.Status(path = path)
         self.assertEqual(status.filepath, path / f'{status.id}.json')
 
     @testsuite.with_temporary_paths(1)
     def test__with_parent(self, path):
-        status1 = Status(path = path)
-        status2 = Status(parent = status1)
+        status1 = repype.status.Status(path = path)
+        status2 = repype.status.Status(parent = status1)
         self.assertEqual(status2.filepath, path / f'{status2.id}.json')
 
 
@@ -78,7 +78,7 @@ class Status__write_intermediate(TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_write(self, path):
-        status = Status(path = path)
+        status = repype.status.Status(path = path)
         status.write('test1')
         status.write('test2')
         with open(status.filepath) as file:
@@ -87,7 +87,7 @@ class Status__write_intermediate(TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_write_intermediate(self, path):
-        status = Status(path = path)
+        status = repype.status.Status(path = path)
         status.write('write')
         status.intermediate('intermediate')
         with open(status.filepath) as file:
@@ -102,7 +102,7 @@ class Status__write_intermediate(TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_write_intermediate_write(self, path):
-        status = Status(path = path)
+        status = repype.status.Status(path = path)
         status.write('write1')
         status.intermediate('intermediate')
         status.write('write2')
@@ -112,7 +112,7 @@ class Status__write_intermediate(TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_write_intermediate_none(self, path):
-        status = Status(path = path)
+        status = repype.status.Status(path = path)
         status.write('write1')
         status.intermediate('intermediate')
         status.intermediate(None)
@@ -125,7 +125,7 @@ class Status__derive(TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test(self, path):
-        status = Status(path = path)
+        status = repype.status.Status(path = path)
         child = status.derive()
         self.assertEqual(status.data, [dict(expand = str(child.filepath))])
         self.assertEqual(child.data, [])
@@ -137,7 +137,7 @@ class Status__progress(TestCase):
     @testsuite.with_temporary_paths(1)
     def test(self, path):
         intermediate_path = None
-        status = Status(path = path)
+        status = repype.status.Status(path = path)
         for item_idx, item in enumerate(status.progress(range(3), details = 'details')):
 
             if intermediate_path is None:
@@ -171,7 +171,7 @@ class Status__progress(TestCase):
     @testsuite.with_temporary_paths(1)
     def test_break(self, path):
         intermediate_path = None
-        status = Status(path = path)
+        status = repype.status.Status(path = path)
 
         for item_idx, item in (enumerate(status.progress(range(3), details = 'details'))):
 
@@ -206,8 +206,20 @@ class Status__progress(TestCase):
             self.assertEqual(data, list())
 
     @testsuite.with_temporary_paths(1)
-    def test_iterations(self, path):
-        status = Status(path = path)
+    def test_iterations_generator(self, path):
+        status = repype.status.Status(path = path)
+        def generator():
+            for item in []:
+                yield item
+        for item in status.progress(generator(), iterations = 0):
+            pass
+
+        # Verify that there have been no iterations
+        self.assertFalse('item' in locals())
+
+    @testsuite.with_temporary_paths(1)
+    def test_iterations_assertion_error(self, path):
+        status = repype.status.Status(path = path)
         with self.assertRaises(AssertionError):
             for item in status.progress(range(3), iterations = 2):
                 pass
@@ -218,7 +230,7 @@ class Status__progress(TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_empty(self, path):
-        status = Status(path = path)
+        status = repype.status.Status(path = path)
         for item in status.progress(list()):
             pass
 
@@ -232,7 +244,7 @@ class Status__progress(TestCase):
     @testsuite.with_temporary_paths(1)
     def test_error(self, path):
         intermediate_path = None
-        status = Status(path = path)
+        status = repype.status.Status(path = path)
 
         with self.assertRaises(testsuite.TestError):
             for item_idx, item in (enumerate(status.progress(range(3), details = 'details'))):
@@ -268,11 +280,70 @@ class Status__progress(TestCase):
             self.assertEqual(data, list())
 
 
+class update(TestCase):
+
+    @testsuite.with_temporary_paths(1)
+    def test_write_kwargs(self, path):
+        status = repype.status.Status(path = path)
+        repype.status.update(status, info = 'test1')
+        repype.status.update(status, info = 'test2')
+        with open(status.filepath) as file:
+            data = json.load(file)
+            self.assertEqual(data, [dict(info = 'test1'), dict(info = 'test2')])
+
+    @testsuite.with_temporary_paths(1)
+    def test_write_str(self, path):
+        status = repype.status.Status(path = path)
+        repype.status.update(status, 'test1')
+        repype.status.update(status, 'test2')
+        with open(status.filepath) as file:
+            data = json.load(file)
+            self.assertEqual(data, ['test1', 'test2'])
+
+    @testsuite.with_temporary_paths(1)
+    def test_intermediate_dict(self, path):
+        status = repype.status.Status(path = path)
+        repype.status.update(status, info = 'intermediate', intermediate = True)
+        with open(status.filepath) as file:
+            data = json.load(file)
+            self.assertEqual(len(data), 1)
+            self.assertEqual(list(data[0].keys()), ['expand', 'content_type'])
+            self.assertEqual(data[0]['content_type'], 'intermediate')
+        with open(data[0]['expand']) as file:
+            data = json.load(file)
+            self.assertEqual(data, [dict(info = 'intermediate')])
+
+        # Clear the intermediate
+        repype.status.update(status, None, intermediate = True)
+        with open(status.filepath) as file:
+            data = json.load(file)
+            self.assertEqual(len(data), 0)
+
+    @testsuite.with_temporary_paths(1)
+    def test_intermediate_str(self, path):
+        status = repype.status.Status(path = path)
+        repype.status.update(status, 'intermediate', intermediate = True)
+        with open(status.filepath) as file:
+            data = json.load(file)
+            self.assertEqual(len(data), 1)
+            self.assertEqual(list(data[0].keys()), ['expand', 'content_type'])
+            self.assertEqual(data[0]['content_type'], 'intermediate')
+        with open(data[0]['expand']) as file:
+            data = json.load(file)
+            self.assertEqual(data, ['intermediate'])
+
+        # Clear the intermediate
+        repype.status.update(status, None, intermediate = True)
+        with open(status.filepath) as file:
+            data = json.load(file)
+            self.assertEqual(len(data), 0)
+
+
 class StatusReader__init(TestCase):
 
     def setUp(self):
         self.tempdir = tempfile.TemporaryDirectory()
-        self.status1 = Status(path = self.tempdir.name)
+        self.status1 = repype.status.Status(path = self.tempdir.name)
         self.status1.write('write1')
         self.status2 = self.status1.derive()
         self.status2.write('write2')
@@ -280,9 +351,9 @@ class StatusReader__init(TestCase):
     def tearDown(self):
         self.tempdir.cleanup()
 
-    @patch.object(StatusReader, 'handle_new_status')
+    @patch.object(repype.status.StatusReader, 'handle_new_status')
     def test_without_intermediates(self, mock_handle_new_status):
-        with StatusReader(self.status1.filepath) as status:
+        with repype.status.StatusReader(self.status1.filepath) as status:
             self.assertEqual(status, ['write1', ['write2']])
 
             wait_for_watchdog()
@@ -328,9 +399,9 @@ class StatusReader__init(TestCase):
                 ]
             )
 
-    @patch.object(StatusReader, 'handle_new_status')
+    @patch.object(repype.status.StatusReader, 'handle_new_status')
     def test_with_intermediates(self, mock_handle_new_status):
-        with StatusReader(self.status1.filepath) as status:
+        with repype.status.StatusReader(self.status1.filepath) as status:
             self.assertEqual(status, ['write1', ['write2']])
 
             self.status2.write('write3')
