@@ -1,4 +1,5 @@
 import contextlib
+import inspect
 import io
 import pathlib
 import re
@@ -21,6 +22,7 @@ except KeyError:
 
 def with_temporary_paths(count: int):
     def decorator(test_func):
+
         def wrapper(self, *args, **kwargs):
             paths = [tempfile.mkdtemp() for _ in range(count)]
             try:
@@ -29,7 +31,17 @@ def with_temporary_paths(count: int):
                 for path in paths:
                     shutil.rmtree(path)
             return ret
-        return wrapper
+
+        async def async_wrapper(self, *args, **kwargs):
+            paths = [tempfile.mkdtemp() for _ in range(count)]
+            try:
+                ret = await test_func(self, *[pathlib.Path(path) for path in paths], *args, **kwargs)
+            finally:
+                for path in paths:
+                    shutil.rmtree(path)
+            return ret
+
+        return async_wrapper if inspect.iscoroutinefunction(test_func) else wrapper
     return decorator
 
 
