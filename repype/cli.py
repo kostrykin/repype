@@ -265,14 +265,17 @@ def run_cli_ex(
             run = run,
         )
 
-        status_reader = status_reader_cls(status.filepath)
-        with status_reader:
+        async def main():
+            status_reader = status_reader_cls(status.filepath)
+            async with status_reader:
 
-            if run:
-                return asyncio.run(batch.run(contexts, status = status))
-            
-            else:
-                return True
+                if run:
+                    return await batch.run(contexts, status = status)
+                
+                else:
+                    return True
+        
+        return asyncio.run(main())
 
 
 if __name__ == '__main__':

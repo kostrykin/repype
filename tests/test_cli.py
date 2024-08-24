@@ -1,3 +1,4 @@
+import asyncio
 import pathlib
 import tempfile
 import time
@@ -9,38 +10,38 @@ from . import testsuite
 from . import test_status
 
 
-class StatusReaderConsoleAdapter__write(unittest.TestCase):
+class StatusReaderConsoleAdapter__write(unittest.IsolatedAsyncioTestCase):
 
-    def setUp(self):
+    async def asyncSetUp(self):
         self.tempdir = tempfile.TemporaryDirectory()
         self.status = repype.status.Status(path = self.tempdir.name)
         self.status_reader = repype.cli.StatusReaderConsoleAdapter(self.status.filepath)
-        self.status_reader.__enter__()
+        await self.status_reader.__aenter__()
 
-    def tearDown(self):
-        self.status_reader.__exit__(None, None, None)
+    async def asyncTearDown(self):
+        await self.status_reader.__aexit__(None, None, None)
         self.tempdir.cleanup()
 
-    def test(self):
+    async def test(self):
         with testsuite.CaptureStdout() as stdout:
             self.status.write('message')
-            test_status.wait_for_watchdog()
+            await test_status.wait_for_watchdog()
             self.assertEqual(str(stdout), 'message\n')
 
 
-class StatusReaderConsoleAdapter__progress(unittest.TestCase):
+class StatusReaderConsoleAdapter__progress(unittest.IsolatedAsyncioTestCase):
 
-    def setUp(self):
+    async def asyncSetUp(self):
         self.tempdir = tempfile.TemporaryDirectory()
         self.status = repype.status.Status(path = self.tempdir.name)
         self.status_reader = repype.cli.StatusReaderConsoleAdapter(self.status.filepath)
-        self.status_reader.__enter__()
+        await self.status_reader.__aenter__()
 
-    def tearDown(self):
-        self.status_reader.__exit__(None, None, None)
+    async def asyncTearDown(self):
+        await self.status_reader.__aexit__(None, None, None)
         self.tempdir.cleanup()
 
-    def test(self):
+    async def test(self):
         lines = [
             '[                    ] 0.0% (0 / 3)\r',
             '[======              ] 33.3% (1 / 3, ETA: 00:02)\r',
@@ -49,16 +50,16 @@ class StatusReaderConsoleAdapter__progress(unittest.TestCase):
         ]
         with testsuite.CaptureStdout() as stdout:
             for item_idx, item in enumerate(repype.status.progress(self.status, range(3))):
-                time.sleep(1)
+                await asyncio.sleep(1)
                 self.assertEqual(str(stdout), ''.join(lines[:item_idx + 1]))
         
-            test_status.wait_for_watchdog()
+            await test_status.wait_for_watchdog()
             self.assertEqual(str(stdout), ''.join(lines))
 
         # Verify that there have been three iterations, i.e. `item_idx = 0`, `item_idx = 1`, `item_idx = 2`
         self.assertEqual(item_idx, 2)
 
-    def test_with_details_str(self):
+    async def test_with_details_str(self):
         lines = [
             'details [                    ] 0.0% (0 / 3)\r',
             'details [======              ] 33.3% (1 / 3, ETA: 00:02)\r',
@@ -67,16 +68,16 @@ class StatusReaderConsoleAdapter__progress(unittest.TestCase):
         ]
         with testsuite.CaptureStdout() as stdout:
             for item_idx, item in enumerate(repype.status.progress(self.status, range(3), details = 'details')):
-                time.sleep(1)
+                await asyncio.sleep(1)
                 self.assertEqual(str(stdout), ''.join(lines[:item_idx + 1]))
         
-            test_status.wait_for_watchdog()
+            await test_status.wait_for_watchdog()
             self.assertEqual(str(stdout), ''.join(lines))
 
         # Verify that there have been three iterations, i.e. `item_idx = 0`, `item_idx = 1`, `item_idx = 2`
         self.assertEqual(item_idx, 2)
 
-    def test_with_details_dict(self):
+    async def test_with_details_dict(self):
         lines = [
             "{'info': 'details'} [                    ] 0.0% (0 / 3)\r",
             "{'info': 'details'} [======              ] 33.3% (1 / 3, ETA: 00:02)\r",
@@ -85,16 +86,16 @@ class StatusReaderConsoleAdapter__progress(unittest.TestCase):
         ]
         with testsuite.CaptureStdout() as stdout:
             for item_idx, item in enumerate(repype.status.progress(self.status, range(3), details = dict(info = 'details'))):
-                time.sleep(1)
+                await asyncio.sleep(1)
                 self.assertEqual(str(stdout), ''.join(lines[:item_idx + 1]))
         
-            test_status.wait_for_watchdog()
+            await test_status.wait_for_watchdog()
             self.assertEqual(str(stdout), ''.join(lines))
 
         # Verify that there have been three iterations, i.e. `item_idx = 0`, `item_idx = 1`, `item_idx = 2`
     #     self.assertEqual(item_idx, 2)
 
-    def test_break(self):
+    async def test_break(self):
         lines = [
             "{'info': 'details'} [                    ] 0.0% (0 / 3)\r",
             "{'info': 'details'} [======              ] 33.3% (1 / 3, ETA: 00:02)\r",
@@ -102,18 +103,18 @@ class StatusReaderConsoleAdapter__progress(unittest.TestCase):
         ]
         with testsuite.CaptureStdout() as stdout:
             for item_idx, item in enumerate(repype.status.progress(self.status, range(3), details = dict(info = 'details'))):
-                time.sleep(1)
+                await asyncio.sleep(1)
                 self.assertEqual(str(stdout), ''.join(lines[:item_idx + 1]))
                 if item_idx == 1:
                     break
         
-            test_status.wait_for_watchdog()
+            await test_status.wait_for_watchdog()
             self.assertEqual(str(stdout), ''.join(lines))
 
         # Verify that there have been two iterations, i.e. `item_idx = 0`, `item_idx = 1`
         self.assertEqual(item_idx, 1)
 
-    def test_error(self):
+    async def test_error(self):
         lines = [
             "{'info': 'details'} [                    ] 0.0% (0 / 3)\r",
             "{'info': 'details'} [======              ] 33.3% (1 / 3, ETA: 00:02)\r",
@@ -122,12 +123,12 @@ class StatusReaderConsoleAdapter__progress(unittest.TestCase):
         with testsuite.CaptureStdout() as stdout:
             with self.assertRaises(testsuite.TestError):
                 for item_idx, item in enumerate(repype.status.progress(self.status, range(3), details = dict(info = 'details'))):
-                    time.sleep(1)
+                    await asyncio.sleep(1)
                     self.assertEqual(str(stdout), ''.join(lines[:item_idx + 1]))
                     if item_idx == 1:
                         raise testsuite.TestError()
         
-            test_status.wait_for_watchdog()
+            await test_status.wait_for_watchdog()
             self.assertEqual(str(stdout), ''.join(lines))
 
         # Verify that there have been two iterations, i.e. `item_idx = 0`, `item_idx = 1`
