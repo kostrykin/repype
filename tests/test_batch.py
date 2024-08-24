@@ -174,7 +174,7 @@ class Batch__contexts(unittest.TestCase):
         )
 
 
-class Batch__run(unittest.TestCase):
+class Batch__run(unittest.IsolatedAsyncioTestCase):
 
     stage1_cls = testsuite.create_stage_class(id = 'stage1')
     stage2_cls = testsuite.create_stage_class(id = 'stage2')
@@ -206,8 +206,8 @@ class Batch__run(unittest.TestCase):
         self.tempdir.cleanup()
 
     @testsuite.with_temporary_paths(1)
-    def test(self, path):
+    async def test(self, path):
         status = repype.status.Status(path = path)
-        ret = self.batch.run(status = status)
+        ret = await self.batch.run(status = status)
         self.assertTrue(ret)
         self.assertEqual([list(item.keys()) for item in status.data], [['expand']] * 3, '\n' + pprint.pformat(status.data))

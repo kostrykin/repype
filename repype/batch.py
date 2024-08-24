@@ -84,9 +84,9 @@ def run_task_process(rc, status) -> int:
 
 
 if __name__ == '__main__':
-    rc, status = dill.load(sys.stdin)
+    rc, status = dill.load(sys.stdin.buffer)
     exit_code = run_task_process(rc, status)
-    sys.stdout.write(exit_code)
+    sys.stdout.write(str(exit_code))
 
 
 class Batch:
@@ -216,11 +216,13 @@ class Batch:
                 # Run the task in a separate process
                 self.task_process = await asyncio.create_subprocess_exec(
                     sys.executable,
+                    '-m'
                     'repype.batch',
                     stdin = asyncio.subprocess.PIPE,
                     stdout = asyncio.subprocess.PIPE,
                 )
-                exit_code = await self.task_process.communicate(input = dill.dumps((rc, task_status),))[0]
+                stdout = (await self.task_process.communicate(input = dill.dumps((rc, task_status),)))[0]
+                exit_code = int(stdout) if stdout else None
                 if exit_code != 0:
                     repype.status.update(
                         status = status,
