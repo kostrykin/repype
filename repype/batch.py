@@ -227,7 +227,7 @@ class Batch:
                     repype.status.update(
                         status = status,
                         info = 'interrupted',
-                        exit_code = exit_code,
+                        exit_code = exit_code,  # exit_code is None if the process was killed, and 1 if an exception was raised in the child process
                     )
 
                     # Interrupt task execution due to an error
@@ -241,8 +241,10 @@ class Batch:
 
     async def cancel(self) -> None:
         """
-        Cancel currently running tasks.
+        Cancel currently running tasks (if any).
         """
         if self.task_process:
-            self.task_process.send_signal(signal.CTRL_C_EVENT)
+            self.task_process.terminate()
+            if self.task_process.returncode is not None:
+                self.task_process.kill()
             await self.task_process.wait()

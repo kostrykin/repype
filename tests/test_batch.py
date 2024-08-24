@@ -232,17 +232,23 @@ class Batch__cancel(unittest.IsolatedAsyncioTestCase):
         # Start the run, but do not await
         t0 = time.time()
         status = repype.status.Status(path = path)
-        run_future = self.batch.run(status = status)
+        batch_run = asyncio.create_task(self.batch.run(status = status))
 
-        # Do the cancellation after 1 second
-        await asyncio.sleep(1)
+        # Do the cancellation after 0.5 second
+        await asyncio.sleep(0.5)
         await self.batch.cancel()
 
         # Wait for the run to finish
-        ret = await run_future
+        ret = await batch_run
         dt = time.time() - t0
 
         # Verify the results
+        self.assertAlmostEqual(dt, 0.5, delta = 0.1)
         self.assertFalse(ret)
-        self.assertLessEqual(abs(dt - 1), 0.1)
-        self.assertEqual([list(item.keys()) for item in status.data], [['expand']] * 3, '\n' + pprint.pformat(status.data))
+        self.assertIn(
+            dict(
+                info = 'interrupted',
+                exit_code = None,
+            ),
+            status.data,
+        )
