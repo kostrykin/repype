@@ -401,17 +401,17 @@ class StatusReader__init(IsolatedAsyncioTestCase):
             )
 
     @patch.object(repype.status.StatusReader, 'handle_new_status')
-    def test_with_intermediates(self, mock_handle_new_status):
-        with repype.status.StatusReader(self.status1.filepath) as status:
+    async def test_with_intermediates(self, mock_handle_new_status):
+        async with repype.status.StatusReader(self.status1.filepath) as status:
             self.assertEqual(status, ['write1', ['write2']])
 
             self.status2.write('write3')
-            wait_for_watchdog()
+            await wait_for_watchdog()
             self.assertEqual(status, ['write1', ['write2', 'write3']])
 
             mock_handle_new_status.reset_mock()
             self.status2.intermediate('interm1')
-            wait_for_watchdog()
+            await wait_for_watchdog()
             self.assertEqual(
                 status,
                 [
@@ -460,7 +460,7 @@ class StatusReader__init(IsolatedAsyncioTestCase):
 
             mock_handle_new_status.reset_mock()
             self.status2.intermediate('interm2')
-            wait_for_watchdog()
+            await wait_for_watchdog()
             self.assertEqual(
                 status,
                 [
@@ -509,7 +509,7 @@ class StatusReader__init(IsolatedAsyncioTestCase):
 
             mock_handle_new_status.reset_mock()
             self.status2.intermediate(None)
-            wait_for_watchdog()
+            await wait_for_watchdog()
             self.assertEqual(
                 status,
                 [
@@ -546,7 +546,7 @@ class StatusReader__init(IsolatedAsyncioTestCase):
 
             mock_handle_new_status.reset_mock()
             self.status2.write('write4')
-            wait_for_watchdog()
+            await wait_for_watchdog()
             self.assertEqual(
                 mock_handle_new_status.call_args_list,
                 [
