@@ -2,7 +2,6 @@ import asyncio
 import json
 import os
 import tempfile
-import time
 from unittest import (
     IsolatedAsyncioTestCase,
     TestCase,
@@ -279,6 +278,16 @@ class Status__progress(TestCase):
         with open(status.filepath) as file:
             data = json.load(file)
             self.assertEqual(data, list())
+
+
+class create(TestCase):
+
+    def test(self):
+        with repype.status.create() as status:
+            self.assertIsInstance(status, repype.status.Status)
+            status.write('test')
+            self.assertEqual(status.filepath.read_text(), '["test"]')
+        self.assertFalse(status.filepath.exists())
 
 
 class update(TestCase):

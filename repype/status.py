@@ -3,7 +3,7 @@ import copy
 import json
 import pathlib
 import hashlib
-import time
+import tempfile
 import uuid
 
 from watchdog.observers import Observer
@@ -14,6 +14,7 @@ from watchdog.events import (
 )
 
 from repype.typing import (
+    ContextManager,
     Dict,
     Iterable,
     Iterator,
@@ -69,7 +70,7 @@ class Status:
     """
 
     def __init__(self, parent: Optional[Self] = None, path: Optional[PathLike] = None):
-        assert (parent is None) != (path is None), 'Either parent or path must be provided'
+        assert (parent is None) != (path is None), f'Either parent or path must be provided (parent: {parent}, path: {path})'
         self.id = uuid.uuid4()
         self.path = pathlib.Path(path) if path else None
         self.parent = parent
@@ -194,6 +195,30 @@ class Status:
                 yield item
         finally:
             self.intermediate(None)
+
+
+def create() -> ContextManager[Status]:
+    """
+    Create a status object associated with a temporary directory.
+
+    .. runblock:: pycon
+
+        >>> import repype.status
+        >>> with repype.status.create() as status:
+        ...    status.write('Hello, World!')
+        ...    print(status.filepath.read_text())
+    """
+    class ContextManager:
+
+        def __enter__(self) -> Status:
+            self.path_directory = tempfile.TemporaryDirectory()
+            return Status(path = self.path_directory.name)
+        
+        def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+            self.path_directory.cleanup()
+            self.path_directory = None
+
+    return ContextManager()
     
 
 class Cursor:
