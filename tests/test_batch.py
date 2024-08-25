@@ -177,6 +177,45 @@ class Batch__contexts(unittest.TestCase):
         )
 
 
+class Batch__pending(unittest.TestCase):
+
+    def setUp(self):
+        self.batch__contexts = Batch__contexts()
+        self.batch__contexts.setUp()
+
+    def tearDown(self):
+        self.batch__contexts.tearDown()
+
+    def test(self):
+        self.assertEqual(
+            [rc.task.path for rc in self.batch__contexts.batch.pending],
+            [
+                self.batch__contexts.root_path,
+                self.batch__contexts.root_path / 'task-2',
+                self.batch__contexts.root_path / 'task-3',
+            ],
+        )
+
+    def test_after_run(self):
+        asyncio.run(self.batch__contexts.batch.run())
+        self.assertEqual(
+            [rc.task.path for rc in self.batch__contexts.batch.pending],
+            [
+            ],
+        )
+
+    def test_after_run_partial(self):
+        contexts = self.batch__contexts.batch.pending[:1]
+        asyncio.run(self.batch__contexts.batch.run(contexts))
+        self.assertEqual(
+            [rc.task.path for rc in self.batch__contexts.batch.pending],
+            [
+                self.batch__contexts.root_path / 'task-2',
+                self.batch__contexts.root_path / 'task-3',
+            ],
+        )
+
+
 class Batch__run(unittest.IsolatedAsyncioTestCase):
 
     stage1_cls = testsuite.create_stage_class(id = 'stage1')
