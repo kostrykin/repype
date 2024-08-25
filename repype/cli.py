@@ -274,9 +274,8 @@ def main(
         contexts = batch.pending
 
     async def _main():
+        with repype.status.create() as status:
 
-        with tempfile.TemporaryDirectory() as status_directory_path:
-            status = repype.status.Status(path = status_directory_path)
             repype.status.update(
                 status = status,
                 info = 'batch',
