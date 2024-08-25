@@ -235,21 +235,6 @@ def run_cli_ex(*args, **kwargs) -> bool:
     return asyncio.run(_main())
 
 
-async def run_cli_ex_async(*args, **kwargs) -> bool:
-    """
-    Run the command-line interface for batch processing asynchroniously.
-    
-    Arguments:
-        *args: Passed through to :func:`main_coroutine`.
-        *kwargs: Passed through to :func:`main_coroutine`.
-
-    Returns:
-        True if the batch processing was successful, False if an error occurred.
-    """
-    _main = main(*args, **kwargs)
-    await _main()
-
-
 def main(
         path: PathLike,
         run: bool = False,
