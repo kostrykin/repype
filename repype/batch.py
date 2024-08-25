@@ -183,6 +183,18 @@ class Batch:
         Get a list of run contexts for all pending tasks.
         """
         return [rc for rc in self.contexts if rc.task.is_pending(rc.pipeline, rc.config)]
+    
+    def context(self, path: PathLike) -> Optional[RunContext]:
+        """
+        Get a run context for a specific task.
+
+        Returns:
+            The run context for the task, or None if the task is not loaded.
+        """
+        for rc in self.contexts:
+            if rc.task.path.resolve() == pathlib.Path(path).resolve():
+                return rc
+        return None
 
     async def run(self, contexts: Optional[List[RunContext]] = None, status: Optional[repype.status.Status] = None) -> bool:
         """
