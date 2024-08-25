@@ -9,6 +9,7 @@ author = 'Leonid Kostrykin'
 # -- Add directory which contains the project to sys.path
 import os, sys
 sys.path.insert(0, os.path.abspath('../..'))
+os.environ['PYTHONPATH'] = os.path.abspath('../..') + ':' + os.environ.get('PYTHONPATH', '')
 
 # -- General configuration
 
@@ -50,4 +51,5 @@ nitpick_ignore = [
     ('py:class', 'watchdog.events.DirModifiedEvent'),
     ('py:class', 'watchdog.events.FileModifiedEvent'),
     ('py:class', 'multiprocessing.context.Process'),
+    ('py:class', 'asyncio.events.AbstractEventLoop'),
 ]

@@ -20,11 +20,13 @@ class Config:
 
     Hyperparameters can be worked with as follows:
 
-    .. code-block:: python
-    
-       config = repype.config.Config()
-       config['stage1/param1'] = 1000
-       config['stage2/param2'] = 5
+    .. runblock:: pycon
+
+       >>> import repype.config
+       >>> config = repype.config.Config()
+       >>> config['stage1/param1'] = 1000
+       >>> config['stage2/param2'] = 5
+       >>> print(config.entries)
 
     Arguments:
         other: A dictionary to be wrapped (no copying occurs), or another :py:class:`Config` object (a deep copy is created).
