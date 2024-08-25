@@ -203,7 +203,7 @@ class Batch:
             
             contexts = self.pending if contexts is None else contexts
             for rc_idx, rc in enumerate(contexts):
-                task_status = status.derive()
+                task_status = repype.status.derive(status)
     
                 repype.status.update(
                     status = task_status,
