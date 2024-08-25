@@ -471,7 +471,7 @@ class Task:
                 return stage
             
             # Check if the stage configuration has changed
-            if self.digest['config'].get(stage.id, dict()) != config.get(stage.id, dict()).entries:
+            if self.digest['config'].get(stage.id, dict()) != config.entries.get(stage.id, dict()):  # do not use `config.get` here to avoid mutation
                 return stage
             
         # There is no diverging stage
