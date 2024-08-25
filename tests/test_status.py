@@ -1,11 +1,12 @@
-import contextlib
-import io
+import asyncio
 import json
 import os
-import platform
 import tempfile
 import time
-from unittest import TestCase
+from unittest import (
+    IsolatedAsyncioTestCase,
+    TestCase,
+)
 from unittest.mock import (
     call,
     patch,
@@ -15,9 +16,9 @@ import repype.status
 from . import testsuite
 
 
-def wait_for_watchdog():
+async def wait_for_watchdog():
     timeout = float(os.environ.get('REPYPE_WATCHDOG_TIMEOUT', 0.1))
-    time.sleep(timeout)
+    await asyncio.sleep(timeout)
 
 
 class Status__init(TestCase):
@@ -339,7 +340,7 @@ class update(TestCase):
             self.assertEqual(len(data), 0)
 
 
-class StatusReader__init(TestCase):
+class StatusReader__init(IsolatedAsyncioTestCase):
 
     def setUp(self):
         self.tempdir = tempfile.TemporaryDirectory()
@@ -352,11 +353,11 @@ class StatusReader__init(TestCase):
         self.tempdir.cleanup()
 
     @patch.object(repype.status.StatusReader, 'handle_new_status')
-    def test_without_intermediates(self, mock_handle_new_status):
-        with repype.status.StatusReader(self.status1.filepath) as status:
+    async def test_without_intermediates(self, mock_handle_new_status):
+        async with repype.status.StatusReader(self.status1.filepath) as status:
             self.assertEqual(status, ['write1', ['write2']])
 
-            wait_for_watchdog()
+            await wait_for_watchdog()
             self.assertEqual(
                 mock_handle_new_status.call_args_list,
                 [
@@ -367,7 +368,7 @@ class StatusReader__init(TestCase):
 
             mock_handle_new_status.reset_mock()
             self.status2.write('write3')
-            wait_for_watchdog()
+            await wait_for_watchdog()
             self.assertEqual(status, ['write1', ['write2', 'write3']])
             self.assertEqual(
                 mock_handle_new_status.call_args_list,
@@ -379,7 +380,7 @@ class StatusReader__init(TestCase):
             mock_handle_new_status.reset_mock()
             status3 = self.status1.derive()
             status3.write('write4')
-            wait_for_watchdog()
+            await wait_for_watchdog()
             self.assertEqual(status, ['write1', ['write2', 'write3'], ['write4']])
             self.assertEqual(
                 mock_handle_new_status.call_args_list,
@@ -390,7 +391,7 @@ class StatusReader__init(TestCase):
 
             mock_handle_new_status.reset_mock()
             self.status1.write('write5')
-            wait_for_watchdog()
+            await wait_for_watchdog()
             self.assertEqual(status, ['write1', ['write2', 'write3'], ['write4'], 'write5'])
             self.assertEqual(
                 mock_handle_new_status.call_args_list,
@@ -400,17 +401,17 @@ class StatusReader__init(TestCase):
             )
 
     @patch.object(repype.status.StatusReader, 'handle_new_status')
-    def test_with_intermediates(self, mock_handle_new_status):
-        with repype.status.StatusReader(self.status1.filepath) as status:
+    async def test_with_intermediates(self, mock_handle_new_status):
+        async with repype.status.StatusReader(self.status1.filepath) as status:
             self.assertEqual(status, ['write1', ['write2']])
 
             self.status2.write('write3')
-            wait_for_watchdog()
+            await wait_for_watchdog()
             self.assertEqual(status, ['write1', ['write2', 'write3']])
 
             mock_handle_new_status.reset_mock()
             self.status2.intermediate('interm1')
-            wait_for_watchdog()
+            await wait_for_watchdog()
             self.assertEqual(
                 status,
                 [
@@ -459,7 +460,7 @@ class StatusReader__init(TestCase):
 
             mock_handle_new_status.reset_mock()
             self.status2.intermediate('interm2')
-            wait_for_watchdog()
+            await wait_for_watchdog()
             self.assertEqual(
                 status,
                 [
@@ -508,7 +509,7 @@ class StatusReader__init(TestCase):
 
             mock_handle_new_status.reset_mock()
             self.status2.intermediate(None)
-            wait_for_watchdog()
+            await wait_for_watchdog()
             self.assertEqual(
                 status,
                 [
@@ -545,7 +546,7 @@ class StatusReader__init(TestCase):
 
             mock_handle_new_status.reset_mock()
             self.status2.write('write4')
-            wait_for_watchdog()
+            await wait_for_watchdog()
             self.assertEqual(
                 mock_handle_new_status.call_args_list,
                 [

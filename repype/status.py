@@ -1,3 +1,4 @@
+import asyncio
 import copy
 import json
 import pathlib
@@ -392,7 +393,8 @@ class StatusReader(FileSystemEventHandler):
     Points to the latest permanent (i.e. non-intermediate) status update within :attr:`data`.
     """
 
-    def __init__(self, filepath: PathLike):
+    def __init__(self, filepath: PathLike, loop: asyncio.AbstractEventLoop = None):
+        self.loop = loop if loop else asyncio.get_running_loop()
         self.filepath = pathlib.Path(filepath).resolve()
         self.data = list()
         self.data_frames = {self.filepath: self.data}
@@ -402,14 +404,14 @@ class StatusReader(FileSystemEventHandler):
         self.update(self.filepath)
         self.check_new_status()
 
-    def __enter__(self) -> dict:
+    async def __aenter__(self) -> dict:
         self.observer = Observer()
         self.observer.schedule(self, self.filepath.parent, recursive = False)
         self.observer.start()
         return self.data
     
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
-        time.sleep(1)  # Give the WatchDog observer some extra time
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        await asyncio.sleep(1)  # Give the WatchDog observer some extra time
         self.observer.stop()
         self.observer.join()
 
@@ -489,8 +491,10 @@ class StatusReader(FileSystemEventHandler):
         """
         if isinstance(event, FileModifiedEvent):
             filepath = pathlib.Path(event.src_path).resolve()
-            if self.update(filepath):
-                self.check_new_status()
+            def update(filepath):
+                if self.update(filepath):
+                    self.check_new_status()
+            self.loop.call_soon_threadsafe(update, filepath)
 
     def check_new_status(self) -> None:
         """

@@ -1,12 +1,15 @@
+import asyncio
 import pathlib
 import pprint
 import tempfile
+import time
 import unittest
 
 import repype.batch
 import repype.pipeline
 import repype.task
 from . import testsuite
+from . import test_cli
 import repype.status
 
 
@@ -174,7 +177,7 @@ class Batch__contexts(unittest.TestCase):
         )
 
 
-class Batch__run(unittest.TestCase):
+class Batch__run(unittest.IsolatedAsyncioTestCase):
 
     stage1_cls = testsuite.create_stage_class(id = 'stage1')
     stage2_cls = testsuite.create_stage_class(id = 'stage2')
@@ -206,8 +209,46 @@ class Batch__run(unittest.TestCase):
         self.tempdir.cleanup()
 
     @testsuite.with_temporary_paths(1)
-    def test(self, path):
+    async def test(self, path):
         status = repype.status.Status(path = path)
-        ret = self.batch.run(status = status)
+        ret = await self.batch.run(status = status)
         self.assertTrue(ret)
         self.assertEqual([list(item.keys()) for item in status.data], [['expand']] * 3, '\n' + pprint.pformat(status.data))
+
+
+class Batch__cancel(unittest.IsolatedAsyncioTestCase):
+
+    def setUp(self):
+        self.batch__run = Batch__run()
+        self.batch__run.setUp()
+        self.batch = repype.batch.Batch(task_cls = test_cli.DelayedTask)
+        self.batch.load(self.batch__run.root_path)
+
+    def tearDown(self):
+        self.batch__run.tearDown()
+
+    @testsuite.with_temporary_paths(1)
+    async def test(self, path):
+        # Start the run, but do not await
+        t0 = time.time()
+        status = repype.status.Status(path = path)
+        batch_run = asyncio.create_task(self.batch.run(status = status))
+
+        # Do the cancellation after 0.5 second
+        await asyncio.sleep(0.5)
+        await self.batch.cancel()
+
+        # Wait for the run to finish
+        ret = await batch_run
+        dt = time.time() - t0
+
+        # Verify the results
+        self.assertAlmostEqual(dt, 0.5, delta = 0.1)
+        self.assertFalse(ret)
+        self.assertIn(
+            dict(
+                info = 'interrupted',
+                exit_code = None,
+            ),
+            status.data,
+        )
