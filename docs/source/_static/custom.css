@@ -1,3 +1,17 @@
 table.hlist ul li {
     list-style-type: none;
 }
+
+p + div.nbinput.container {
+    margin-top: -12px;
+}
+
+div.nbinput.container + p,
+div.nboutput.container + p {
+    margin-top: 24px;
+}
+
+div.nbinput.container + section,
+section + section {
+    margin-top: 24px;
+}

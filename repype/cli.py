@@ -225,8 +225,8 @@ def run_cli_ex(*args, **kwargs) -> bool:
     Run the command-line interface for batch processing.
     
     Arguments:
-        *args: Passed through to :func:`main_coroutine`.
-        *kwargs: Passed through to :func:`main_coroutine`.
+        *args: Passed through to :func:`main`.
+        *kwargs: Passed through to :func:`main`.
 
     Returns:
         True if the batch processing was successful, False if an error occurred.
