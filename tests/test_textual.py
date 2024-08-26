@@ -5,6 +5,7 @@ import dill
 import importlib
 import os
 import pathlib
+import platform
 import re
 import sys
 import traceback
@@ -17,27 +18,32 @@ import tests.test_repype
 class Textual(unittest.IsolatedAsyncioTestCase):
 
     async def test(self):
-        test_filename_pattern = re.compile(r'^test_[a-zA-Z0-9_]+\.py$')
-        test_directory_path = pathlib.Path(__file__).parent / 'textual'
-        for filename in os.listdir(test_directory_path):
-            if test_filename_pattern.match(filename):
-                filepath = test_directory_path / filename
-                with self.subTest(test = filepath.stem):
+        python_version = platform.python_version_tuple()
+        if python_version[0] != 3 or python_version[1] < 10:
+            self.skipTest('Textual tests require Python 3.10 or later')
 
-                    test_process = await asyncio.create_subprocess_exec(
-                        sys.executable,
-                        '-m'
-                        'tests.test_textual',
-                        filepath.stem,
-                        stdout = asyncio.subprocess.PIPE,
-                        stderr = asyncio.subprocess.PIPE,
-                    )
-                    stdout, stderr = await test_process.communicate()
-                    if stdout:
-                        print(stdout.decode())
-                    if stderr:
-                        exception = dill.loads(stderr)
-                        raise exception
+        else:
+            test_filename_pattern = re.compile(r'^test_[a-zA-Z0-9_]+\.py$')
+            test_directory_path = pathlib.Path(__file__).parent / 'textual'
+            for filename in os.listdir(test_directory_path):
+                if test_filename_pattern.match(filename):
+                    filepath = test_directory_path / filename
+                    with self.subTest(test = filepath.stem):
+
+                        test_process = await asyncio.create_subprocess_exec(
+                            sys.executable,
+                            '-m'
+                            'tests.test_textual',
+                            filepath.stem,
+                            stdout = asyncio.subprocess.PIPE,
+                            stderr = asyncio.subprocess.PIPE,
+                        )
+                        stdout, stderr = await test_process.communicate()
+                        if stdout:
+                            print(stdout.decode())
+                        if stderr:
+                            exception = dill.loads(stderr)
+                            raise exception
                     
 
 class TextualTestCase(unittest.TestCase):
