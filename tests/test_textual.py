@@ -1,31 +1,77 @@
+import argparse
+import asyncio
+import contextlib
+import dill
+import importlib
+import os
+import pathlib
+import re
+import sys
+import traceback
 import unittest
 
 import repype.textual.app
-import repype.textual.batch
-import repype.textual.confirm
-import repype.textual.editor
-import repype.textual.run
-from . import test_repype
+import tests.test_repype
 
 
-class Repype(unittest.IsolatedAsyncioTestCase):
+class Textual(unittest.IsolatedAsyncioTestCase):
 
-    async def asyncSetUp(self):
-        self.repype_segmentation = test_repype.repype_segmentation()
+    async def test(self):
+        test_filename_pattern = re.compile(r'^test_[a-zA-Z0-9_]+\.py$')
+        test_directory_path = pathlib.Path(__file__).parent / 'textual'
+        for filename in os.listdir(test_directory_path):
+            if test_filename_pattern.match(filename):
+                filepath = test_directory_path / filename
+                with self.subTest(test = filepath.stem):
+
+                    test_process = await asyncio.create_subprocess_exec(
+                        sys.executable,
+                        '-m'
+                        'tests.test_textual',
+                        filepath.stem,
+                        stdout = asyncio.subprocess.PIPE,
+                        stderr = asyncio.subprocess.PIPE,
+                    )
+                    stdout, stderr = await test_process.communicate()
+                    if stdout:
+                        print(stdout.decode())
+                    if stderr:
+                        exception = dill.loads(stderr)
+                        raise exception
+                    
+
+class TextualTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.repype_segmentation = tests.test_repype.repype_segmentation()
         self.repype_segmentation.setUp()
         self.app = repype.textual.app.Repype(path = self.repype_segmentation.root_path)
 
-    async def asyncTearDown(self):
+    def tearDown(self):
         self.repype_segmentation.tearDown()
 
-    async def test_screen(self):
-        async with self.app.run_test() as pilot:
-            pass
-            #print(self.app.screen)
-            #await pilot.press('q')
 
-    async def test_quit(self):
-        async with self.app.run_test() as pilot:
-            pass
-            #await pilot.press('q')
-            #self.assertFalse(self.app.is_running)
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('test', type = str)
+    args = parser.parse_args()
+
+    try:
+        async def main():
+            with contextlib.redirect_stderr(sys.stdout):
+                test = importlib.import_module(f'tests.textual.{args.test}')
+                test_case_str = test.test_case
+                test_case_module = importlib.import_module('.'.join(test_case_str.split('.')[:-1]))
+                test_case_class  = getattr(test_case_module, test_case_str.split('.')[-1])
+                test_case = test_case_class()
+                try:
+                    test_case.setUp()
+                    await test.run(test_case)
+                finally:
+                    test_case.tearDown()
+        asyncio.run(main()) 
+    except:
+        print(traceback.format_exc())
+        error_serialized = dill.dumps(sys.exc_info()[1])
+        sys.stderr.buffer.write(error_serialized)
