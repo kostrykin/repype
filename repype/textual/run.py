@@ -169,7 +169,7 @@ class RunScreen(ModalScreen[bool]):
                     return
 
                 if status.get('info') == 'process':
-                    label.update(f'[bold]({status["step"] + 1}/{status["step_count"]})[/bold] Processing input: {status["input"]}')
+                    label.update(f'[bold]({status["step"] + 1}/{status["step_count"]})[/bold] Processing: {status["input_id"]}')
                     label.add_class('status-process')
                     return
 

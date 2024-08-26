@@ -43,6 +43,12 @@
 
   You can then open ``build/html/index.html`` to view the documentation.
 
+- To run the Textual interface with debug console::
+
+      textual run --dev repype.textual.app:Repype
+
+  after running ``textual console`` on a different terminal.
+
 ----
 
 .. raw:: html
