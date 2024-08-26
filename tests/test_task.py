@@ -540,6 +540,43 @@ class Task__is_pending(unittest.TestCase):
         self.assertTrue(task.is_pending(self.pipeline, config))
 
 
+class Task__reset(unittest.TestCase):
+
+    def setUp(self):
+        self.pipeline = repype.pipeline.create_pipeline(
+            [
+                testsuite.create_stage(id = 'stage1', outputs = ['output1.1']),
+            ]
+        )
+
+    @testsuite.with_temporary_paths(1)
+    def test_without_digest(self, path):
+        task = repype.task.Task(
+            path = path,
+            parent = None,
+            spec = dict(runnable = True),
+        )
+        task.reset()
+        self.assertFalse(task. digest_sha_filepath.exists())
+        self.assertFalse(task.digest_task_filepath.exists())
+        self.assertFalse(task.       data_filepath.exists())
+
+    @testsuite.with_temporary_paths(1)
+    def test_with_digest(self, path):
+        task = repype.task.Task(
+            path = path,
+            parent = None,
+            spec = dict(runnable = True),
+        )
+        task. digest_sha_filepath.write_text('xxx')
+        task.digest_task_filepath.write_text('xxx')
+        task.       data_filepath.write_text('xxx')
+        task.reset()
+        self.assertFalse(task. digest_sha_filepath.exists())
+        self.assertFalse(task.digest_task_filepath.exists())
+        self.assertFalse(task.       data_filepath.exists())
+
+
 class Task__marginal_states(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)

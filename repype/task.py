@@ -338,6 +338,17 @@ class Task:
         # If the task is completed, but the configuration has changed, the task is pending
         return hashes['task'] != self.compute_sha(config)
     
+    def reset(self):
+        """
+        Reset the task by removing all stored data.
+        """
+        if self.digest_sha_filepath.exists():
+            self.digest_sha_filepath.unlink()
+        if self.digest_task_filepath.exists():
+            self.digest_task_filepath.unlink()
+        if self.data_filepath.exists():
+            self.data_filepath.unlink()
+    
     def get_marginal_fields(self, pipeline: repype.pipeline.Pipeline) -> FrozenSet[str]:
         """
         Get the marginal fields from a pipeline.
