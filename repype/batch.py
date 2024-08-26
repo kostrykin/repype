@@ -51,6 +51,19 @@ class RunContext:
         self.pipeline = task.create_pipeline()
         self.config = task.create_config()
 
+    def run(self, *args, **kwargs) -> repype.task.TaskData:
+        """
+        Run the task.
+
+        Arguments:
+            args: Additional arguments to pass to the task.
+            kwargs: Additional keyword arguments to pass to the task.
+
+        Returns:
+            The *task data object* returned by the task.
+        """
+        return self.task.run(self.config, pipeline = self.pipeline, *args, **kwargs)
+
 
 def run_task_process(rc, status) -> int:
     """
@@ -67,7 +80,7 @@ def run_task_process(rc, status) -> int:
     """
     # Run the task and exit the child process
     try:
-        rc.task.run(rc.config, pipeline = rc.pipeline, status = status)
+        rc.run(status = status)
         return 0  # Indicate success to the parent process
 
     # If an exception occurs, update the status and re-raise the exception
