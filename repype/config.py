@@ -238,6 +238,12 @@ class Config:
         """
         return Config(self)
     
+    @property
+    def sha(self):
+        """The SHA1 hash code associated with the hyperparameters set in this configuration.
+        """
+        return hashlib.sha1(json.dumps(self.entries).encode('utf8'))
+    
     def __str__(self):
         """
         Readable representation of this configuration.

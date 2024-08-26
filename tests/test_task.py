@@ -173,6 +173,25 @@ class Task__full_spec(unittest.TestCase):
         )
 
 
+class Task__repr__(unittest.TestCase):
+
+    @testsuite.with_temporary_paths(1)
+    def test(self, path):
+        task = repype.task.Task(
+            path = path,
+            parent = None,
+            spec = dict(
+                field1 = 1,
+                field2 = 2,
+            ),
+        )
+        print(repr(task))
+        self.assertEqual(
+            repr(task),
+            f'<Task "{path}" bf21a9e>',
+        )
+
+
 class Task__create_pipeline(unittest.TestCase):
 
     def test_undefined(self):

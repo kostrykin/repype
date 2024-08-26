@@ -617,4 +617,4 @@ class Task:
     
     def __repr__(self):
         config = self.create_config()
-        return f'Task({self.path}, {config.sha.hexdigest()[:7]})'
+        return f'<Task "{self.path}" {config.sha.hexdigest()[:7]}>'
