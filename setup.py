@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from distutils.core import setup
+from setuptools import setup
 
 with open('repype/version.py') as fin:
     exec(fin.read(), globals())
@@ -60,4 +60,12 @@ setup(
     url = 'https://github.com/kostrykin/repype',
     license = 'MIT',
     packages = ['repype'],
+    package_data = {
+        'repype': [
+            'README.rst',
+            'LICENSE',
+            'repype.tcss',
+        ],
+    },
+    include_package_data = True,
 )
