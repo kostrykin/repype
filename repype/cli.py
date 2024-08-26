@@ -133,7 +133,7 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
                     text = 'Starting from scratch'
 
             if status.get('info') == 'process':
-                text = f'({status["step"] + 1}/{status["step_count"]}) Processing input: {status["input"]}'
+                text = f'({status["step"] + 1}/{status["step_count"]}) Processing: {status["input_id"]}'
 
             if status.get('info') == 'start-stage':
                 text = f'Starting stage: {status["stage"]}'

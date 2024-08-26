@@ -13,5 +13,5 @@ config:
 scopes:
   segmentation: 'seg/%s.png'
 
-inputs:
+input_ids:
   - B2--W00026--P00001--Z00000--T00000--dapi.tif

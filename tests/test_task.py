@@ -17,36 +17,36 @@ import repype.status
 import yaml
 
 
-class decode_inputs(unittest.TestCase):
+class decode_input_ids(unittest.TestCase):
 
     def test_empty(self):
-        self.assertEqual(repype.task.decode_inputs(''), [])
+        self.assertEqual(repype.task.decode_input_ids(''), [])
 
     def test_single_str(self):
-        self.assertEqual(repype.task.decode_inputs('1'), [1])
+        self.assertEqual(repype.task.decode_input_ids('1'), [1])
 
     def test_single_int(self):
-        self.assertEqual(repype.task.decode_inputs(1), [1])
+        self.assertEqual(repype.task.decode_input_ids(1), [1])
 
     def test_range(self):
-        self.assertEqual(repype.task.decode_inputs('1-2'), [1, 2])
-        self.assertEqual(repype.task.decode_inputs('1 - 3'), [1, 2, 3])
+        self.assertEqual(repype.task.decode_input_ids('1-2'), [1, 2])
+        self.assertEqual(repype.task.decode_input_ids('1 - 3'), [1, 2, 3])
 
     def test_invalid(self):
         with self.assertRaises(ValueError):
-            repype.task.decode_inputs('1-')
+            repype.task.decode_input_ids('1-')
         with self.assertRaises(ValueError):
-            repype.task.decode_inputs('-1')
+            repype.task.decode_input_ids('-1')
         with self.assertRaises(ValueError):
-            repype.task.decode_inputs('-')
+            repype.task.decode_input_ids('-')
         with self.assertRaises(ValueError):
-            repype.task.decode_inputs('3-1')
+            repype.task.decode_input_ids('3-1')
         with self.assertRaises(ValueError):
-            repype.task.decode_inputs('1-1')
+            repype.task.decode_input_ids('1-1')
 
     def test_mixed(self):
-        self.assertEqual(repype.task.decode_inputs('1,2-3,4'), [1, 2, 3, 4])
-        self.assertEqual(repype.task.decode_inputs('1, 2-3'), [1, 2, 3])
+        self.assertEqual(repype.task.decode_input_ids('1,2-3,4'), [1, 2, 3, 4])
+        self.assertEqual(repype.task.decode_input_ids('1, 2-3'), [1, 2, 3])
 
 
 class Task__init(unittest.TestCase):
@@ -349,7 +349,7 @@ class Task__create_config(unittest.TestCase):
         self.assertEqual(config, repype.config.Config(dict(key1 = 'value10', key2 = 'value200', key3 = 'value3', key4 = 'value4')))
 
 
-class Task__inputs(unittest.TestCase):
+class Task__input_ids(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_str(self, path):
@@ -357,10 +357,10 @@ class Task__inputs(unittest.TestCase):
             path = path,
             parent = None,
             spec = dict(
-                inputs = '1, 2-3, 4',
+                input_ids = '1, 2-3, 4',
             ),
         )
-        self.assertEqual(task.inputs, [1, 2, 3, 4])
+        self.assertEqual(task.input_ids, [1, 2, 3, 4])
 
     @testsuite.with_temporary_paths(1)
     def test_list(self, path):
@@ -368,13 +368,13 @@ class Task__inputs(unittest.TestCase):
             path = path,
             parent = None,
             spec = dict(
-                inputs = [
+                input_ids = [
                     'id-1',
                     'id-2',
                 ],
             ),
         )
-        self.assertEqual(task.inputs, ['id-1', 'id-2'])
+        self.assertEqual(task.input_ids, ['id-1', 'id-2'])
 
 
 class Task__root(unittest.TestCase):
@@ -636,7 +636,7 @@ class Task__store(unittest.TestCase):
             parent = None,
             spec = dict(
                 runnable = True,
-                inputs = ['file-0'],
+                input_ids = ['file-0'],
                 marginal_stages = [
                     'stage2',
                 ],
@@ -693,7 +693,7 @@ class Task__load(unittest.TestCase):
             parent = None,
             spec = dict(
                 runnable = True,
-                inputs = ['file-0'],
+                input_ids = ['file-0'],
                 marginal_stages = [
                     'stage2',
                 ],
@@ -701,7 +701,7 @@ class Task__load(unittest.TestCase):
         )
         self.data_without_marginals = {
             'file-0': {
-                'input': 'file-0',
+                'input_id': 'file-0',
                 'output1.1': 'value1.1',
                 'output3.1': 'value3.1',
             },
@@ -947,7 +947,7 @@ class Task__run(unittest.TestCase):
             parent = None,
             spec = dict(
                 runnable = True,
-                inputs = ['file-0', 'file-1'],
+                input_ids = ['file-0', 'file-1'],
             ),
         )
         self.config = self.task.create_config()
@@ -966,14 +966,14 @@ class Task__run(unittest.TestCase):
         mock_load.assert_not_called()
         mock_create_pipeline.assert_called_once_with()
         mock_create_pipeline.return_value.process.assert_any_call(
-            input = 'file-0',
+            input_id = 'file-0',
             data = dict(),
             config = mock_create_pipeline.return_value.configure(self.config, 'file-0'),
             first_stage = None,
             status = None,
         )
         mock_create_pipeline.return_value.process.assert_any_call(
-            input = 'file-1',
+            input_id = 'file-1',
             data = dict(),
             config = mock_create_pipeline.return_value.configure(self.config, 'file-1'),
             first_stage = None,
@@ -998,14 +998,14 @@ class Task__run(unittest.TestCase):
         mock_load.assert_called_once()
         mock_create_pipeline.assert_called_once_with()
         mock_create_pipeline.return_value.process.assert_any_call(
-            input = 'file-0',
+            input_id = 'file-0',
             data = dict(output = 'value1'),
             config = mock_create_pipeline.return_value.configure(self.config, 'file-0'),
             first_stage = 'stage-1',
             status = None,
         )
         mock_create_pipeline.return_value.process.assert_any_call(
-            input = 'file-1',
+            input_id = 'file-1',
             data = dict(output = 'value2'),
             config = mock_create_pipeline.return_value.configure(self.config, 'file-1'),
             first_stage = 'stage-1',
@@ -1025,7 +1025,7 @@ class Task__final_config(unittest.TestCase):
             spec = dict(
                 runnable = True,
                 pipeline = 'repype.pipeline.Pipeline',
-                inputs = [1, 2],
+                input_ids = [1, 2],
                 scopes = dict(
                     config = 'cfg/%d.yml',
                 ),
@@ -1040,9 +1040,9 @@ class Task__final_config(unittest.TestCase):
         pipeline = task.create_pipeline()
         pipeline.append(testsuite.create_stage(id = 'stage1'))
         task.run(task.create_config(), pipeline)
-        for input in [1, 2]:
-            with self.subTest(input = input):
-                with (path / 'cfg' / f'{input}.yml').open('r') as config_file:
+        for input_id in [1, 2]:
+            with self.subTest(input_id = input_id):
+                with (path / 'cfg' / f'{input_id}.yml').open('r') as config_file:
                     config = repype.config.Config(yaml.safe_load(config_file))
                     self.assertEqual(
                         config,

@@ -207,9 +207,9 @@ class Pipeline__process(unittest.TestCase):
     def setUp(self):
         self.pipeline = repype.pipeline.Pipeline(
             [
-                MagicMock(id = 'stage1', inputs = ['input'], outputs = ['x1'], consumes = []),    # stage1 takes `input` and produces `x1`
-                MagicMock(id = 'stage2', inputs = [], outputs = ['x2'], consumes = ['input']),    # stage2 consumes `input` and produces `x2`
-                MagicMock(id = 'stage3', inputs = ['x1', 'x2'], outputs = ['x3'], consumes = []), # stage3 takes `x1` and `x2` and produces `x3`
+                MagicMock(id = 'stage1', inputs = ['input_id'], outputs = ['x1'], consumes = []),  # stage1 takes `input_id` and produces `x1`
+                MagicMock(id = 'stage2', inputs = [], outputs = ['x2'], consumes = ['input_id']),  # stage2 consumes `input_id` and produces `x2`
+                MagicMock(id = 'stage3', inputs = ['x1', 'x2'], outputs = ['x3'], consumes = []),  # stage3 takes `x1` and `x2` and produces `x3`
             ]
         )
         self.pipeline.stages[0].run.side_effect = self.stage1_run
@@ -218,11 +218,11 @@ class Pipeline__process(unittest.TestCase):
 
     def stage1_run(self, pipeline, data, config, status = None,  **kwargs):
         config.set_default('enabled', True)
-        data['x1'] = config.get('x1_factor', 1) * data['input']
+        data['x1'] = config.get('x1_factor', 1) * data['input_id']
 
     def stage2_run(self, pipeline, data, config, status = None, **kwargs):
         config.set_default('enabled', True)
-        data['x2'] = config.get('x2_factor', 1) * data['input']
+        data['x2'] = config.get('x2_factor', 1) * data['input_id']
 
     def stage3_run(self, pipeline, data, config, status = None, **kwargs):
         config.set_default('enabled', True)
@@ -234,11 +234,11 @@ class Pipeline__process(unittest.TestCase):
         config['stage2/x2_factor'] = 2
         config['stage3/constant' ] = 3
         
-        for input in range(5):
-            with self.subTest(input = input):
+        for input_id in range(5):
+            with self.subTest(input_id = input_id):
 
                 mock_status = MagicMock()
-                data, final_config, timings = self.pipeline.process(input = input, config = config, status = mock_status)
+                data, final_config, timings = self.pipeline.process(input_id = input_id, config = config, status = mock_status)
                 mock_status.assert_not_called()
 
                 expected_final_config = config.copy()
@@ -251,7 +251,7 @@ class Pipeline__process(unittest.TestCase):
                     [True] * len(self.pipeline.stages),
                 )
                 self.assertEqual(final_config, expected_final_config)
-                self.assertEqual(data['x3'], config['stage1/x1_factor'] * input + config['stage2/x2_factor'] * input + config['stage3/constant'])
+                self.assertEqual(data['x3'], config['stage1/x1_factor'] * input_id + config['stage2/x2_factor'] * input_id + config['stage3/constant'])
 
     def test_with_first_stage(self):
         config = repype.config.Config()
@@ -262,17 +262,17 @@ class Pipeline__process(unittest.TestCase):
         # Test combinations of `first_stage` with and without the `+` suffix
         for suffix, offset in (('', 0), ('+', 1)):
 
-            # Test different inputs
-            for input in [-1, 0, +1, +2]:
+            # Test different input identifiers
+            for input_id in [-1, 0, +1, +2]:
 
                 # Pre-compute the full data
                 mock_status = MagicMock()
-                full_data, _, _ = self.pipeline.process(input = input, config = config, status = mock_status)
+                full_data, _, _ = self.pipeline.process(input_id = input_id, config = config, status = mock_status)
                 mock_status.assert_not_called()
 
                 # Test each stage as a `first_stage`
                 for first_stage_idx, first_stage in enumerate((stage.id for stage in self.pipeline.stages[:len(self.pipeline.stages) - offset])):
-                    with self.subTest(suffix = suffix, offset = offset, input = input, first_stage = first_stage):
+                    with self.subTest(suffix = suffix, offset = offset, input_id = input_id, first_stage = first_stage):
                         remaining_stages = frozenset([stage.id for stage in self.pipeline.stages[first_stage_idx + offset:]])
 
                         # Reset the call records
@@ -282,7 +282,7 @@ class Pipeline__process(unittest.TestCase):
                         # Process the pipeline
                         mock_status = MagicMock()
                         data, _, timings = self.pipeline.process(
-                            input = input,
+                            input_id = input_id,
                             data = full_data,
                             first_stage = first_stage + suffix,
                             config = config,
@@ -301,7 +301,7 @@ class Pipeline__process(unittest.TestCase):
                             else:
                                 stage.run.assert_called_once()
 
-    def test_with_first_stage_and_missing_inputs(self):
+    def test_with_first_stage_and_missing_input_ids(self):
         config = repype.config.Config()
         config['stage1/x1_factor'] = 1
         config['stage2/x2_factor'] = 2
@@ -309,7 +309,7 @@ class Pipeline__process(unittest.TestCase):
 
         # Pre-compute the full data
         mock_status = MagicMock()
-        full_data, _, _ = self.pipeline.process(input = 10, config = config, status = mock_status)
+        full_data, _, _ = self.pipeline.process(input_id = 10, config = config, status = mock_status)
         mock_status.assert_not_called()
 
         # Test each stage as a `first_stage`
@@ -328,7 +328,7 @@ class Pipeline__process(unittest.TestCase):
                     # Process the pipeline
                     mock_status = MagicMock()
                     data, _, timings = self.pipeline.process(
-                        input = full_data['input'],
+                        input_id = full_data['input_id'],
                         data = full_data_without_marginals,
                         first_stage = first_stage,
                         config = config,
@@ -353,31 +353,31 @@ class Pipeline__get_extra_stages(unittest.TestCase):
     def setUp(self):
         self.pipeline = repype.pipeline.Pipeline(
             [
-                MagicMock(id = 'stage1', inputs = ['input'], outputs = ['x1'], consumes = []),    # stage1 takes `input` and produces `x1`
-                MagicMock(id = 'stage2', inputs = [], outputs = ['x2'], consumes = ['input']),    # stage2 consumes `input` and produces `x2`
-                MagicMock(id = 'stage3', inputs = ['x1', 'x2'], outputs = ['x3'], consumes = []), # stage3 takes `x1` and `x2` and produces `x3`
+                MagicMock(id = 'stage1', inputs = ['input_id'], outputs = ['x1'], consumes = []),  # stage1 takes `input_id` and produces `x1`
+                MagicMock(id = 'stage2', inputs = [], outputs = ['x2'], consumes = ['input_id']),  # stage2 consumes `input_id` and produces `x2`
+                MagicMock(id = 'stage3', inputs = ['x1', 'x2'], outputs = ['x3'], consumes = []),  # stage3 takes `x1` and `x2` and produces `x3`
             ]
         )
 
     def test(self):
         self.assertEqual(
-            sorted(self.pipeline.get_extra_stages(first_stage = 'stage1', last_stage = None, available_inputs = ['input'])),
+            sorted(self.pipeline.get_extra_stages(first_stage = 'stage1', last_stage = None, available_inputs = ['input_id'])),
             [],
         )
         self.assertEqual(
-            sorted(self.pipeline.get_extra_stages(first_stage = 'stage3', last_stage = None, available_inputs = ['input'])),
+            sorted(self.pipeline.get_extra_stages(first_stage = 'stage3', last_stage = None, available_inputs = ['input_id'])),
             ['stage1', 'stage2'],
         )
         self.assertEqual(
-            sorted(self.pipeline.get_extra_stages(first_stage = 'stage3', last_stage = None, available_inputs = ['input', 'x2'])),
+            sorted(self.pipeline.get_extra_stages(first_stage = 'stage3', last_stage = None, available_inputs = ['input_id', 'x2'])),
             ['stage1'],
         )
         self.assertEqual(
-            sorted(self.pipeline.get_extra_stages(first_stage = 'stage3', last_stage = None, available_inputs = ['input', 'x1'])),
+            sorted(self.pipeline.get_extra_stages(first_stage = 'stage3', last_stage = None, available_inputs = ['input_id', 'x1'])),
             ['stage2'],
         )
         self.assertEqual(
-            sorted(self.pipeline.get_extra_stages(first_stage = 'stage3', last_stage = None, available_inputs = ['input', 'x1', 'x2'])),
+            sorted(self.pipeline.get_extra_stages(first_stage = 'stage3', last_stage = None, available_inputs = ['input_id', 'x1', 'x2'])),
             [],
         )
 
@@ -387,16 +387,16 @@ class Pipeline__fields(unittest.TestCase):
     def setUp(self):
         self.pipeline = repype.pipeline.Pipeline(
             [
-                MagicMock(id = 'stage1', inputs = ['input'], outputs = ['x1'], consumes = []),    # stage1 takes `input` and produces `x1`
-                MagicMock(id = 'stage2', inputs = [], outputs = ['x2'], consumes = ['input']),    # stage2 consumes `input` and produces `x2`
-                MagicMock(id = 'stage3', inputs = ['x1', 'x2'], outputs = ['x3'], consumes = []), # stage3 takes `x1` and `x2` and produces `x3`
+                MagicMock(id = 'stage1', inputs = ['input_id'], outputs = ['x1'], consumes = []),  # stage1 takes `input_id` and produces `x1`
+                MagicMock(id = 'stage2', inputs = [], outputs = ['x2'], consumes = ['input_id']),  # stage2 consumes `input_id` and produces `x2`
+                MagicMock(id = 'stage3', inputs = ['x1', 'x2'], outputs = ['x3'], consumes = []),  # stage3 takes `x1` and `x2` and produces `x3`
             ]
         )
 
     def test_fields(self):
         self.assertEqual(
             sorted(self.pipeline.fields),
-            ['input', 'x1', 'x2', 'x3'],
+            ['input_id', 'x1', 'x2', 'x3'],
         )
 
 
@@ -428,9 +428,9 @@ class create_pipeline(unittest.TestCase):
     def test(self):
         # Define the stages, in the order they should be executed
         stages = [
-            Mock(id = 'stage1', inputs = ['input'], outputs = ['x1'], consumes = []),   # stage1 takes `input` and produces `x1`
-            Mock(id = 'stage2', inputs = [], outputs = ['x2'], consumes = ['input']),   # stage2 consumes `input` and produces `x2`
-            Mock(id = 'stage3', inputs = ['x1', 'x2'], outputs = ['y'], consumes = []), # stage3 takes `x1` and `x2` and produces `y`
+            Mock(id = 'stage1', inputs = ['input_id'], outputs = ['x1'], consumes = []),  # stage1 takes `input_id` and produces `x1`
+            Mock(id = 'stage2', inputs = [], outputs = ['x2'], consumes = ['input_id']),  # stage2 consumes `input_id` and produces `x2`
+            Mock(id = 'stage3', inputs = ['x1', 'x2'], outputs = ['y'], consumes = []),   # stage3 takes `x1` and `x2` and produces `y`
         ]
 
         # Test `create_pipeline` with all permutations of the stages
@@ -443,10 +443,10 @@ class create_pipeline(unittest.TestCase):
 
     def test_unsatisfiable(self):
         stages = [
-            Mock(id = 'stage1', inputs = ['input'], outputs = ['x1'], consumes = []),      # stage1 takes `input` and produces `x1`
-            Mock(id = 'stage2', inputs = [], outputs = ['x2'], consumes = ['input']),      # stage2 consumes `input` and produces `x2`
-            Mock(id = 'stage3', inputs = ['x1', 'x2'], outputs = ['y'], consumes = []),    # stage3 takes `x1` and `x2` and produces `y`
-            Mock(id = 'stage4', inputs = ['input', 'y'], outputs = ['z'], consumes = []),  # stage4 takes `input` and `y` and produces `z`
+            Mock(id = 'stage1', inputs = ['input_id'], outputs = ['x1'], consumes = []),      # stage1 takes `input_id` and produces `x1`
+            Mock(id = 'stage2', inputs = [], outputs = ['x2'], consumes = ['input_id']),      # stage2 consumes `input_id` and produces `x2`
+            Mock(id = 'stage3', inputs = ['x1', 'x2'], outputs = ['y'], consumes = []),       # stage3 takes `x1` and `x2` and produces `y`
+            Mock(id = 'stage4', inputs = ['input_id', 'y'], outputs = ['z'], consumes = []),  # stage4 takes `input_id` and `y` and produces `z`
         ]
         for permutated_stages in itertools.permutations(stages):
             with self.subTest(permutation = permutated_stages):

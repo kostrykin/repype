@@ -40,20 +40,20 @@ class Download(repype.stage.Stage):
 
 class Unzip(repype.stage.Stage):
      
-    inputs = ['input']
+    inputs   = ['input_id']
     consumes = ['download']
-    outputs = ['image']
+    outputs  = ['image']
 
     def process(
             self,
-            input,
+            input_id,
             download,
             pipeline: repype.pipeline.Pipeline,
             config: repype.config.Config,
             status: Optional[repype.status.Status] = None,
         ) -> PipelineData:
         contents = zipfile.ZipFile(io.BytesIO(download))
-        with contents.open(input) as file:
+        with contents.open(input_id) as file:
             data = file.read()
         return dict(
             image = skimage.io.imread(io.BytesIO(data))
@@ -62,7 +62,7 @@ class Unzip(repype.stage.Stage):
 
 class Segmentation(repype.stage.Stage):
      
-    inputs = ['image']
+    inputs  = ['image']
     outputs = ['segmentation']
 
     def process(
@@ -81,17 +81,17 @@ class Segmentation(repype.stage.Stage):
 
 class Output(repype.stage.Stage):
 
-    inputs = ['input', 'segmentation']
+    inputs = ['input_id', 'segmentation']
 
     def process(
             self,
-            input,
+            input_id,
             segmentation,
             pipeline: repype.pipeline.Pipeline,
             config: repype.config.Config,
             status: Optional[repype.status.Status] = None,
         ) -> PipelineData:
-        filepath = pipeline.resolve('segmentation', input)
+        filepath = pipeline.resolve('segmentation', input_id)
         filepath.parent.mkdir(parents = True, exist_ok = True)
         skimage.io.imsave(filepath, segmentation)
         return dict()
@@ -115,7 +115,7 @@ class repype_segmentation(unittest.TestCase):
             '    url: https://zenodo.org/record/3362976/files/B2.zip' '\n'
             'scopes:' '\n'
             '  segmentation: seg/%s.png' '\n'
-            'inputs:' '\n'
+            'input_ids:' '\n'
             '  - B2--W00026--P00001--Z00000--T00000--dapi.tif'
         )
         testsuite.create_task_file(
@@ -140,7 +140,7 @@ class repype_segmentation(unittest.TestCase):
                 f'  (1/2) Entering task: {self.root_path.resolve()}/task' '\n'
                 f'  Starting from scratch' '\n'
                 f'    ' '\n'
-                f'    (1/1) Processing input: B2--W00026--P00001--Z00000--T00000--dapi.tif' '\n'
+                f'    (1/1) Processing: B2--W00026--P00001--Z00000--T00000--dapi.tif' '\n'
                 f'    Starting stage: download' '\r'
                 f'    Starting stage: unzip   ' '\r'
                 f'    Starting stage: segmentation' '\r'
@@ -151,7 +151,7 @@ class repype_segmentation(unittest.TestCase):
                 f'  (2/2) Entering task: {self.root_path.resolve()}/task/sigma=2' '\n'
                 f'  Picking up from: {self.root_path.resolve()}/task (segmentation)' '\n'
                 f'    ' '\n'
-                f'    (1/1) Processing input: B2--W00026--P00001--Z00000--T00000--dapi.tif' '\n'
+                f'    (1/1) Processing: B2--W00026--P00001--Z00000--T00000--dapi.tif' '\n'
                 f'    Starting stage: segmentation' '\r'
                 f'    Starting stage: output      ' '\r'
                 f'                                ' '\n'
