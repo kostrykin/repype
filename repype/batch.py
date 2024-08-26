@@ -1,7 +1,9 @@
+import asyncio
 import glob
 import multiprocessing
 import multiprocessing.connection
 import pathlib
+import signal
 import sys
 import traceback
 
@@ -49,28 +51,37 @@ class RunContext:
         self.pipeline = task.create_pipeline()
         self.config = task.create_config()
 
+    def run(self, *args, **kwargs) -> repype.task.TaskData:
+        """
+        Run the task.
 
-def run_task_process(exit_code: multiprocessing.connection.Connection, args_serialized: bytes) -> None:
+        Arguments:
+            args: Additional arguments to pass to the task.
+            kwargs: Additional keyword arguments to pass to the task.
+
+        Returns:
+            The *task data object* returned by the task.
+        """
+        return self.task.run(self.config, pipeline = self.pipeline, *args, **kwargs)
+
+
+def run_task_process(rc, status) -> int:
     """
     Run a task using specific :class:`RunContext` and :class:`repype.status.Status` objects inside a separate process.
-
-    The exit code of the process is sent to the parent process using the `exit_code` connection.
-    This is to bypass some interference between the `exitcode` attribute of ``multiprocessing.Process`` objects and threaded workers in Textual:
-    https://github.com/Textualize/textual/discussions/4923
-    The exit code is 0 upon successful completion, and 1 indicates failure.
 
     Arguments:
         exit_code: The connection to send the exit code to.
         args_serialized: The serialized arguments to run the task.
             This should be a tuple of the shape ``(rc, status)``, where ``rc`` is a :class:`RunContext` object
             and ``status`` is a :class:`repype.status.Status` object, serialized using dill.
-    """
-    rc, status = dill.loads(args_serialized)
 
+    Returns:
+        0 upon successful completion, and 1 indicates failure.
+    """
     # Run the task and exit the child process
     try:
-        rc.task.run(rc.config, pipeline = rc.pipeline, status = status)
-        exit_code.send(0)  # Indicate success to the parent process
+        rc.run(status = status)
+        return 0  # Indicate success to the parent process
 
     # If an exception occurs, update the status and re-raise the exception
     except:
@@ -82,7 +93,13 @@ def run_task_process(exit_code: multiprocessing.connection.Connection, args_seri
             traceback = traceback.format_exc(),
             stage = error.stage.id if isinstance(error, repype.pipeline.StageError) else None,
         )
-        exit_code.send(1)  # Indicate a failure to the parent process
+        return 1  # Indicate a failure to the parent process
+
+
+if __name__ == '__main__':
+    rc, status = dill.load(sys.stdin.buffer)
+    exit_code = run_task_process(rc, status)
+    sys.stdout.write(str(exit_code))
 
 
 class Batch:
@@ -179,8 +196,20 @@ class Batch:
         Get a list of run contexts for all pending tasks.
         """
         return [rc for rc in self.contexts if rc.task.is_pending(rc.pipeline, rc.config)]
+    
+    def context(self, path: PathLike) -> Optional[RunContext]:
+        """
+        Get a run context for a specific task.
 
-    def run(self, contexts: Optional[List[RunContext]] = None, status: Optional[repype.status.Status] = None) -> bool:
+        Returns:
+            The run context for the task, or None if the task is not loaded.
+        """
+        for rc in self.contexts:
+            if rc.task.path.resolve() == pathlib.Path(path).resolve():
+                return rc
+        return None
+
+    async def run(self, contexts: Optional[List[RunContext]] = None, status: Optional[repype.status.Status] = None) -> bool:
         """
         Run all pending tasks (or a subset).
 
@@ -199,7 +228,7 @@ class Batch:
             
             contexts = self.pending if contexts is None else contexts
             for rc_idx, rc in enumerate(contexts):
-                task_status = status.derive()
+                task_status = repype.status.derive(status)
     
                 repype.status.update(
                     status = task_status,
@@ -210,18 +239,20 @@ class Batch:
                 )
 
                 # Run the task in a separate process
-                self.task_pipe = multiprocessing.Pipe(duplex = False)
-                self.task_process = multiprocessing.Process(target = run_task_process, args = (self.task_pipe[1], dill.dumps((rc, task_status),),))
-                self.task_process.start()
-
-                # Wait for the task process to finish
-                self.task_process.join()
-                exit_code = self.task_pipe[0].recv()
+                self.task_process = await asyncio.create_subprocess_exec(
+                    sys.executable,
+                    '-m'
+                    'repype.batch',
+                    stdin = asyncio.subprocess.PIPE,
+                    stdout = asyncio.subprocess.PIPE,
+                )
+                stdout = (await self.task_process.communicate(input = dill.dumps((rc, task_status),)))[0]
+                exit_code = int(stdout) if stdout else None
                 if exit_code != 0:
                     repype.status.update(
                         status = status,
                         info = 'interrupted',
-                        exit_code = exit_code,
+                        exit_code = exit_code,  # exit_code is None if the process was killed, and 1 if an exception was raised in the child process
                     )
 
                     # Interrupt task execution due to an error
@@ -233,20 +264,12 @@ class Batch:
         finally:
             self.task_process = None
 
-    def cancel(self) -> None:
+    async def cancel(self) -> None:
         """
-        Cancel currently running tasks.
+        Cancel currently running tasks (if any).
         """
         if self.task_process:
-
-            # Try to terminate the process using SIGTERM (wait at most 1 second)
             self.task_process.terminate()
-            self.task_process.join(1)
-
-            # Check whether the process ended, if not, ultimately kill it using SIGKILL
-            if self.task_process.exitcode is None:
+            if self.task_process.returncode is not None:
                 self.task_process.kill()
-                self.task_process.join()
-
-            # The `run` method is sitll waiting for the exit code, so send a value to unblock it
-            self.task_pipe[1].send(2)
+            await self.task_process.wait()

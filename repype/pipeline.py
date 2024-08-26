@@ -10,7 +10,7 @@ from repype.typing import (
     PipelineData,
     Dict,
     FrozenSet,
-    Input,
+    InputID,
     Iterable,
     List,
     Optional,
@@ -156,7 +156,7 @@ class Pipeline:
 
     def process(
             self,
-            input: Optional[Input],
+            input_id: Optional[InputID],
             config: repype.config.Config,
             first_stage: Optional[str] = None,
             last_stage: Optional[str] = None,
@@ -165,21 +165,24 @@ class Pipeline:
             **kwargs,
         ) -> Tuple[PipelineData, repype.config.Config, Dict[str, float]]:
         """
-        Processes the input using this pipeline.
+        Processes the input data identified by the `input_id` using this pipeline.
 
         The :py:meth:`stage.process() <repype.stage.Stage.process>` method of each stage of the pipeline is executed successively.
 
         Arguments:
-            input: The input to be processed. Can be None if and only if `data` is not None (then the input is deduced from `data`).
+            input_id: The identifier of the input data to be processed.
+                Can be None if and only if `data` is not None (then the `input_id` is deduced from `data`).
             config: The hyperparameters to be used.
             first_stage: The ID of the first stage to run (defaults to the first).
-                Earlier stages may still be required to run due to consumed inputs, marginal fields, or if `data` is None.
+                Earlier stages may still be required to run due to pipeline fields consumed by stages, marginal fields, or if `data` is None.
             last_stage: The ID of the last stage to run (defaults to the last).
             data: The *pipeline data object* from previous processing.
             status: A status object to report the progress of the computations.
 
         Returns:
-            Tuple ``(data, config, timings)``, where ``data`` is the *pipeline data object* comprising all final and intermediate results, ``config`` are the finally used hyperparameters, and ``timings`` is a dictionary containing the run time of each individual pipeline stage (in seconds).
+            Tuple ``(data, config, timings)``, where ``data`` is the *pipeline data object* comprising all final and intermediate results,
+            ``config`` are the finally used hyperparameters,
+            and ``timings`` is a dictionary containing the run time of each individual pipeline stage (in seconds).
 
         Raises:
             StageError: If an error occurs during the run of a pipeline stage.
@@ -202,11 +205,11 @@ class Pipeline:
         if first_stage is not None and first_stage != self.stages[0].id and data is None:
             raise ValueError('Argument "data" must be provided if "first_stage" is used')
         
-        # The `input` parameter is required if `data` is not provided
+        # The `input_id` parameter is required if `data` is not provided
         if data is None:
             data = dict()
-        if input is not None:
-            data['input'] = input
+        if input_id is not None:
+            data['input_id'] = input_id
 
         # Determine the stages to be executed
         extra_stages = self.get_extra_stages(first_stage, last_stage, data.keys())
@@ -235,12 +238,12 @@ class Pipeline:
         Arguments:
             first_stage: The ID of the first stage to be executed (or None to start with the first).
             last_stage: The ID of the last stage to be executed (or None to end with the last).
-            available_inputs: The fields that are already available (e.g., from previous computations).
+            available_inputs: The stage inputs (pipeline fields) that are already available (e.g., from previous computations).
 
         Returns:
             The IDs of the stages that are required to be executed in addition, in order to process the pipeline from `first_stage` to `last_stage`.
         """
-        required_inputs, available_inputs = set(), set(available_inputs) | {'input'}
+        required_inputs, available_inputs = set(), set(available_inputs) | {'input_id'}
         stage_by_output = dict()
         extra_stages    = list()
         ctrl = ProcessingControl(first_stage, last_stage)
@@ -298,7 +301,7 @@ class Pipeline:
             self.stages.insert(after + 1, stage)
             return after + 1
 
-    def configure(self, base_config: repype.config.Config, input: Input, *args, **kwargs) -> repype.config.Config:
+    def configure(self, base_config: repype.config.Config, input_id: InputID, *args, **kwargs) -> repype.config.Config:
         """
         Automatically adopts hyperparameters by applying linear adoptation rules.
 
@@ -307,7 +310,7 @@ class Pipeline:
 
         Arguments:
             base_config: The base hyperparameters to be used (not modified).
-            input: The input to adopt the hyperparameters for.
+            input_id: The identifier of the input data to adopt the hyperparameters for.
             *args: Sequential arguments passed to :py:meth:`stage.configure() <repype.stage.Stage.configure>`.
             **kwargs: Keyword arguments passed to :py:meth:`stage.configure() <repype.stage.Stage.configure>`.
 
@@ -316,7 +319,7 @@ class Pipeline:
         """
         config = base_config.copy()
         for stage in self.stages:
-            specs = stage.configure(self, input, *args, **kwargs)
+            specs = stage.configure(self, input_id, *args, **kwargs)
             for key, spec in specs.items():
                 assert len(spec) in (2,3), \
                     f'{type(stage).__name__}.configure returned tuple of unsupported length: {len(spec)}'
@@ -324,24 +327,24 @@ class Pipeline:
                 create_config_entry(config, f'{stage.id}/{key}', *spec[:2], **create_config_entry_kwargs)
         return config
     
-    def resolve(self, scope: str, input: Optional[Input] = None) -> Optional[pathlib.Path]:
+    def resolve(self, scope: str, input_id: Optional[InputID] = None) -> Optional[pathlib.Path]:
         """
-        Resolves the path of a file based on the given scope and input.
+        Resolves the path of a file based on the given scope and input identifier.
 
-        Returns None if the input is None, or the scope is not defined.
+        Returns None if the `input_id` is None, or the `scope` is not defined.
         """
-        if input is None or scope not in self.scopes:
+        if input_id is None or scope not in self.scopes:
             return None
         else:
             scope = self.scopes[scope]
-            return pathlib.Path(str(scope) % input).resolve()
+            return pathlib.Path(str(scope) % input_id).resolve()
     
     @property
     def fields(self) -> FrozenSet[str]:
         """
         List all fields that are produced by the pipeline.
         """
-        fields = set(['input'])
+        fields = set(['input_id'])
         for stage in self.stages:
             fields |= frozenset(stage.outputs)
         return frozenset(fields)
@@ -368,7 +371,7 @@ def create_pipeline(stages: Sequence[repype.stage.Stage], *args, pipeline_cls: T
     Returns:
         Object of the `pipeline_cls` class.
     """
-    available_inputs = set(['input'])
+    available_inputs = set(['input_id'])
     remaining_stages = list(stages)
 
     # Ensure that the stage identifiers are unique
@@ -383,12 +386,12 @@ def create_pipeline(stages: Sequence[repype.stage.Stage], *args, pipeline_cls: T
     while len(remaining_stages) > 0:
         next_stage = None
 
-        # Ensure that the next stage has no missing inputs
+        # Ensure that the next stage has no missing input fields
         for stage1 in remaining_stages:
             if frozenset(stage1.inputs).issubset(frozenset(available_inputs)):
                 conflicted = False
 
-                # Ensure that no remaining stage requires a consumed input
+                # Ensure that no remaining stage requires a consumed input field
                 for stage2 in remaining_stages:
                     if stage1 is stage2: continue
                     consumes = frozenset(getattr(stage1, 'consumes', []))
@@ -402,7 +405,7 @@ def create_pipeline(stages: Sequence[repype.stage.Stage], *args, pipeline_cls: T
         if next_stage is None:
             raise RuntimeError(
                 f'Failed to resolve total ordering (pipeline so far: {pipeline.stages}, '
-                f'available inputs: {available_inputs}, remaining stages: {remaining_stages})')
+                f'available input fields: {available_inputs}, remaining stages: {remaining_stages})')
         
         remaining_stages.remove(next_stage)
         pipeline.append(next_stage)

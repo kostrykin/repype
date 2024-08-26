@@ -1,4 +1,4 @@
-import argparse
+import asyncio
 import pathlib
 import sys
 import tempfile
@@ -7,6 +7,8 @@ import time
 import repype.batch
 import repype.status
 from repype.typing import (
+    Any,
+    Coroutine,
     List,
     Optional,
     PathLike,
@@ -131,7 +133,7 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
                     text = 'Starting from scratch'
 
             if status.get('info') == 'process':
-                text = f'({status["step"] + 1}/{status["step_count"]}) Processing input: {status["input"]}'
+                text = f'({status["step"] + 1}/{status["step_count"]}) Processing: {status["input_id"]}'
 
             if status.get('info') == 'start-stage':
                 text = f'Starting stage: {status["stage"]}'
@@ -218,16 +220,31 @@ def run_cli(
     )
 
 
-def run_cli_ex(
+def run_cli_ex(*args, **kwargs) -> bool:
+    """
+    Run the command-line interface for batch processing.
+    
+    Arguments:
+        *args: Passed through to :func:`main`.
+        *kwargs: Passed through to :func:`main`.
+
+    Returns:
+        True if the batch processing was successful, False if an error occurred.
+    """
+    _main = main(*args, **kwargs)
+    return asyncio.run(_main())
+
+
+def main(
         path: PathLike,
         run: bool = False,
         tasks: List[PathLike] = list(),
         task_dirs: List[PathLike] = list(),
         task_cls: Type[repype.task.Task] = repype.task.Task,
         status_reader_cls: Type[repype.status.StatusReader] = StatusReaderConsoleAdapter,
-    ) -> bool:
+    ) -> Coroutine[Any, Any, bool]:
     """
-    Run the command-line interface for batch processing, with options given explicitly.
+    Create a co-routine for running the command-line interface for batch processing.
     
     Arguments:
         path: The root directory for batch processing. Tasks will be loaded recursively from this directory.
@@ -238,7 +255,7 @@ def run_cli_ex(
         status_reader_cls: The status reader implementation to use for displaying status updates.
 
     Returns:
-        True if the batch processing was successful, False if an error occurred.
+        Co-routine for batch processing. The co-routine returns True upon success, False if an error occurred.
     """
 
     path  = pathlib.Path(path).resolve()
@@ -256,23 +273,26 @@ def run_cli_ex(
     else:
         contexts = batch.pending
 
-    with tempfile.TemporaryDirectory() as status_directory_path:
-        status = repype.status.Status(path = status_directory_path)
-        repype.status.update(
-            status = status,
-            info = 'batch',
-            batch = [str(rc.task.path.resolve()) for rc in contexts],
-            run = run,
-        )
+    async def _main():
+        with repype.status.create() as status:
 
-        status_reader = status_reader_cls(status.filepath)
-        with status_reader:
+            repype.status.update(
+                status = status,
+                info = 'batch',
+                batch = [str(rc.task.path.resolve()) for rc in contexts],
+                run = run,
+            )
 
-            if run:
-                return batch.run(contexts, status = status)
-            
-            else:
-                return True
+            status_reader = status_reader_cls(status.filepath)
+            async with status_reader:
+
+                if run:
+                    return await batch.run(contexts, status = status)
+                
+                else:
+                    return True
+    
+    return _main
 
 
 if __name__ == '__main__':

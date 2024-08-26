@@ -18,7 +18,7 @@ from repype.typing import (
     PipelineData,
     Dict,
     FrozenSet,
-    Input,
+    InputID,
     Iterator,
     List,
     Mapping,
@@ -30,52 +30,52 @@ from repype.typing import (
 import yaml
 
 
-TaskData = Dict[Input, PipelineData]
+TaskData = Dict[InputID, PipelineData]
 """
 Task data object. A dictionary with input objects as keys and *pipeline data objects* as values.
 """
 
 
-def decode_inputs(spec: Union[Input, List[Input]]) -> List[Input]:
+def decode_input_ids(spec: Union[InputID, List[InputID]]) -> List[InputID]:
     """
     Convert a string of comma-separated integers (or ranges thereof) to a list of integers.
 
     If `spec` is a list already, or a single input identifier, it is returned as is.
     """
-    # Convert a string of comma-separated inputs (or ranges thereof) to a list of integers
+    # Convert a string of comma-separated input identifiers (or ranges thereof) to a list of integers
     if isinstance(spec, str):
 
         # Split the string by commas and remove whitespace
-        inputs = list()
+        input_ids = list()
         for token in spec.replace(' ', '').split(','):
             if token == '':
                 continue
 
-            # Check if the token is a range of inputs
+            # Check if the token is a range of input identifiers
             m = re.match(r'^([0-9]+)-([0-9]+)$', token)
 
-            # If the token is a single input, add it to the list
+            # If the token is a single input identifier, add it to the list
             if m is None and re.match(r'^[0-9]+$', token):
-                inputs.append(int(token))
+                input_ids.append(int(token))
                 continue
 
-            # If the token is a range of inputs, add all inputs in the range to the list
+            # If the token is a range of input identifiers, add all identifiers in the range to the list
             elif m is not None:
                 first, last = int(m.group(1)), int(m.group(2))
                 if first < last:
-                    inputs += list(range(first, last + 1))
+                    input_ids += list(range(first, last + 1))
                     continue
             
-            # If the token is neither a single input nor a range of inputs, raise an error
+            # If the token is neither a single input identifier nor a range of identifiers, raise an error
             raise ValueError(f'Cannot parse input token "{token}"')
 
-        return sorted(frozenset(inputs))
+        return sorted(frozenset(input_ids))
     
-    # Treat the input as a list of inputs, if it is a list
+    # Treat the input identifiers as a list of identifiers, if it is a list
     elif isinstance(spec, list):
         return sorted(frozenset(spec))
     
-    # Otherwise, treat the input as a single input
+    # Otherwise, treat the input identifier as a single identifier
     else:
         return [spec]
     
@@ -146,11 +146,11 @@ class Task:
         return bool(self.full_spec.get('runnable'))
     
     @property
-    def inputs(self):
+    def input_ids(self):
         """
-        The inputs of the task.
+        The identifiers of the inputs of the task.
         """
-        return decode_inputs(self.full_spec.get('inputs', []))
+        return decode_input_ids(self.full_spec.get('input_ids', []))
     
     @property
     def root(self) -> Self:
@@ -359,7 +359,7 @@ class Task:
         """
         Load the previously computed *task data object*.
 
-        To ensure consistency with the task specification, it is verified that the loaded data contains results for all inputs of the task, and no additional inputs.
+        To ensure consistency with the task specification, it is verified that the loaded data contains results for all input identifiers of the task, and no spurious identifiers.
         If the `pipeline` is not None, a check for consistency of the data with the `pipeline` is also performed.
         The loaded *task data object* is consistent with the `pipeline` if the data contains all fields which are not marginal according to the :meth:`get_marginal_fields` method, and no additional fields.
 
@@ -375,7 +375,7 @@ class Task:
             data = dill.load(data_file)
 
         # Check if the data is consistent with the task specification
-        assert frozenset(data.keys()) == frozenset(self.inputs), 'Loaded data is inconsistent with task specification.'
+        assert frozenset(data.keys()) == frozenset(self.input_ids), 'Loaded data is inconsistent with task specification.'
 
         # Check if the data is consistent with the pipeline
         if pipeline is not None:
@@ -413,7 +413,7 @@ class Task:
             config: The hyperparameters used to vcompute `data`.
         """
         assert self.runnable
-        assert frozenset(data.keys()) == frozenset(self.inputs)
+        assert frozenset(data.keys()) == frozenset(self.input_ids)
 
         # Strip the marginal fields from the data
         data_without_marginals = {
@@ -471,7 +471,7 @@ class Task:
                 return stage
             
             # Check if the stage configuration has changed
-            if self.digest['config'].get(stage.id, dict()) != config.get(stage.id, dict()).entries:
+            if self.digest['config'].get(stage.id, dict()) != config.entries.get(stage.id, dict()):  # do not use `config.get` here to avoid mutation
                 return stage
             
         # There is no diverging stage
@@ -568,7 +568,7 @@ class Task:
         )
 
         # Run the pipeline for all inputs
-        for input_idx, input in enumerate(self.inputs):
+        for input_idx, input_id in enumerate(self.input_ids):
             input_status = repype.status.derive(status)
             
             # Announce the status of the task
@@ -576,18 +576,18 @@ class Task:
                 status = input_status,
                 info = 'process',
                 task = str(self.path.resolve()),
-                input = input,
+                input_id = input_id,
                 step = input_idx,
-                step_count = len(self.inputs),
+                step_count = len(self.input_ids),
             )
 
             # Automatically adopt hyperparameters
-            input_config = pipeline.configure(config, input)
+            input_config = pipeline.configure(config, input_id)
 
             # Process the input
-            data_chunk = data.get(input, dict())
+            data_chunk = data.get(input_id, dict())
             data_chunk, final_config, _ = pipeline.process(
-                input = input,
+                input_id = input_id,
                 data = data_chunk,
                 config = input_config,
                 first_stage = first_stage.id if first_stage else None,
@@ -598,12 +598,12 @@ class Task:
                 data_chunk = self.strip_marginals(pipeline, data_chunk)
 
             # Store the final configuration used for the input, if a corresponding scope is defined
-            if final_config and (final_config_filepath := pipeline.resolve('config', input)):
+            if final_config and (final_config_filepath := pipeline.resolve('config', input_id)):
                 final_config_filepath.parent.mkdir(parents = True, exist_ok = True)
                 with final_config_filepath.open('w') as final_config_file:
                     yaml.dump(final_config.entries, final_config_file)
 
-            data[input] = data_chunk
+            data[input_id] = data_chunk
 
         # Store the results for later pick up
         repype.status.update(status, info = 'storing', intermediate = True)
@@ -617,4 +617,4 @@ class Task:
     
     def __repr__(self):
         config = self.create_config()
-        return f'Task({self.path}, {config.sha.hexdigest()[:7]})'
+        return f'<Task "{self.path}" {config.sha.hexdigest()[:7]}>'

@@ -1,6 +1,10 @@
 *.swp
 .DS_Store
 coverage.json
+examples/**/.sha.json
+examples/**/.task.json
+examples/**/data.dill.gz
+examples/**/*.png
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

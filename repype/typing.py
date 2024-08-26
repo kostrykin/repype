@@ -17,9 +17,9 @@ PipelineData = Dict[str, Any]
 Pipeline data object. A dictionary with string keys and arbitrary values.
 """
 
-Input = TypeVar('Input', int, str)
+InputID = TypeVar('InputID', int, str)
 """
-Type hint for input objects. Each input object corresponds uniquely to a pipeline run.
+Type hint for input identifiers. Each input identifier uniquely corresponds to a pipeline run.
 """
 
 PathLike = TypeVar('PathLike', str, pathlib.Path)

@@ -1,0 +1,17 @@
+runnable: true
+
+pipeline:
+  - tests.test_repype.Download
+  - tests.test_repype.Unzip
+  - tests.test_repype.Segmentation
+  - tests.test_repype.Output
+
+config:
+  download:
+    url: https://zenodo.org/record/3362976/files/B2.zip
+
+scopes:
+  segmentation: 'seg/%s.png'
+
+input_ids:
+  - B2--W00026--P00001--Z00000--T00000--dapi.tif

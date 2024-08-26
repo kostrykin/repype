@@ -20,11 +20,13 @@ class Config:
 
     Hyperparameters can be worked with as follows:
 
-    .. code-block:: python
-    
-       config = repype.config.Config()
-       config['stage1/param1'] = 1000
-       config['stage2/param2'] = 5
+    .. runblock:: pycon
+
+       >>> import repype.config
+       >>> config = repype.config.Config()
+       >>> config['stage1/param1'] = 1000
+       >>> config['stage2/param2'] = 5
+       >>> print(config.entries)
 
     Arguments:
         other: A dictionary to be wrapped (no copying occurs), or another :py:class:`Config` object (a deep copy is created).
@@ -45,6 +47,31 @@ class Config:
             self.entries = json.loads(json.dumps(other.entries))
         else:
             raise ValueError(f'Unknown argument: {other}')
+        
+    @property
+    def yaml(self) -> str:
+        """
+        YAML representation of this configuration.
+
+        .. runblock:: pycon
+
+            >>> import repype.config
+            >>> config = repype.config.Config()
+            >>> config['stage1/param1'] = 1000
+            >>> config['stage2/param2'] = 5
+            >>> config['stage1/sub/param1'] = 'xyz'
+            >>> print(config.yaml)
+        """
+        return '\n'.join(self._as_yaml())
+
+    def _as_yaml(self, indent = 0):
+        for key, value in self.entries.items():
+            prefix = '  ' * indent
+            if isinstance(value, dict):
+                yield prefix + f'{key}:'
+                yield from Config(value)._as_yaml(indent + 1)
+            else:
+                yield prefix + f'{key}: {repr(value)}'
 
     def pop(self, key: str, default: Any) -> Any:
         """
@@ -210,6 +237,12 @@ class Config:
         Returns a deep copy.
         """
         return Config(self)
+    
+    @property
+    def sha(self):
+        """The SHA1 hash code associated with the hyperparameters set in this configuration.
+        """
+        return hashlib.sha1(json.dumps(self.entries).encode('utf8'))
     
     def __str__(self):
         """

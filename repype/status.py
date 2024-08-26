@@ -1,8 +1,9 @@
+import asyncio
 import copy
 import json
 import pathlib
 import hashlib
-import time
+import tempfile
 import uuid
 
 from watchdog.observers import Observer
@@ -13,6 +14,7 @@ from watchdog.events import (
 )
 
 from repype.typing import (
+    ContextManager,
     Dict,
     Iterable,
     Iterator,
@@ -68,7 +70,7 @@ class Status:
     """
 
     def __init__(self, parent: Optional[Self] = None, path: Optional[PathLike] = None):
-        assert (parent is None) != (path is None), 'Either parent or path must be provided'
+        assert (parent is None) != (path is None), f'Either parent or path must be provided (parent: {parent}, path: {path})'
         self.id = uuid.uuid4()
         self.path = pathlib.Path(path) if path else None
         self.parent = parent
@@ -193,6 +195,30 @@ class Status:
                 yield item
         finally:
             self.intermediate(None)
+
+
+def create() -> ContextManager[Status]:
+    """
+    Create a status object associated with a temporary directory.
+
+    .. runblock:: pycon
+
+        >>> import repype.status
+        >>> with repype.status.create() as status:
+        ...    status.write('Hello, World!')
+        ...    print(status.filepath.read_text())
+    """
+    class ContextManager:
+
+        def __enter__(self) -> Status:
+            self.path_directory = tempfile.TemporaryDirectory()
+            return Status(path = self.path_directory.name)
+        
+        def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+            self.path_directory.cleanup()
+            self.path_directory = None
+
+    return ContextManager()
     
 
 class Cursor:
@@ -358,6 +384,10 @@ class StatusReader(FileSystemEventHandler):
 
     Arguments:
         filepath: The status file written by the status object to be monitored.
+        loop: The event loop to be used for processing the status updates (usually the loop of the main thread).
+            Defaults to the event loop of the thread used to create the status reader object.
+        debug: If True, the status updates are processed on a separate thread (the main thread is assumed to be used for long-running, blocking operations).
+            If False, the status updates are posted to the main thread.
 
     See also:
         :attr:`repype.status.Status.filepath` is the status file written by a status object.
@@ -392,7 +422,20 @@ class StatusReader(FileSystemEventHandler):
     Points to the latest permanent (i.e. non-intermediate) status update within :attr:`data`.
     """
 
-    def __init__(self, filepath: PathLike):
+    loop: asyncio.AbstractEventLoop
+    """
+    The event loop to be used for processing the status updates.
+    """
+
+    debug: bool
+    """
+    If True, the status updates are processed on a separate thread (the main thread is assumed to be used for long-running, blocking operations).
+    If False, the status updates are posted to the main thread.
+    """
+
+    def __init__(self, filepath: PathLike, loop: asyncio.AbstractEventLoop = None, debug = False):
+        self.loop = loop if loop else asyncio.get_running_loop()
+        self.debug = debug
         self.filepath = pathlib.Path(filepath).resolve()
         self.data = list()
         self.data_frames = {self.filepath: self.data}
@@ -402,14 +445,14 @@ class StatusReader(FileSystemEventHandler):
         self.update(self.filepath)
         self.check_new_status()
 
-    def __enter__(self) -> dict:
+    async def __aenter__(self) -> dict:
         self.observer = Observer()
         self.observer.schedule(self, self.filepath.parent, recursive = False)
         self.observer.start()
         return self.data
     
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
-        time.sleep(1)  # Give the WatchDog observer some extra time
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        await asyncio.sleep(1)  # Give the WatchDog observer some extra time
         self.observer.stop()
         self.observer.join()
 
@@ -489,8 +532,13 @@ class StatusReader(FileSystemEventHandler):
         """
         if isinstance(event, FileModifiedEvent):
             filepath = pathlib.Path(event.src_path).resolve()
-            if self.update(filepath):
-                self.check_new_status()
+            def update(filepath):
+                if self.update(filepath):
+                    self.check_new_status()
+            if self.debug:
+                update(filepath)
+            else:
+                self.loop.call_soon_threadsafe(update, filepath)
 
     def check_new_status(self) -> None:
         """

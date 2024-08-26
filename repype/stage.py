@@ -12,7 +12,7 @@ from repype.typing import (
     Optional,
     Pipeline,
     Protocol,
-    Input,
+    InputID,
     Iterable,
     List,
     Literal,
@@ -84,32 +84,32 @@ class Stage:
     Each stage can be controlled by a separate set of hyperparameters.
     Those hyperparameters reside in namespaces, which are uniquely associated with the corresponding pipeline stages.
 
-    Each stage must declare the input fields it requires, and the output fields it produces.
+    Each stage must declare the pipeline fields it requires as input, and the output fields it produces.
     These are used by :func:`repype.pipeline.create_pipeline` function to automatically determine the stage order and
     by the :meth:`repype.pipeline.Pipeline.get_extra_stages` method to determine the stages that are required to be executed additionally.
-    The input field ``input`` is provided by the pipeline itself via the :meth:`repype.pipeline.Pipeline.process` method.
+    The field ``input_id`` is provided by the pipeline itself via the :meth:`repype.pipeline.Pipeline.process` method.
 
     Arguments:
         id: The stage identifier, used as the hyperparameter namespace.
             Defaults to the result of the :py:func:`suggest_stage_id` function.
-        inputs: List of inputs required by this stage.
-        consumes: List of inputs consumed by this stage (cannot be used by subsequent stages).
-        outputs: List of outputs produced by this stage.
+        inputs: List of fields read by this stage.
+        consumes: List of fields consumed by this stage (read and cannot be used by subsequent stages).
+        outputs: List of fields produced by this stage.
     """
 
     inputs: Collection[str] = []
     """
-    List of inputs required by this stage.
+    List of fields read by this stage.
     """
 
     outputs: Collection[str] = []
     """
-    List of outputs produced by this stage.
+    List of fields produced by this stage.
     """
 
     consumes: Collection[str] = []
     """
-    List of inputs consumed by this stage (cannot be used by subsequent stages).
+    List of fields consumed by this stage (read and cannot be used by subsequent stages).
     """
 
     enabled_by_default: bool = True
@@ -186,8 +186,8 @@ class Stage:
         Arguments:
             pipeline: The pipeline object that this stage is a part of.
             data: The *pipeline data object* to be used for this stage.
-                This is a dictionary that contains all required inputs.
-                The outputs of this stage are added to this dictionary.
+                This is a dictionary that contains all available fields of the pipeline.
+                The output fields of this stage are added to this dictionary.
             config: The hyperparameters to be used for this stage.
             status: A status object to report the progress of the computations.
 
@@ -206,7 +206,7 @@ class Stage:
             )
             self.callback('start', data, status = status, config = config, **kwargs)
 
-            # Extract the input data of the stage
+            # Extract the input fields for the stage
             input_data = {key: data[key] for key in self.inputs}
 
             # Clean up the hyperparameters passed to the stage implementation
@@ -244,7 +244,7 @@ class Stage:
 
         Arguments:
             data: The *pipeline data object* to be used for this stage.
-                This is a dictionary that contains all required inputs.
+                This is a dictionary that contains all available fields of the pipeline.
             status: A status object to report the progress of the computations.
         """
         repype.status.update(
@@ -263,16 +263,17 @@ class Stage:
             **inputs,
         ) -> PipelineData:
         """
-        Processes the inputs of this stage of the `pipeline`.
+        Processes the input fields of this stage of the `pipeline`.
 
-        This method implements a stage of the pipeline with the provided inputs and configuration parameters.
-        It then returns the outputs produced by this stage.
+        This method implements a stage of the pipeline with the provided `inputs` and configuration parameters.
+        It then returns the outputs produced by the stage.
 
         Arguments:
             pipeline: The pipeline object that this stage is a part of.
             config: The hyperparameters to be used for this stage.
             status: A status object to report the progress of the computations.
-            **inputs: The inputs of this stage. Each key-value pair represents an input field and the corresponding value.
+            **inputs: The fields of the pipeline read by this stage.
+                Each key-value pair represents an input field and the corresponding value.
 
         Returns:
             A dictionary containing the outputs of this stage.
@@ -283,7 +284,7 @@ class Stage:
         """
         raise NotImplementedError()
 
-    def configure(self, pipeline: Pipeline, input: Input, *args, **kwargs) -> dict:
+    def configure(self, pipeline: Pipeline, input_id: InputID, *args, **kwargs) -> dict:
         """
         Returns the rules to adopt hyperparameters based on the input data.
 
@@ -322,7 +323,7 @@ class Stage:
 
         Arguments:
             pipeline: The pipeline object that this stage is a part of.
-            input: The input to adopt the hyperparameters for.
+            input_id: The identifier of the input data to adopt the hyperparameters for.
             *args: Sequential arguments passed to :meth:`Pipeline.configure <repype.pipeline.Pipeline.configure>`.
             **kwargs: Keyword arguments passed to :meth:`Pipeline.configure <repype.pipeline.Pipeline.configure>`.
         """
