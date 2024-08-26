@@ -185,7 +185,6 @@ class Task__repr__(unittest.TestCase):
                 field2 = 2,
             ),
         )
-        print(repr(task))
         self.assertEqual(
             repr(task),
             f'<Task "{path}" bf21a9e>',
