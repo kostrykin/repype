@@ -51,5 +51,8 @@ jobs:
         github-auth: ${{ secrets.GITHUB_TOKEN }}
         gist-auth: ${{ secrets.GIST_SECRET }}
         gist-filename: pypers.json
+        run: |
+          coverage run -m unittest discover
+          python -m coverage json --omit "tests/*,repype/textual/*"
       env:
         REPYPE_WATCHDOG_TIMEOUT: 1
