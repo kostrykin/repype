@@ -1,7 +1,6 @@
 import argparse
 import asyncio
 import contextlib
-import dill
 import importlib
 import os
 import pathlib
@@ -44,7 +43,8 @@ class Textual(unittest.IsolatedAsyncioTestCase):
             # Run each test in a separate process, with coverage measuring enabled
             # This is necessary, because the method `run_test` of Textual apps can be run only once per process
             os.environ['COVERAGE_PROCESS_START'] = '.coveragerc'
-            for filepath, test in tests:
+            for test_idx, (filepath, test) in enumerate(tests):
+                print(('\n' * int(test_idx == 0)) + f'-> textual.{filepath.stem}.{test}')
                 with self.subTest(test = filepath.stem):
 
                     # Spawn the separate test process
@@ -63,8 +63,7 @@ class Textual(unittest.IsolatedAsyncioTestCase):
                     if stdout:
                         print(stdout.decode())
                     if stderr:
-                        exception = dill.loads(stderr)
-                        raise exception
+                        self.fail(stderr.decode())
                     
 
 class TextualTestCase(unittest.TestCase):
@@ -125,5 +124,4 @@ if __name__ == '__main__':
 
     except:
         print(traceback.format_exc())
-        error_serialized = dill.dumps(sys.exc_info()[1])
-        sys.stderr.buffer.write(error_serialized)
+        sys.stderr.write(str(sys.exc_info()[1]))
