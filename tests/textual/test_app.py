@@ -7,7 +7,7 @@ async def test(test_case):
         assert test_case.app.is_running
 
 
-async def test_quit(test_case):
+async def test__action_exit(test_case):
     async with test_case.app.run_test() as pilot:
 
         await pilot.press('q')
