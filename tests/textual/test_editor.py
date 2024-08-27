@@ -1,5 +1,4 @@
 import repype.textual.editor
-from tests.textual.test_batch import find_tree_node_by_task
 import textual.css.query
 import unittest.mock
 
