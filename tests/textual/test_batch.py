@@ -5,7 +5,7 @@ import repype.textual.batch
 test_case = 'tests.test_textual.TextualTestCase'
 
 
-async def run(test_case):
+async def test(test_case):
 
     # Load the batch
     batch = repype.batch.Batch()

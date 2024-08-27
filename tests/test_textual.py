@@ -23,7 +23,7 @@ class Textual(unittest.IsolatedAsyncioTestCase):
             self.skipTest(f'Textual tests require Python 3.10 or later (found: {platform.python_version()})')
 
         else:
-            # Gather all tests from within the 'textual' directory
+            # Gather all test files from within the 'textual' directory
             test_filename_pattern = re.compile(r'^test_[a-zA-Z0-9_]+\.py$')
             test_directory_path = pathlib.Path(__file__).parent / 'textual'
             test_filepaths = [
@@ -32,10 +32,19 @@ class Textual(unittest.IsolatedAsyncioTestCase):
                 if test_filename_pattern.match(filename)
             ]
 
+            # Inspect all test files and gather all tests
+            tests = list()
+            test_def_pattern = re.compile(r'^async +def +(test(?:_[a-zA-Z0-9_]+)?)')
+            for filepath in test_filepaths:
+                with open(filepath, 'r') as file:
+                    for line in file:
+                        if m := test_def_pattern.match(line):
+                            tests.append((filepath, m.group(1)))
+
             # Run each test in a separate process, with coverage measuring enabled
             # This is necessary, because the method `run_test` of Textual apps can be run only once per process
             os.environ['COVERAGE_PROCESS_START'] = '.coveragerc'
-            for filepath in test_filepaths:
+            for filepath, test in tests:
                 with self.subTest(test = filepath.stem):
 
                     # Spawn the separate test process
@@ -44,6 +53,7 @@ class Textual(unittest.IsolatedAsyncioTestCase):
                         '-m'
                         'tests.test_textual',
                         filepath.stem,
+                        test,
                         stdout = asyncio.subprocess.PIPE,
                         stderr = asyncio.subprocess.PIPE,
                     )
@@ -77,6 +87,7 @@ if __name__ == '__main__':
 
     # Parse the test name from the command line arguments
     parser = argparse.ArgumentParser()
+    parser.add_argument('filename', type = str)
     parser.add_argument('test', type = str)
     args = parser.parse_args()
 
@@ -94,7 +105,7 @@ if __name__ == '__main__':
             async def main():
 
                 # Load the test
-                test = importlib.import_module(f'tests.textual.{args.test}')
+                test = importlib.import_module(f'tests.textual.{args.filename}')
                 test_case_str = test.test_case
                 test_case_module = importlib.import_module('.'.join(test_case_str.split('.')[:-1]))
 
@@ -105,7 +116,7 @@ if __name__ == '__main__':
                 # Run the test with the demanded test case
                 try:
                     test_case.setUp()
-                    await test.run(test_case)
+                    await getattr(test, args.test)(test_case)
                 finally:
                     test_case.tearDown()
                     
