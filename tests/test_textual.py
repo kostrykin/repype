@@ -19,12 +19,13 @@ class Textual(unittest.IsolatedAsyncioTestCase):
 
     async def test(self):
         python_version = platform.python_version_tuple()
-        if python_version[0] != 3 or python_version[1] < 10:
-            self.skipTest('Textual tests require Python 3.10 or later')
+        if int(python_version[0]) != 3 or int(python_version[1]) < 10:
+            self.skipTest(f'Textual tests require Python 3.10 or later (found: {platform.python_version()})')
 
         else:
             test_filename_pattern = re.compile(r'^test_[a-zA-Z0-9_]+\.py$')
             test_directory_path = pathlib.Path(__file__).parent / 'textual'
+            os.environ['COVERAGE_PROCESS_START'] = '.coveragerc'
             for filename in os.listdir(test_directory_path):
                 if test_filename_pattern.match(filename):
                     filepath = test_directory_path / filename
@@ -64,8 +65,15 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     try:
-        async def main():
-            with contextlib.redirect_stderr(sys.stdout):
+        with contextlib.redirect_stderr(sys.stdout):
+            
+            try:
+                import coverage
+                coverage.process_startup()
+            except ImportError:
+                pass
+
+            async def main():
                 test = importlib.import_module(f'tests.textual.{args.test}')
                 test_case_str = test.test_case
                 test_case_module = importlib.import_module('.'.join(test_case_str.split('.')[:-1]))
@@ -76,7 +84,9 @@ if __name__ == '__main__':
                     await test.run(test_case)
                 finally:
                     test_case.tearDown()
-        asyncio.run(main()) 
+                    
+            asyncio.run(main()) 
+
     except:
         print(traceback.format_exc())
         error_serialized = dill.dumps(sys.exc_info()[1])

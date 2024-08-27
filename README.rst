@@ -31,7 +31,7 @@
 
 - Instead of using ``python -m unittest``, use coverage.py to also produce a test coverage report::
 
-      coverage run -m unittest && python -m coverage html
+      coverage run -m unittest && coverage combine && coverage html
 
   This requires `coverage.py <https://coverage.readthedocs.io/en/7.4.0/#quick-start>`_ to be installed additionally, like ``pip install coverage``.
 

@@ -1,4 +1,3 @@
 [run]
-omit =
-    tests/*
-    repype/textual/*
+omit = tests/*
+parallel = True
