@@ -67,6 +67,10 @@ class TextualTestCase(unittest.TestCase):
     def tearDown(self):
         self.repype_segmentation.tearDown()
 
+    @property
+    def root_path(self):
+        return self.repype_segmentation.root_path
+
 
 # This script is run by the `Textual` test case in a separate process
 if __name__ == '__main__':

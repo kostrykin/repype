@@ -1,3 +1,4 @@
+import repype.batch
 import repype.textual.batch
 
 
@@ -5,6 +6,19 @@ test_case = 'tests.test_textual.TextualTestCase'
 
 
 async def run(test_case):
+
+    # Load the batch
+    batch = repype.batch.Batch()
+    batch.load(test_case.root_path)
+
+    # Load the tasks
+    ctx1 = batch.context(test_case.root_path / 'task')
+    ctx2 = batch.context(test_case.root_path / 'task' / 'sigma=2')
+
+    # Mark `task2` as completed
+    ctx2.run()
+
+    # Verify the batch screen and its contents
     async with test_case.app.run_test() as pilot:
         
         # Verify screen
@@ -26,4 +40,4 @@ async def run(test_case):
         test_case.assertIn(str(task1_node.data.path), task1_node.label)
         test_case.assertIn('sigma=2', task2_node.label)
         test_case.assertIn('pending', task1_node.label)
-        test_case.assertIn('pending', task2_node.label)
+        test_case.assertNotIn('pending', task2_node.label)
