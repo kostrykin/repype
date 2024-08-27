@@ -1,6 +1,7 @@
+import unittest.mock
+
 import repype.textual.editor
 import textual.css.query
-import unittest.mock
 
 
 test_case = 'tests.test_textual.TextualTestCase'
@@ -22,7 +23,6 @@ async def test__new(test_case):
         await test_case.app.push_screen(screen)
 
         # Verify the editor screen
-        screen = test_case.app.screen
         test_case.assertEqual(screen.parent_task, ctx1.task)
         test_case.assertIsNone(screen.my_task)
         test_case.assertEqual(screen.mode, 'new')
@@ -48,7 +48,6 @@ async def test__edit(test_case):
         await test_case.app.push_screen(screen)
 
         # Verify the editor screen
-        screen = test_case.app.screen
         test_case.assertEqual(screen.my_task, ctx1.task)
         test_case.assertIsNone(screen.parent_task)
         test_case.assertEqual(screen.mode, 'edit')

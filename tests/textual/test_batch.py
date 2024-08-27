@@ -1,6 +1,7 @@
+import unittest.mock
+
 import repype.batch
 import repype.textual.batch
-import unittest.mock
 
 
 test_case = 'tests.test_textual.TextualTestCase'
