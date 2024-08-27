@@ -1,5 +1,6 @@
 import repype.batch
 import repype.textual.batch
+import unittest.mock
 
 
 test_case = 'tests.test_textual.TextualTestCase'
@@ -242,7 +243,8 @@ async def test__add_task__none(test_case):
         test_case.assertIsInstance(test_case.app.screen, repype.textual.batch.BatchScreen)
 
 
-async def test__add_task__task1(test_case):
+@unittest.mock.patch('repype.textual.editor.EditorScreen.new')
+async def test__add_task__task1(test_case, mock_EditorScreen_new):
 
     # Load the batch
     batch = repype.batch.Batch()
@@ -259,13 +261,16 @@ async def test__add_task__task1(test_case):
         task1_node = find_tree_node_by_task(task_tree.root, ctx1.task)
         task_tree.select_node(task1_node)
 
-        # Add sub-task below selected task
-        await pilot.press('a')
+        # Patch `app.push_screen` method
+        with unittest.mock.patch.object(test_case.app, 'push_screen') as mock_push_screen:
 
-        # Confirm that the editor is shown
-        test_case.assertIsInstance(test_case.app.screen, repype.textual.batch.EditorScreen)
-        test_case.assertEqual(test_case.app.screen.parent_task, ctx1.task)
-        test_case.assertIsNone(test_case.app.screen.my_task)
+            # Add sub-task below selected task
+            await pilot.press('a')
+
+            # Confirm that `EditorScreen.new` and `app.push_screen` were called
+            mock_EditorScreen_new.assert_called_once_with(parent_task = ctx1.task)
+            mock_push_screen.assert_called_once()
+            test_case.assertIs(mock_push_screen.call_args[0][0], mock_EditorScreen_new.return_value)
 
 
 async def test__edit_task__none(test_case):
@@ -288,7 +293,8 @@ async def test__edit_task__none(test_case):
         test_case.assertIsInstance(test_case.app.screen, repype.textual.batch.BatchScreen)
 
 
-async def test__edit_task__task1(test_case):
+@unittest.mock.patch('repype.textual.editor.EditorScreen.edit')
+async def test__edit_task__task1(test_case, mock_EditorScreen_edit):
 
     # Load the batch
     batch = repype.batch.Batch()
@@ -305,10 +311,13 @@ async def test__edit_task__task1(test_case):
         task1_node = find_tree_node_by_task(task_tree.root, ctx1.task)
         task_tree.select_node(task1_node)
 
-        # Edit the selected task
-        await pilot.press('e')
+        # Patch `app.push_screen` method
+        with unittest.mock.patch.object(test_case.app, 'push_screen') as mock_push_screen:
 
-        # Confirm that the editor is shown
-        test_case.assertIsInstance(test_case.app.screen, repype.textual.batch.EditorScreen)
-        test_case.assertEqual(test_case.app.screen.my_task, ctx1.task)
-        test_case.assertIsNone(test_case.app.screen.parent_task)
+            # Edit the selected task
+            await pilot.press('e')
+
+            # Confirm that `EditorScreen.edit` and `app.push_screen` were called
+            mock_EditorScreen_edit.assert_called_once_with(task = ctx1.task)
+            mock_push_screen.assert_called_once()
+            test_case.assertIs(mock_push_screen.call_args[0][0], mock_EditorScreen_edit.return_value)
