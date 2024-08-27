@@ -56,6 +56,10 @@ async def test(test_case):
         test_case.assertIn('pending', task1_node.label)
         test_case.assertNotIn('pending', task2_node.label)
 
+        # Verify the `pending` label
+        test_case.assertIn('Tasks:', screen.query_one(f'#batch-pending').renderable)
+        test_case.assertIn('1 pending', screen.query_one(f'#batch-pending').renderable)
+
 
 async def test__action_delete_task__none(test_case):
 
