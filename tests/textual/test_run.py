@@ -32,6 +32,7 @@ async def test__success(test_case):
                     container = screen.query_one('#run-task-1-container')
                     test_case.assertTrue(collapsible.collapsed)
                     test_case.assertEqual(collapsible.title, ctx1.task.path.resolve())
+                    test_case.assertEqual(len(container.children), 0)
 
                     repype.status.update(status, info = 'enter', task = '/path/to/task1')
 
