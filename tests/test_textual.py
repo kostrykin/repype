@@ -4,7 +4,7 @@ import contextlib
 import importlib
 import os
 import pathlib
-import platform  # FIXME
+import platform
 import re
 import sys
 import traceback
@@ -75,6 +75,12 @@ def create_composite_textual_test_cases():
 
             # Define the test method
             async def test_method(self):
+
+                # Skip the test if the Python version is too low
+                python_version = platform.python_version_tuple()
+                if int(python_version[0]) != 3 or int(python_version[1]) < 10:
+                    self.skipTest(f'Textual tests require Python 3.10 or later (found: {platform.python_version()})')
+                    return
 
                 # Spawn the separate test process
                 test_process = await asyncio.create_subprocess_exec(
