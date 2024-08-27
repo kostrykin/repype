@@ -325,3 +325,83 @@ async def test__edit_task__task1(test_case, mock_EditorScreen_edit):
             mock_EditorScreen_edit.assert_called_once_with(task = ctx1.task)
             mock_push_screen.assert_called_once()
             test_case.assertIs(mock_push_screen.call_args[0][0], mock_EditorScreen_edit.return_value)
+
+
+async def test__run_task__none(test_case):
+
+    # Load the batch
+    batch = repype.batch.Batch()
+    batch.load(test_case.root_path)
+
+    # Verify the batch screen and its contents
+    async with test_case.app.run_test() as pilot:
+
+        # Select the root node (not a task)
+        task_tree = test_case.app.screen.query_one('#setup-tasks')
+        task_tree.select_node(task_tree.root)
+
+        # Run the selected task (none)
+        await pilot.press('r')
+
+        # Verify that nothing happened
+        test_case.assertIsInstance(test_case.app.screen, repype.textual.batch.BatchScreen)
+
+
+async def test__run_task__completed(test_case):
+
+    # Load the batch
+    batch = repype.batch.Batch()
+    batch.load(test_case.root_path)
+
+    # Load the tasks
+    ctx1 = batch.context(test_case.root_path / 'task')
+
+    # Mark `task1` as completed
+    ctx1.run()
+
+    # Verify the batch screen and its contents
+    async with test_case.app.run_test() as pilot:
+
+        # Select the first task
+        task_tree = test_case.app.screen.query_one('#setup-tasks')
+        task1_node = find_tree_node_by_task(task_tree.root, ctx1.task)
+        task_tree.select_node(task1_node)
+
+        # Run the selected task
+        await pilot.press('r')
+
+        # Verify that nothing happened
+        test_case.assertIsInstance(test_case.app.screen, repype.textual.batch.BatchScreen)
+
+
+@unittest.mock.patch.object(repype.textual.batch, 'RunScreen')
+async def test__run_task__pending(test_case, mock_RunScreen):
+
+    # Load the batch
+    batch = repype.batch.Batch()
+    batch.load(test_case.root_path)
+
+    # Load the tasks
+    task1 = batch.task(test_case.root_path / 'task')
+
+    # Verify the batch screen and its contents
+    async with test_case.app.run_test() as pilot:
+
+        # Select the first task
+        task_tree = test_case.app.screen.query_one('#setup-tasks')
+        task1_node = find_tree_node_by_task(task_tree.root, task1)
+        task_tree.select_node(task1_node)
+
+        # Patch `app.push_screen` method
+        with unittest.mock.patch.object(test_case.app, 'push_screen') as mock_push_screen:
+
+            # Run the selected task
+            await pilot.press('r')
+
+            # Confirm that `RunScreen` and `app.push_screen` were called
+            mock_RunScreen.assert_called_once()
+            test_case.assertEqual(len(mock_RunScreen.call_args[0]), 1)
+            test_case.assertEqual(len(mock_RunScreen.call_args[0][0]), 1)
+            test_case.assertEqual(mock_RunScreen.call_args[0][0][0].task, task1)
+            mock_push_screen.assert_called_once()
+            test_case.assertIs(mock_push_screen.call_args[0][0], mock_RunScreen.return_value)
