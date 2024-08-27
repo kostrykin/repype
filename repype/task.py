@@ -132,7 +132,7 @@ class Task:
         self.path   = pathlib.Path(path)
 
     def __eq__(self, other):
-        return all(
+        return other is not None and all(
             (
                 isinstance(other, type(self)),
                 self.path == other.path,
