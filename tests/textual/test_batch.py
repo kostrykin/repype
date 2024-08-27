@@ -154,3 +154,69 @@ async def test__action_delete_task__task2(test_case):
         # Verify task nodes
         task1_node = task_tree.root.children[0]
         test_case.assertEqual(task1_node.data, ctx1.task)
+
+
+async def test__reset_task__none(test_case):
+
+    # Load the batch
+    batch = repype.batch.Batch()
+    batch.load(test_case.root_path)
+
+    # Load the tasks
+    ctx1 = batch.context(test_case.root_path / 'task')
+    ctx2 = batch.context(test_case.root_path / 'task' / 'sigma=2')
+
+    # Mark `task1` and `task2` as completed
+    ctx1.run()
+    ctx2.run()
+
+    # Verify the batch screen and its contents
+    async with test_case.app.run_test() as pilot:
+
+        # Select the root node (not a task)
+        task_tree = test_case.app.screen.query_one('#setup-tasks')
+        task_tree.select_node(task_tree.root)
+
+        # Delete the selected task
+        await pilot.press('R')
+
+        # Verify that nothing happened
+        test_case.assertIsInstance(test_case.app.screen, repype.textual.batch.BatchScreen)
+
+
+async def test__reset_task__task1(test_case):
+
+    # Load the batch
+    batch = repype.batch.Batch()
+    batch.load(test_case.root_path)
+
+    # Load the tasks
+    ctx1 = batch.context(test_case.root_path / 'task')
+    ctx2 = batch.context(test_case.root_path / 'task' / 'sigma=2')
+
+    # Mark `task1` and `task2` as completed
+    ctx1.run()
+    ctx2.run()
+
+    # Verify the batch screen and its contents
+    async with test_case.app.run_test() as pilot:
+
+        # Select the first task
+        task_tree = test_case.app.screen.query_one('#setup-tasks')
+        task1_node = find_tree_node_by_task(task_tree.root, ctx1.task)
+        task_tree.select_node(task1_node)
+
+        # Delete the selected task
+        await pilot.press('R')
+
+        # Confirm
+        test_case.assertIsInstance(test_case.app.screen, repype.textual.batch.ConfirmScreen)
+        test_case.app.screen.yes()
+        test_case.assertIsInstance(test_case.app.screen, repype.textual.batch.BatchScreen)
+        await pilot.pause(0)
+
+        # Verify task nodes
+        task1_node = find_tree_node_by_task(task_tree.root, ctx1.task)
+        task2_node = find_tree_node_by_task(task_tree.root, ctx2.task)
+        test_case.assertIn('pending', task1_node.label)
+        test_case.assertNotIn('pending', task2_node.label)

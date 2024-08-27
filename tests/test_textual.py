@@ -45,7 +45,7 @@ class Textual(unittest.IsolatedAsyncioTestCase):
             os.environ['COVERAGE_PROCESS_START'] = '.coveragerc'
             for test_idx, (filepath, test) in enumerate(tests):
                 print(('\n' * int(test_idx == 0)) + f'-> textual.{filepath.stem}.{test}')
-                with self.subTest(test = filepath.stem):
+                with self.subTest(test = f'{filepath.stem}.{test}'):
 
                     # Spawn the separate test process
                     test_process = await asyncio.create_subprocess_exec(
