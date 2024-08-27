@@ -14,56 +14,116 @@ import repype.textual.app
 import tests.test_repype
 
 
-class Textual(unittest.IsolatedAsyncioTestCase):
+# class Textual(unittest.IsolatedAsyncioTestCase):
 
-    async def test(self):
-        python_version = platform.python_version_tuple()
-        if int(python_version[0]) != 3 or int(python_version[1]) < 10:
-            self.skipTest(f'Textual tests require Python 3.10 or later (found: {platform.python_version()})')
+#     async def test(self):
+#         python_version = platform.python_version_tuple()
+#         if int(python_version[0]) != 3 or int(python_version[1]) < 10:
+#             self.skipTest(f'Textual tests require Python 3.10 or later (found: {platform.python_version()})')
 
-        else:
-            # Gather all test files from within the 'textual' directory
-            test_filename_pattern = re.compile(r'^test_[a-zA-Z0-9_]+\.py$')
-            test_directory_path = pathlib.Path(__file__).parent / 'textual'
-            test_filepaths = [
-                test_directory_path / filename
-                for filename in os.listdir(test_directory_path)
-                if test_filename_pattern.match(filename)
-            ]
+#         else:
+#             # Gather all test files from within the 'textual' directory
+#             test_filename_pattern = re.compile(r'^test_[a-zA-Z0-9_]+\.py$')
+#             test_directory_path = pathlib.Path(__file__).parent / 'textual'
+#             test_filepaths = [
+#                 test_directory_path / filename
+#                 for filename in os.listdir(test_directory_path)
+#                 if test_filename_pattern.match(filename)
+#             ]
 
-            # Inspect all test files and gather all tests
-            tests = list()
-            test_def_pattern = re.compile(r'^async +def +(test(?:_[a-zA-Z0-9_]+)?)')
-            for filepath in test_filepaths:
-                with open(filepath, 'r') as file:
-                    for line in file:
-                        if m := test_def_pattern.match(line):
-                            tests.append((filepath, m.group(1)))
+#             # Inspect all test files and gather all tests
+#             tests = list()
+#             test_def_pattern = re.compile(r'^async +def +(test(?:_[a-zA-Z0-9_]+)?)')
+#             for filepath in test_filepaths:
+#                 with open(filepath, 'r') as file:
+#                     for line in file:
+#                         if m := test_def_pattern.match(line):
+#                             tests.append((filepath, m.group(1)))
 
-            # Run each test in a separate process, with coverage measuring enabled
-            # This is necessary, because the method `run_test` of Textual apps can be run only once per process
-            os.environ['COVERAGE_PROCESS_START'] = '.coveragerc'
-            for test_idx, (filepath, test) in enumerate(tests):
-                print(('\n' * int(test_idx == 0)) + f'-> textual.{filepath.stem}.{test}')
-                with self.subTest(test = f'{filepath.stem}.{test}'):
+#             # Run each test in a separate process, with coverage measuring enabled
+#             # This is necessary, because the method `run_test` of Textual apps can be run only once per process
+#             os.environ['COVERAGE_PROCESS_START'] = '.coveragerc'
+#             for test_idx, (filepath, test) in enumerate(tests):
+#                 print(('\n' * int(test_idx == 0)) + f'-> textual.{filepath.stem}.{test}')
+#                 with self.subTest(test = f'{filepath.stem}.{test}'):
 
-                    # Spawn the separate test process
-                    test_process = await asyncio.create_subprocess_exec(
-                        sys.executable,
-                        '-m'
-                        'tests.test_textual',
-                        filepath.stem,
-                        test,
-                        stdout = asyncio.subprocess.PIPE,
-                        stderr = asyncio.subprocess.PIPE,
-                    )
+#                     # Spawn the separate test process
+#                     test_process = await asyncio.create_subprocess_exec(
+#                         sys.executable,
+#                         '-m'
+#                         'tests.test_textual',
+#                         filepath.stem,
+#                         test,
+#                         stdout = asyncio.subprocess.PIPE,
+#                         stderr = asyncio.subprocess.PIPE,
+#                     )
 
-                    # Wait for the test process to finish
-                    stdout, stderr = await test_process.communicate()
-                    if stdout:
-                        print(stdout.decode())
-                    if stderr:
-                        self.fail(stderr.decode())
+#                     # Wait for the test process to finish
+#                     stdout, stderr = await test_process.communicate()
+#                     if stdout:
+#                         print(stdout.decode())
+#                     if stderr:
+#                         self.fail(stderr.decode())
+
+
+def create_composite_textual_test_case():
+
+    class CompositeTextualTestCase(unittest.IsolatedAsyncioTestCase): ...
+
+    # Gather all test files from within the 'textual' directory
+    test_filename_pattern = re.compile(r'^test_[a-zA-Z0-9_]+\.py$')
+    test_directory_path = pathlib.Path(__file__).parent / 'textual'
+    test_filepaths = [
+        test_directory_path / filename
+        for filename in os.listdir(test_directory_path)
+        if test_filename_pattern.match(filename)
+    ]
+
+    # Inspect all test files and gather all tests
+    tests = list()
+    test_def_pattern = re.compile(r'^async +def +(test(?:_[a-zA-Z0-9_]+)?)')
+    for filepath in test_filepaths:
+        with open(filepath, 'r') as file:
+            for line in file:
+                if m := test_def_pattern.match(line):
+                    tests.append((filepath, m.group(1)))
+
+    # Run each test in a separate process, with coverage measuring enabled
+    # This is necessary, because the method `run_test` of Textual apps can be run only once per process
+    os.environ['COVERAGE_PROCESS_START'] = '.coveragerc'
+    for filepath, test in tests:
+        def create_test_method(filepath, test):
+
+            # Define the test method
+            async def test_method(self):
+
+                # Spawn the separate test process
+                test_process = await asyncio.create_subprocess_exec(
+                    sys.executable,
+                    '-m'
+                    'tests.test_textual',
+                    filepath.stem,
+                    test,
+                    stdout = asyncio.subprocess.PIPE,
+                    stderr = asyncio.subprocess.PIPE,
+                )
+
+                # Wait for the test process to finish
+                stdout, stderr = await test_process.communicate()
+                if stdout:
+                    print(stdout.decode())
+                if stderr:
+                    self.fail(stderr.decode())
+                    
+            return test_method
+
+        # Add the test method to the composite test case
+        setattr(CompositeTextualTestCase, filepath.stem + '__' + test, create_test_method(filepath, test))
+
+    return CompositeTextualTestCase
+
+
+CompositeTextualTestCase = create_composite_textual_test_case()
                     
 
 class TextualTestCase(unittest.TestCase):
