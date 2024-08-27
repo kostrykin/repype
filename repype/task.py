@@ -131,6 +131,19 @@ class Task:
         self.parent = parent
         self.path   = pathlib.Path(path)
 
+    def __eq__(self, other):
+        return all(
+            (
+                isinstance(other, type(self)),
+                self.path == other.path,
+                self.spec == other.spec,
+                self.parent == other.parent,
+            )
+        )
+    
+    def __hash__(self):
+        return hash((self.path, json.dumps(self.spec), self.parent))
+
     @property
     def full_spec(self) -> Dict[str, Any]:
         """

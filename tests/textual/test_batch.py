@@ -37,7 +37,9 @@ async def run(test_case):
         # Verify task nodes
         task1_node = task_tree.root.children[0]
         task2_node = task_tree.root.children[0].children[0]
-        test_case.assertIn(str(task1_node.data.path), task1_node.label)
+        test_case.assertEqual(task1_node.data, ctx1.task)
+        test_case.assertEqual(task2_node.data, ctx2.task)
+        test_case.assertIn(str(ctx1.task.path), task1_node.label)
         test_case.assertIn('sigma=2', task2_node.label)
         test_case.assertIn('pending', task1_node.label)
         test_case.assertNotIn('pending', task2_node.label)
