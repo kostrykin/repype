@@ -1,6 +1,7 @@
 import repype.textual.editor
 from tests.textual.test_batch import find_tree_node_by_task
 import textual.css.query
+import unittest.mock
 
 
 test_case = 'tests.test_textual.TextualTestCase'
@@ -60,3 +61,29 @@ async def test__edit(test_case):
             screen.query_one('#editor-code').text,
             (ctx1.task.path / 'task.yml').read_text(),
         )
+
+
+@unittest.mock.patch('repype.textual.editor.EditorScreen.dismiss')
+async def test__action_cancel(test_case, mock_EditorScreen_dismiss):
+
+    # Load the batch
+    batch = repype.batch.Batch()
+    batch.load(test_case.root_path)
+
+    # Load the tasks
+    ctx1 = batch.context(test_case.root_path / 'task')
+
+    # Run the app and push the editor screen
+    async with test_case.app.run_test() as pilot:
+
+        screen = repype.textual.editor.EditorScreen.edit(task = ctx1.task)
+        await test_case.app.push_screen(screen)
+
+        # Close the editor without saving
+        await pilot.press('ctrl+c')
+
+        # Confirm
+        test_case.assertIsInstance(test_case.app.screen, repype.textual.editor.ConfirmScreen)
+        test_case.app.screen.yes()
+        await pilot.pause(0)
+        mock_EditorScreen_dismiss.assert_called_once_with(False)
