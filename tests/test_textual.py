@@ -4,14 +4,41 @@ import contextlib
 import importlib
 import os
 import pathlib
-import platform
+import platform  # FIXME
 import re
 import sys
 import traceback
+import types
 import unittest
 
 import repype.textual.app
 import tests.test_repype
+                    
+
+class TextualTestCase(unittest.IsolatedAsyncioTestCase):
+
+    async def asyncSetUp(self):
+        self.repype_segmentation = tests.test_repype.repype_segmentation()
+        self.repype_segmentation.setUp()
+        self.app = repype.textual.app.Repype(path = self.repype_segmentation.root_path)
+
+    async def asyncTearDown(self):
+        self.repype_segmentation.tearDown()
+
+    @property
+    def root_path(self):
+        return self.repype_segmentation.root_path
+
+
+def load_textual_test(filename):
+    test_module = importlib.import_module(f'tests.textual.{filename}')
+    test_case_str = test_module.test_case
+    test_case_module = importlib.import_module('.'.join(test_case_str.split('.')[:-1]))
+    test_case_class  = getattr(test_case_module, test_case_str.split('.')[-1])
+    return types.SimpleNamespace(
+        module = test_module,
+        test_case_class = test_case_class,
+    )
 
 
 def create_composite_textual_test_cases():
@@ -34,10 +61,11 @@ def create_composite_textual_test_cases():
                 if m := test_def_pattern.match(line):
                     tests.append((filepath, m.group(1)))
 
-    # Define the composite test case for each filepath
+    # Define the composite test case for each filepath (with the proper base class)
     test_cases = dict()
     for filepath in test_filepaths:
-        test_cases[filepath] = type(filepath.stem, (unittest.IsolatedAsyncioTestCase,), dict())
+        test = load_textual_test(filepath.stem)
+        test_cases[filepath] = type(filepath.stem, (test.test_case_class,), dict())
 
     # Run each test in a separate process, with coverage measuring enabled
     # This is necessary, because the method `run_test` of Textual apps can be run only once per process
@@ -75,23 +103,9 @@ def create_composite_textual_test_cases():
     return test_cases.values()
 
 
+# Register the composite test cases
 for composite_test_case in create_composite_textual_test_cases():
     globals()[composite_test_case.__name__] = composite_test_case
-                    
-
-class TextualTestCase(unittest.TestCase):
-
-    def setUp(self):
-        self.repype_segmentation = tests.test_repype.repype_segmentation()
-        self.repype_segmentation.setUp()
-        self.app = repype.textual.app.Repype(path = self.repype_segmentation.root_path)
-
-    def tearDown(self):
-        self.repype_segmentation.tearDown()
-
-    @property
-    def root_path(self):
-        return self.repype_segmentation.root_path
 
 
 # This script is run by the `Textual` test case in a separate process
@@ -117,20 +131,15 @@ if __name__ == '__main__':
             async def main():
 
                 # Load the test
-                test = importlib.import_module(f'tests.textual.{args.filename}')
-                test_case_str = test.test_case
-                test_case_module = importlib.import_module('.'.join(test_case_str.split('.')[:-1]))
-
-                # Instantiate the demanded test case
-                test_case_class  = getattr(test_case_module, test_case_str.split('.')[-1])
-                test_case = test_case_class()
+                test = load_textual_test(args.filename)
+                test_case = test.test_case_class()
 
                 # Run the test with the demanded test case
                 try:
-                    test_case.setUp()
-                    await getattr(test, args.test)(test_case)
+                    await test_case.asyncSetUp()
+                    await getattr(test.module, args.test)(test_case)
                 finally:
-                    test_case.tearDown()
+                    await test_case.asyncTearDown()
                     
             # Fire up an event loop and run the test co-routine
             asyncio.run(main()) 
