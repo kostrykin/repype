@@ -225,3 +225,103 @@ async def test__success(test_case, mock_log):
             while mock_batch.task_process:
                 await asyncio.sleep(1)
             test_case.assertTrue(screen.success)
+
+
+async def test__action_cancel(test_case):
+
+    # Load the batch
+    batch = repype.batch.Batch()
+    batch.load(test_case.root_path)
+
+    # Load the tasks
+    ctx1 = batch.context(test_case.root_path / 'task')
+
+    # Verify the `RunScreen` and its contents
+    async with test_case.app.run_test() as pilot:
+
+        # Configure the `RunScreen` with a mocked `RunContext` object
+        screen = repype.textual.run.RunScreen([ctx1])
+        with unittest.mock.patch.object(screen, 'handle_new_status') as mock_handle_new_status:
+            await test_case.app.push_screen(screen)
+
+            # Cancel the batch run
+            await pilot.press('ctrl+c')
+
+            # Confirm
+            test_case.assertIsInstance(test_case.app.screen, repype.textual.run.ConfirmScreen)
+            test_case.app.screen.yes()
+            test_case.assertIsInstance(test_case.app.screen, repype.textual.run.RunScreen)
+            await pilot.pause(0)
+
+            # Wait for the batch run to be cancelled
+            if test_case.app.batch.task_process:
+                await test_case.app.batch.task_process.wait()
+            await pilot.pause(1)
+
+        # Verify the results
+        test_case.assertFalse(screen.success)
+        test_case.assertFalse(mock_handle_new_status.call_args_list[-1].kwargs['intermediate'])
+        test_case.assertEqual(
+            mock_handle_new_status.call_args_list[-1].kwargs['status'],
+            dict(
+                info = 'interrupted',
+                exit_code = None,
+            ),
+        )
+
+
+@unittest.mock.patch.object(repype.textual.run, 'log')
+async def test__action_close__while_running(test_case, mock_log):
+
+    # Load the batch
+    batch = repype.batch.Batch()
+    batch.load(test_case.root_path)
+
+    # Load the tasks
+    ctx1 = batch.context(test_case.root_path / 'task')
+
+    # Verify the `RunScreen` and its contents
+    async with test_case.app.run_test() as pilot:
+
+        # Configure the `RunScreen` with a mocked `RunContext` object
+        screen = repype.textual.run.RunScreen([ctx1])
+        await test_case.app.push_screen(screen)
+        await pilot.pause(0)
+
+        # Trigger `action_close`
+        await pilot.press('escape')
+
+        # Verify that nothing happened
+        test_case.assertIsInstance(test_case.app.screen, repype.textual.run.RunScreen)
+
+        # Finish the batch run
+        await test_case.app.batch.task_process.wait()
+
+
+@unittest.mock.patch.object(repype.textual.run, 'log')
+@unittest.mock.patch.object(repype.textual.run.RunScreen, 'dismiss', autospec = True)
+async def test__action_close(test_case, mock_dismiss, mock_log):
+
+    # Load the batch
+    batch = repype.batch.Batch()
+    batch.load(test_case.root_path)
+
+    # Load the tasks
+    ctx1 = batch.context(test_case.root_path / 'task')
+
+    # Verify the `RunScreen` and its contents
+    async with test_case.app.run_test() as pilot:
+
+        # Configure the `RunScreen` with a mocked `RunContext` object
+        screen = repype.textual.run.RunScreen([ctx1])
+        await test_case.app.push_screen(screen)
+        await pilot.pause(0)
+
+        # Finish the batch run
+        await test_case.app.batch.task_process.wait()
+
+        # Trigger `action_close`
+        await pilot.press('escape')
+
+        # Verify that the screen was closed
+        mock_dismiss.assert_called_once_with(screen, True)
