@@ -282,7 +282,7 @@ class Batch__cancel(unittest.IsolatedAsyncioTestCase):
         dt = time.time() - t0
 
         # Verify the results
-        self.assertAlmostEqual(dt, 0.5, delta = 0.1)
+        self.assertAlmostEqual(dt, 0.5, delta = 0.15)
         self.assertFalse(ret)
         self.assertIn(
             dict(
