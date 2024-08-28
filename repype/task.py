@@ -52,22 +52,29 @@ def decode_input_ids(spec: Union[InputID, List[InputID]]) -> List[InputID]:
                 continue
 
             # Check if the token is a range of input identifiers
-            m = re.match(r'^([0-9]+)-([0-9]+)$', token)
+            m = re.match(r'^([0-9]+)?-([0-9]+)?$', token)
 
             # If the token is a single input identifier, add it to the list
             if m is None and re.match(r'^[0-9]+$', token):
                 input_ids.append(int(token))
                 continue
 
-            # If the token is a range of input identifiers, add all identifiers in the range to the list
+            # If the token looks like a range of integer input identifiers, ...
             elif m is not None:
-                first, last = int(m.group(1)), int(m.group(2))
-                if first < last:
-                    input_ids += list(range(first, last + 1))
-                    continue
+
+                # ... and it is a valid range, add all identifiers in the range to the list
+                if m.group(1) is not None and m.group(2) is not None:
+                    first, last = int(m.group(1)), int(m.group(2))
+                    if first < last:
+                        input_ids += list(range(first, last + 1))
+                        continue
+
+                # ... but it is not a valid range, raise an error
+                raise ValueError(f'Cannot parse input token "{token}"')
             
-            # If the token is neither a single input identifier nor a range of identifiers, raise an error
-            raise ValueError(f'Cannot parse input token "{token}"')
+            # Otherwise, treat the token as a string identifier
+            else:
+                input_ids.append(str(token))
 
         return sorted(frozenset(input_ids))
     
