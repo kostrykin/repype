@@ -34,6 +34,8 @@ async def test__success(test_case):
                     test_case.assertEqual(collapsible.title, ctx1.task.path.resolve())
                     test_case.assertEqual(len(container.children), 0)
 
+                    # Test `enter` status update
+
                     repype.status.update(status, info = 'enter', task = '/path/to/task1')
 
                     await asyncio.sleep(1)
@@ -42,12 +44,66 @@ async def test__success(test_case):
                     test_case.assertIsInstance(container.children[0], repype.textual.run.Label)
                     test_case.assertEqual(str(container.children[0].renderable), '')  # FIXME: Why is there an empty label?
 
+                    # Test plain status update
+
                     repype.status.update(status, 'update 1')
 
                     await asyncio.sleep(1)
                     test_case.assertEqual(len(container.children), 2)
                     test_case.assertIsInstance(container.children[1], repype.textual.run.Label)
                     test_case.assertEqual(str(container.children[1].renderable), 'update 1')
+
+                    # Test intermediate status update
+
+                    repype.status.update(status, 'intermediate 1', intermediate = True)
+
+                    await asyncio.sleep(1)
+                    test_case.assertEqual(len(container.children), 4)
+                    test_case.assertIsInstance(container.children[2], repype.textual.run.Label)
+                    test_case.assertEqual(str(container.children[2].renderable), 'intermediate 1')
+                    test_case.assertIsInstance(container.children[3], repype.textual.run.ProgressBar)
+                    test_case.assertEqual(container.children[3].progress, 0)
+                    test_case.assertIsNone(container.children[3].total)
+
+                    # Test intermediate status clearance
+
+                    repype.status.update(status, None, intermediate = True)
+
+                    await asyncio.sleep(1)
+                    test_case.assertEqual(len(container.children), 2)
+                    test_case.assertIsInstance(container.children[1], repype.textual.run.Label)
+                    test_case.assertEqual(str(container.children[1].renderable), 'update 1')
+
+                    # Test two subsequent intermediate status updates
+
+                    repype.status.update(status, 'intermediate 2', intermediate = True)
+
+                    await asyncio.sleep(1)
+                    test_case.assertEqual(len(container.children), 4)
+                    test_case.assertIsInstance(container.children[2], repype.textual.run.Label)
+                    test_case.assertEqual(str(container.children[2].renderable), 'intermediate 2')
+                    test_case.assertIsInstance(container.children[3], repype.textual.run.ProgressBar)
+                    test_case.assertEqual(container.children[3].progress, 0)
+                    test_case.assertIsNone(container.children[3].total)
+
+                    repype.status.update(status, 'intermediate 3', intermediate = True)
+
+                    await asyncio.sleep(1)
+                    test_case.assertEqual(len(container.children), 4)
+                    test_case.assertIsInstance(container.children[2], repype.textual.run.Label)
+                    test_case.assertEqual(str(container.children[2].renderable), 'intermediate 3')
+                    test_case.assertIsInstance(container.children[3], repype.textual.run.ProgressBar)
+                    test_case.assertEqual(container.children[3].progress, 0)
+                    test_case.assertIsNone(container.children[3].total)
+
+                    # Test permanent status update after intermediate status
+
+                    repype.status.update(status, 'update 2')
+
+                    await asyncio.sleep(1)
+                    test_case.assertEqual(len(container.children), 3)
+                    test_case.assertIsInstance(container.children[2], repype.textual.run.Label)
+                    test_case.assertEqual(str(container.children[2].renderable), 'update 2')
 
                     return True
                 
