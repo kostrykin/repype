@@ -23,7 +23,7 @@ class decode_input_ids(unittest.TestCase):
         self.assertEqual(repype.task.decode_input_ids(''), [])
 
     def test_single_str(self):
-        self.assertEqual(repype.task.decode_input_ids('1'), [1])
+        self.assertEqual(repype.task.decode_input_ids('xxx.png'), [1])
 
     def test_single_int(self):
         self.assertEqual(repype.task.decode_input_ids(1), [1])
