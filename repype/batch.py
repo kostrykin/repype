@@ -202,7 +202,7 @@ class Batch:
         Get a run context for a specific task.
 
         Returns:
-            The run context for the task, or None if the task is not loaded.
+            The run context for the task, or `None` if the task is not loaded.
         """
         for rc in self.contexts:
             if rc.task.path.resolve() == pathlib.Path(path).resolve():
@@ -221,7 +221,7 @@ class Batch:
             status: The status object to update during task execution. Defaults to a new status object.
 
         Returns:
-            True if all tasks were completed successfully, and False otherwise
+            `True` if all tasks were completed successfully, and `False` otherwise
         """
         assert self.task_process is None, 'A task is already running'
         try:

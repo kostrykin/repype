@@ -180,8 +180,8 @@ class Stage:
         """
         Run this stage of the `pipeline` by calling :meth:`process`, if the stage is enabled.
 
-        The stage is enabled if the ``enabled`` hyperparameter is set to ``True``, or
-        the ``enabled`` hyperparameter is not set and :attr:`enabled_by_default` is True.
+        The stage is enabled if the ``enabled`` hyperparameter is set to `True`, or
+        the ``enabled`` hyperparameter is not set and :attr:`enabled_by_default` is `True`.
 
         Arguments:
             pipeline: The pipeline object that this stage is a part of.

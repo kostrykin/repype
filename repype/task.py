@@ -161,7 +161,7 @@ class Task:
     @property
     def runnable(self) -> bool:
         """
-        True if the task is runnable, and False otherwise.
+        `True` if the task is runnable, and `False` otherwise.
         """
         return bool(self.full_spec.get('runnable'))
     
@@ -221,7 +221,7 @@ class Task:
     @property
     def digest(self) -> Mapping[str, Any]:
         """
-        Immutable full specification of the task completion (or None).
+        Immutable full specification of the task completion (or `None`).
         """
         if not self.digest_task_filepath.is_file():
             return None
@@ -336,7 +336,7 @@ class Task:
     
     def is_pending(self, pipeline: repype.pipeline.Pipeline, config: repype.config.Config) -> bool:
         """
-        True if the task needs to run, and False if the task is completed or not runnable.
+        `True` if the task needs to run, and `False` if the task is completed or not runnable.
         """
         # Non-runnable tasks never are pending
         if not self.runnable:
@@ -391,7 +391,7 @@ class Task:
         Load the previously computed *task data object*.
 
         To ensure consistency with the task specification, it is verified that the loaded data contains results for all input identifiers of the task, and no spurious identifiers.
-        If the `pipeline` is not None, a check for consistency of the data with the `pipeline` is also performed.
+        If the `pipeline` is not `None`, a check for consistency of the data with the `pipeline` is also performed.
         The loaded *task data object* is consistent with the `pipeline` if the data contains all fields which are not marginal according to the :meth:`get_marginal_fields` method, and no additional fields.
 
         Args:
@@ -479,7 +479,7 @@ class Task:
             config: The hyperparameters.
 
         Returns:
-            The first diverging stage of the task, or None if there is no diverging stage.
+            The first diverging stage of the task, or `None` if there is no diverging stage.
         """
         # If the task is not completed, the first diverging stage is the first stage of the pipeline
         if not self.digest_sha_filepath.is_file():
@@ -514,8 +514,8 @@ class Task:
 
         Returns a dictionary with the following keys:
 
-        - ``task``: The task to pick up from, or None if there is no task to pick up from.
-        - ``first_diverging_stage``: The first stage of the `pipeline` which needs to run, or None if no further computations are required.
+        - ``task``: The task to pick up from, or `None` if there is no task to pick up from.
+        - ``first_diverging_stage``: The first stage of the `pipeline` which needs to run, or `None` if no further computations are required.
         
         Arguments:
             pipeline: The pipeline object.
@@ -564,8 +564,8 @@ class Task:
         Arguments:
             config: The hyperparameters to run the task with.
             pipeline: The pipeline to run the task with. Defaults to :meth:`create_pipeline`.
-            pickup: If True, pick up computations from a previously completed task.
-            strip_marginals: If True, strip the marginal fields from the *task data object* before storing it.
+            pickup: If `True`, pick up computations from a previously completed task.
+            strip_marginals: If `True`, strip the marginal fields from the *task data object* before storing it.
             status: The status object to update.
 
         Raises:

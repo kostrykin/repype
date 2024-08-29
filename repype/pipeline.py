@@ -29,8 +29,8 @@ class ProcessingControl:
     and determines whether a given stage should be processed based on its position in the pipeline.
 
     Arguments:
-        first_stage: The first stage of the pipeline. Processing starts from this stage. If None, processing starts from the beginning.
-        last_stage: The last stage of the pipeline. Processing ends after this stage. If None, processing goes until the end.
+        first_stage: The first stage of the pipeline. Processing starts from this stage. If `None`, processing starts from the beginning.
+        last_stage: The last stage of the pipeline. Processing ends after this stage. If `None`, processing goes until the end.
     """
 
     started: bool
@@ -40,12 +40,12 @@ class ProcessingControl:
 
     first_stage: Optional[str]
     """
-    The first stage of the pipeline. Processing starts from this stage. If None, processing starts from the beginning.
+    The first stage of the pipeline. Processing starts from this stage. If `None`, processing starts from the beginning.
     """
 
     last_stage: Optional[str]
     """
-    The last stage of the pipeline. Processing ends after this stage. If None, processing goes until the end.
+    The last stage of the pipeline. Processing ends after this stage. If `None`, processing goes until the end.
     """
 
     def __init__(self, first_stage: Optional[str] = None, last_stage: Optional[str] = None):
@@ -65,7 +65,7 @@ class ProcessingControl:
             stage: The stage to check.
             
         Returns:
-            True if the stage should be processed, False otherwise.
+            `True` if the stage should be processed, `False` otherwise.
         """
         if not self.started and stage == self.first_stage:
             self.started = True
@@ -92,9 +92,9 @@ def create_config_entry(
 
     In addition, the value of the hyperparameter is updated according to the following rules:
 
-    - If `type` is not None, the value is converted to the specified type.
-    - If `min` is not None, the value is set to the maximum of the value and `min`.
-    - If `max` is not None, the value is set to the minimum of the value and `max`.
+    - If `type` is not `None`, the value is converted to the specified type.
+    - If `min` is not `None`, the value is set to the maximum of the value and `min`.
+    - If `max` is not `None`, the value is set to the minimum of the value and `max`.
 
     See also:
         This function is used by the :py:meth:`Pipeline.configure` method to automatically configure the hyperparameters of the pipeline.
@@ -171,10 +171,10 @@ class Pipeline:
 
         Arguments:
             input_id: The identifier of the input data to be processed.
-                Can be None if and only if `data` is not None (then the `input_id` is deduced from `data`).
+                Can be `None` if and only if `data` is not `None` (then the `input_id` is deduced from `data`).
             config: The hyperparameters to be used.
             first_stage: The ID of the first stage to run (defaults to the first).
-                Earlier stages may still be required to run due to pipeline fields consumed by stages, marginal fields, or if `data` is None.
+                Earlier stages may still be required to run due to pipeline fields consumed by stages, marginal fields, or if `data` is `None`.
             last_stage: The ID of the last stage to run (defaults to the last).
             data: The *pipeline data object* from previous processing.
             status: A status object to report the progress of the computations.
@@ -236,8 +236,8 @@ class Pipeline:
         Returns the stages that are required to be executed in addition, in order to process the pipeline from `first_stage` to `last_stage`.
 
         Arguments:
-            first_stage: The ID of the first stage to be executed (or None to start with the first).
-            last_stage: The ID of the last stage to be executed (or None to end with the last).
+            first_stage: The ID of the first stage to be executed (or `None` to start with the first).
+            last_stage: The ID of the last stage to be executed (or `None` to end with the last).
             available_inputs: The stage inputs (pipeline fields) that are already available (e.g., from previous computations).
 
         Returns:
@@ -331,7 +331,7 @@ class Pipeline:
         """
         Resolves the path of a file based on the given scope and input identifier.
 
-        Returns None if the `input_id` is None, or the `scope` is not defined.
+        Returns `None` if the `input_id` is `None`, or the `scope` is not defined.
         """
         if input_id is None or scope not in self.scopes:
             return None

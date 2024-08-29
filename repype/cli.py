@@ -54,7 +54,7 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
     """
     Last margin used for the status (corresponds to the total indentation).
 
-    None if no status has been printed yet.
+    `None` if no status has been printed yet.
     """
 
     def __init__(self, *args, indent: int = 2, **kwargs):
@@ -198,7 +198,7 @@ def run_cli(
         status_reader_cls: The status reader implementation to use for displaying status updates.
 
     Returns:
-        True if the batch processing was successful, False if an error occurred.
+        `True` if the batch processing was successful, `False` if an error occurred.
     """
 
     import argparse
@@ -229,7 +229,7 @@ def run_cli_ex(*args, **kwargs) -> bool:
         *kwargs: Passed through to :func:`main`.
 
     Returns:
-        True if the batch processing was successful, False if an error occurred.
+        `True` if the batch processing was successful, `False` if an error occurred.
     """
     _main = main(*args, **kwargs)
     return asyncio.run(_main())
@@ -248,14 +248,14 @@ def main(
     
     Arguments:
         path: The root directory for batch processing. Tasks will be loaded recursively from this directory.
-        run: Whether to run the batch processing. If False, the tasks will be loaded, but not executed.
+        run: Whether to run the batch processing. If `False`, the tasks will be loaded, but not executed.
         tasks: List of tasks to run. Tasks are identified by their paths. If given, only these tasks will be run.
         task_dirs: List of task directories to run. If given, only tasks from these directories and their sub-directories will be run.
         task_cls: The task class to use for loading tasks.
         status_reader_cls: The status reader implementation to use for displaying status updates.
 
     Returns:
-        Co-routine for batch processing. The co-routine returns True upon success, False if an error occurred.
+        Co-routine for batch processing. The co-routine returns `True` upon success, `False` if an error occurred.
     """
 
     path  = pathlib.Path(path).resolve()

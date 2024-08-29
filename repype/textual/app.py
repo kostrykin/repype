@@ -21,9 +21,9 @@ class Repype(App):
     Arguments:
         path: The root directory for batch processing, where the tasks are loaded from.
             Passed through to :meth:`repype.batch.Batch.load`.
-            Parsed from the command-line, if None.
+            Parsed from the command-line, if `None`.
         headless: Run in headless mode for debugging.
-            If True, overwrites the `headless` argument passed to :meth:`run`.
+            If `True`, overwrites the `headless` argument passed to :meth:`run`.
             Can also be overwritten by the command-line argument ``--headless``.
     """
 

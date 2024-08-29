@@ -56,7 +56,7 @@ class Status:
     path: Optional[pathlib.Path]
     """
     The path to the directory where the status file is written by this status object,
-    or None if the path of the :attr:`parent` status object is adopted.
+    or `None` if the path of the :attr:`parent` status object is adopted.
     """
 
     parent: Optional[Self]
@@ -134,7 +134,7 @@ class Status:
         Write an intermediate status update to the status object.
 
         Intermediate status updates are overwritten by subsequent status updates (intermediate or permanent).
-        If `status` is None, any previous intermediate status is cleared without writing a new one.
+        If `status` is `None`, any previous intermediate status is cleared without writing a new one.
         """
         # An intermediate status object is created, and then linked within this status object
         # The order of the two operations is crucial, because otherwise an empty intermediate object might be detected initially
@@ -250,7 +250,7 @@ class Cursor:
         Move the cursor to the next sibling.
 
         Returns:
-            The cursor, if it points to a valid element, or None otherwise.
+            The cursor, if it points to a valid element, or `None` otherwise.
         """
         self.path[-1] += 1
         if self.valid:
@@ -265,7 +265,7 @@ class Cursor:
         This cursor is not changed, but a new cursor is returned.
 
         Returns:
-            The cursor to the next child or sibling, if such exists, or None otherwise.
+            The cursor to the next child or sibling, if such exists, or `None` otherwise.
         """
         cursor = Cursor(other = self)
         if not cursor.increment():
@@ -291,7 +291,7 @@ class Cursor:
         This cursor is not changed, but a new cursor is returned.
 
         Returns:
-            The cursor to the next element, if such exists, or None otherwise.
+            The cursor to the next element, if such exists, or `None` otherwise.
         """
         cursor = self.find_next_child_or_sibling()
         if cursor:
@@ -309,7 +309,7 @@ class Cursor:
         Check if there is a subsequent non-intermediate element.
 
         Returns:
-            True if calling :meth:`find_next_element` once or repeatedly will yield a non-intermediate element, and False otherwise.
+            `True` if calling :meth:`find_next_element` once or repeatedly will yield a non-intermediate element, and `False` otherwise.
         """
         cursor = self
         while cursor := cursor.find_next_element():
@@ -322,7 +322,7 @@ class Cursor:
         Get the sequence of elements which represent the path to the element, that this cursor points to.
 
         Returns:
-            The sequence of elements along the path to where this cursor points, if the cursor points to a valid element, or None otherwise.
+            The sequence of elements along the path to where this cursor points, if the cursor points to a valid element, or `None` otherwise.
         """
         elements = [self.data]
         for pos in self.path:
@@ -366,7 +366,7 @@ class Cursor:
         """
         Check if the cursor points to an intermediate element.
 
-        The value is None if the cursor is invalid, True if the cursor points to an intermediate element, and False otherwise.
+        The value is `None` if the cursor is invalid, `True` if the cursor points to an intermediate element, and `False` otherwise.
         """
         if self.valid:
             element = self.get_elements()[-1]
@@ -386,8 +386,8 @@ class StatusReader(FileSystemEventHandler):
         filepath: The status file written by the status object to be monitored.
         loop: The event loop to be used for processing the status updates (usually the loop of the main thread).
             Defaults to the event loop of the thread used to create the status reader object.
-        debug: If True, the status updates are processed on a separate thread (the main thread is assumed to be used for long-running, blocking operations).
-            If False, the status updates are posted to the main thread.
+        debug: If `True`, the status updates are processed on a separate thread (the main thread is assumed to be used for long-running, blocking operations).
+            If `False`, the status updates are posted to the main thread.
 
     See also:
         :attr:`repype.status.Status.filepath` is the status file written by a status object.
@@ -429,8 +429,8 @@ class StatusReader(FileSystemEventHandler):
 
     debug: bool
     """
-    If True, the status updates are processed on a separate thread (the main thread is assumed to be used for long-running, blocking operations).
-    If False, the status updates are posted to the main thread.
+    If `True`, the status updates are processed on a separate thread (the main thread is assumed to be used for long-running, blocking operations).
+    If `False`, the status updates are posted to the main thread.
     """
 
     def __init__(self, filepath: PathLike, loop: asyncio.AbstractEventLoop = None, debug = False):
@@ -467,7 +467,7 @@ class StatusReader(FileSystemEventHandler):
             filepath: The path to the status file to be read.
 
         Returns:
-            True if the status data has changed, and False otherwise.
+            `True` if the status data has changed, and `False` otherwise.
         """
         data_frame = self.data_frames.get(filepath)
 
@@ -597,8 +597,8 @@ class StatusReader(FileSystemEventHandler):
             parents: The sequence of elements along the path to the element, that this cursor points to (except the element itself).
                 Elements corresponding to intermediate statuses are represented as dictionaries with the key ``content`` for the status, and ``content_type`` set to ``intermediate``.
             positions: The sequence of elements along the path, represented by the positions of the elements within the parent lists.
-            status: The new status update. Can only be None if `intermediate` is True, indicating that the intermediate status is cleared.
-            intermediate: True if the status update is intermediate, and False otherwise.
+            status: The new status update. Can only be `None` if `intermediate` is True, indicating that the intermediate status is cleared.
+            intermediate: True if the status update is intermediate, and `False` otherwise.
         """
         pass
     
@@ -609,7 +609,7 @@ def update(status: Optional[Status], text = None, intermediate: bool = False, **
     """
     Shortcut for :meth:`Status.write` and :meth:`Status.intermediate`.
 
-    Does nothing if `status` is None.
+    Does nothing if `status` is `None`.
 
     Raises:
         AssertionError: If both `text` and `kwargs` are provided (or neither, and `intermediate` is True).
@@ -627,7 +627,7 @@ def derive(status: Optional[Status]) -> Optional[Status]:
     """
     Shortcut for :meth:`Status.derive`.
 
-    Does nothing if `status` is None.
+    Does nothing if `status` is `None`.
     """
     if status is not None:
         return status.derive()
@@ -642,7 +642,7 @@ def progress(
     """
     Shortcut for :meth:`Status.progress`.
 
-    Yields the items from the `iterable` directly if `status` is None.
+    Yields the items from the `iterable` directly if `status` is `None`.
     """
 
     if status is None:
