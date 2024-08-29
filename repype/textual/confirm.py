@@ -6,6 +6,9 @@ from repype.typing import (
 from textual import (
     on,
 )
+from textual.app import (
+    App,
+)
 from repype.typing import (
     Iterator,
 )
@@ -129,3 +132,21 @@ class ConfirmScreen(ModalScreen[bool]):
         Dismisses the dialog with a value of `False`.
         """
         self.dismiss(False)
+
+
+async def confirm(
+        app: App,
+        *args,
+        **kwargs,
+    ) -> bool:
+    """
+    Display a confirmation dialog and wait for it to be dismissed.
+
+    Returns:
+        The value of the button that was pressed.
+    """
+    screen = ConfirmScreen(
+        *args,
+        **kwargs,
+    )
+    return await app.push_screen_wait(screen)

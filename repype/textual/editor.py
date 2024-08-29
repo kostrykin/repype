@@ -1,6 +1,9 @@
 from textual.binding import (
     Binding,
 )
+from textual import (
+    work,
+)
 from textual.containers import (
     Vertical,
 )
@@ -15,7 +18,7 @@ from textual.widgets import (
     TextArea,
 )
 import yaml
-from .confirm import ConfirmScreen
+from .confirm import confirm
 
 
 class EditorScreen(ModalScreen[bool]):
@@ -123,9 +126,7 @@ class EditorScreen(ModalScreen[bool]):
         # Indicate success
         self.dismiss(True)
 
-    def action_cancel(self):
-        screen = ConfirmScreen('Close the task editor without saving?', default = 'no')
-        def confirm(yes):
-            if yes:
-                self.dismiss(False)
-        self.app.push_screen(screen, confirm)
+    @work
+    async def action_cancel(self):
+        if await confirm(self.app, 'Close the task editor without saving?', default = 'no'):
+            self.dismiss(False)

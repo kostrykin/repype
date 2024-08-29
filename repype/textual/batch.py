@@ -5,6 +5,9 @@ import repype.batch
 from repype.typing import (
     Iterator,
 )
+from textual import (
+    work,
+)
 from textual.binding import (
     Binding,
 )
@@ -20,7 +23,7 @@ from textual.widgets import (
     Static,
     Tree,
 )
-from .confirm import ConfirmScreen
+from .confirm import confirm
 from .editor import EditorScreen
 from .run import RunScreen
 
@@ -153,7 +156,8 @@ class BatchScreen(Screen):
                     self.update_task_tree()
             self.app.push_screen(screen, update_task)
 
-    def action_delete_task(self) -> None:
+    @work
+    async def action_delete_task(self) -> None:
         """
         Delete the selected task and all sub-tasks.
 
@@ -163,17 +167,15 @@ class BatchScreen(Screen):
         """
         cursor = self.task_tree.cursor_node
         if cursor and cursor.data:
-            screen = ConfirmScreen(
-                'Delete the task and all sub-tasks?'
-                '\n' '[bold]' + str(cursor.data.path) + '[/bold]',
-                yes_variant = 'warning',
-                default = 'no',
-            )
-            def confirm(yes):
-                if yes:
-                    shutil.rmtree(cursor.data.path)
-                    self.update_task_tree()
-            self.app.push_screen(screen, confirm)
+            if await confirm(
+                    self.app,
+                    'Delete the task and all sub-tasks?'
+                    '\n' '[bold]' + str(cursor.data.path) + '[/bold]',
+                    yes_variant = 'warning',
+                    default = 'no',
+                ):
+                shutil.rmtree(cursor.data.path)
+                self.update_task_tree()
 
     def action_run_task(self) -> None:
         """
@@ -195,7 +197,8 @@ class BatchScreen(Screen):
                     self.update_task_tree()
                 self.app.push_screen(screen, update_task_tree)
 
-    def action_reset_task(self) -> None:
+    @work
+    async def action_reset_task(self) -> None:
         """
         Reset the selected task.
 
@@ -205,14 +208,12 @@ class BatchScreen(Screen):
         """
         cursor = self.task_tree.cursor_node
         if cursor and cursor.data:
-            screen = ConfirmScreen(
-                'Reset the task?'
-                '\n' '[bold]' + str(cursor.data.path) + '[/bold]',
-                yes_variant = 'warning',
-                default = 'no',
-            )
-            def confirm(yes):
-                if yes:
-                    cursor.data.reset()
-                    self.update_task_tree()
-            self.app.push_screen(screen, confirm)
+            if await confirm(
+                    self.app,
+                    'Reset the task?'
+                    '\n' '[bold]' + str(cursor.data.path) + '[/bold]',
+                    yes_variant = 'warning',
+                    default = 'no',
+                ):
+                cursor.data.reset()
+                self.update_task_tree()

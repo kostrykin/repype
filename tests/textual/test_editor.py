@@ -1,5 +1,6 @@
 import unittest.mock
 
+import repype.textual.confirm
 import repype.textual.editor
 import textual.css.query
 
@@ -81,7 +82,7 @@ async def test__action_cancel(test_case, mock_EditorScreen_dismiss):
         await pilot.press('ctrl+c')
 
         # Confirm
-        test_case.assertIsInstance(test_case.app.screen, repype.textual.editor.ConfirmScreen)
+        test_case.assertIsInstance(test_case.app.screen, repype.textual.confirm.ConfirmScreen)
         test_case.app.screen.yes()
 
         # Verify the editor screen was dismissed

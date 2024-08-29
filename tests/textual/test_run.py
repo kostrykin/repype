@@ -4,6 +4,7 @@ import types
 import unittest.mock
 
 import repype.status
+import repype.textual.confirm
 import repype.textual.app
 import repype.textual.run
 
@@ -249,7 +250,7 @@ async def test__action_cancel(test_case):
             await pilot.press('ctrl+c')
 
             # Confirm
-            test_case.assertIsInstance(test_case.app.screen, repype.textual.run.ConfirmScreen)
+            test_case.assertIsInstance(test_case.app.screen, repype.textual.confirm.ConfirmScreen)
             test_case.app.screen.yes()
             test_case.assertIsInstance(test_case.app.screen, repype.textual.run.RunScreen)
             await pilot.pause(0)

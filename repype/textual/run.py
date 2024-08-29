@@ -22,7 +22,7 @@ from textual.widgets import (
     Label,
     ProgressBar,
 )
-from .confirm import ConfirmScreen
+from .confirm import confirm
 
 
 class StatusReaderAdapter(repype.status.StatusReader):
@@ -81,13 +81,11 @@ class RunScreen(ModalScreen[bool]):
             self.update_task_state(task_path = rc.task.path.resolve())
         self.run_batch()
 
-    def action_cancel(self):
+    @work
+    async def action_cancel(self):
         if self.app.batch.task_process:
-            screen = ConfirmScreen('Cancel the unfinished tasks?', default = 'no')
-            async def confirm(yes):
-                if yes:
-                    await self.app.batch.cancel()
-            self.app.push_screen(screen, confirm)
+            if await confirm(self.app, 'Cancel the unfinished tasks?', default = 'no'):
+                await self.app.batch.cancel()
 
     def action_close(self):
         if self.app.batch.task_process is None:

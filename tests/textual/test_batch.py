@@ -1,5 +1,6 @@
 import unittest.mock
 
+import repype.textual.confirm
 import repype.batch
 import repype.textual.batch
 
@@ -114,7 +115,7 @@ async def test__action_delete_task__task1(test_case):
         await pilot.press('d')
 
         # Confirm
-        test_case.assertIsInstance(test_case.app.screen, repype.textual.batch.ConfirmScreen)
+        test_case.assertIsInstance(test_case.app.screen, repype.textual.confirm.ConfirmScreen)
         test_case.app.screen.yes()
         test_case.assertIsInstance(test_case.app.screen, repype.textual.batch.BatchScreen)
         await pilot.pause(0)
@@ -148,7 +149,7 @@ async def test__action_delete_task__task2(test_case):
         await pilot.press('d')
 
         # Confirm
-        test_case.assertIsInstance(test_case.app.screen, repype.textual.batch.ConfirmScreen)
+        test_case.assertIsInstance(test_case.app.screen, repype.textual.confirm.ConfirmScreen)
         test_case.app.screen.yes()
         test_case.assertIsInstance(test_case.app.screen, repype.textual.batch.BatchScreen)
         await pilot.pause(0)
@@ -216,7 +217,7 @@ async def test__reset_task__task1(test_case):
         await pilot.press('R')
 
         # Confirm
-        test_case.assertIsInstance(test_case.app.screen, repype.textual.batch.ConfirmScreen)
+        test_case.assertIsInstance(test_case.app.screen, repype.textual.confirm.ConfirmScreen)
         test_case.app.screen.yes()
         test_case.assertIsInstance(test_case.app.screen, repype.textual.batch.BatchScreen)
         await pilot.pause(0)
