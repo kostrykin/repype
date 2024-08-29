@@ -1,10 +1,16 @@
 import shutil
 
+from repype.typing import (
+    Iterator,
+)
 from textual.binding import (
     Binding,
 )
 from textual.screen import (
     Screen,
+)
+from textual.widget import (
+    Widget,
 )
 from textual.widgets import (
     Footer,
@@ -39,6 +45,9 @@ def format_task_label(batch, task):
 
 
 class BatchScreen(Screen):
+    """
+    App screen for managing tasks.
+    """
 
     BINDINGS = [
         Binding('a', 'add_task', 'Add child task'),
@@ -47,17 +56,26 @@ class BatchScreen(Screen):
         Binding('r', 'run_task', 'Run task'),
         Binding('R', 'reset_task', 'Reset task'),
     ]
+    """
+    Key bindings for the screen.
+    """
 
     def __init__(self):
         super().__init__()
         self.sub_title = 'Manage tasks'
         self.task_tree = Tree('Loaded tasks', id = 'setup-tasks')
 
-    def on_mount(self):
+    def on_mount(self) -> None:
+        """
+        Expands the root task nodes and loads the task tree.
+        """
         self.task_tree.root.expand()
         self.update_task_tree()
 
-    def update_task_tree(self):
+    def update_task_tree(self) -> None:
+        """
+        Reload the task tree.
+        """
         self.app.batch.tasks.clear()
         self.app.batch.load(self.app.path)
         self.task_tree.clear()
@@ -78,7 +96,13 @@ class BatchScreen(Screen):
             node = parent.add(format_task_label(self.app.batch, task), expand = True, data = task)
             task_nodes[task] = node
 
-    def compose(self):
+    def compose(self) -> Iterator[Widget]:
+        """
+        Compose the screen.
+
+        Yields:
+            The components of the screen.
+        """
         yield Header()
         yield self.task_tree
         yield Static(id = 'batch-pending')

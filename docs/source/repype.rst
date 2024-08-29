@@ -1,5 +1,5 @@
-repype API
-==========
+repype
+======
 
 .. toctree::
     repype.batch
