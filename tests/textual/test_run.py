@@ -245,8 +245,8 @@ async def test__action_cancel(test_case):
             await test_case.app.push_screen(screen)
 
             # Cancel the batch run
+            await pilot.pause(0.2)
             await pilot.press('ctrl+c')
-            await pilot.pause(0.1)
 
             # Confirm
             test_case.assertIsInstance(test_case.app.screen, repype.textual.run.ConfirmScreen)
