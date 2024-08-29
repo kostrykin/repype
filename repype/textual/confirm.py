@@ -1,3 +1,8 @@
+from repype.typing import (
+    Literal,
+    Optional,
+)
+
 from textual import (
     on,
 )
@@ -20,20 +25,65 @@ from textual.widgets import (
 )
 
 
+DefaultLiteral = Literal['yes', 'no']
+
+
 class ConfirmScreen(ModalScreen[bool]):
     """
     A screen that displays a confirmation dialog with a message and two buttons.
 
     Arguments:
-        text (str): The text to display in the dialog.
-        yes_text (str): The text to display on the 'Yes' button.
-        no_text (str): The text to display on the 'No' button.
-        yes_variant (str): The variant to use for the 'Yes' button.
-        no_variant (str): The variant to use for the 'No' button.
-        default (str): The button to focus by default. Can be 'yes' or 'no'.
+        text: The text to display in the dialog.
+        yes_text: The text to display on the "Yes" button.
+        no_text: The text to display on the "No" button.
+        yes_variant: The variant to use for the "Yes" button.
+        no_variant: The variant to use for the "No" button.
+        default: The button to focus by default.
+
+    Raises:
+        AssertionError: If the `default` argument is invalid.
     """
 
-    def __init__(self, text, yes_text = 'Yes', no_text = 'No', yes_variant = 'primary', no_variant = 'default', default = None):
+    text: str
+    """
+    The text to display in the dialog.
+    """
+
+    yes_text: str
+    """
+    The text to display on the "Yes" button.
+    """
+
+    no_text: str
+    """
+    The text to display on the "No" button.
+    """
+
+    yes_variant: str
+    """
+    The variant to use for the "Yes" button.
+    """
+
+    no_variant: str
+    """
+    The variant to use for the "No" button.
+    """
+
+    default: Optional[DefaultLiteral]
+    """
+    The button to focus by default.
+    """
+
+    def __init__(
+            self,
+            text: str,
+            yes_text: str = 'Yes',
+            no_text: str = 'No',
+            yes_variant: str = 'primary',
+            no_variant: str = 'default',
+            default: Optional[DefaultLiteral] = None,
+        ):
+        assert default in (None, 'yes', 'no'), f'Invalid default value: "{default}"'
         super().__init__()
         self.text = text
         self.yes_text = yes_text
@@ -65,7 +115,7 @@ class ConfirmScreen(ModalScreen[bool]):
     @on(Button.Pressed, '#yes')
     def yes(self) -> None:
         """
-        Handle the 'Yes' button being pressed.
+        Handle the "Yes" button being pressed.
 
         Dismisses the dialog with a value of `True`.
         """
@@ -74,7 +124,7 @@ class ConfirmScreen(ModalScreen[bool]):
     @on(Button.Pressed, '#no')
     def no(self) -> None:
         """
-        Handle the 'No' button being pressed.
+        Handle the "No" button being pressed.
 
         Dismisses the dialog with a value of `False`.
         """
