@@ -1,5 +1,7 @@
 import shutil
 
+import repype.task
+import repype.batch
 from repype.typing import (
     Iterator,
 )
@@ -23,19 +25,34 @@ from .editor import EditorScreen
 from .run import RunScreen
 
 
-def find_root_tasks(batch):
+def find_root_tasks(batch: repype.batch.Batch) -> Iterator[repype.task.Task]:
+    """
+    Find all root tasks of the `batch`.
+
+    Yields:
+        The root tasks of the `batch`.
+    """
     for task in batch.tasks.values():
         if task.parent is None:
             yield task
 
 
-def find_child_tasks(batch):
+def find_sub_tasks(batch: repype.batch.Batch) -> Iterator[repype.task.Task]:
+    """
+    Find all non-root tasks of the `batch`.
+
+    Yields:
+        The non-root tasks of the `batch`.
+    """
     tasks = sorted((task for task in batch.tasks.values() if task.parent), key = lambda task: len(str(task.path)))
     for task in tasks:
         yield task
 
 
-def format_task_label(batch, task):
+def format_task_label(batch: repype.batch.Batch, task: repype.task.Task) -> str:
+    """
+    Format the label of a `task` from the `batch` for display in the task tree.
+    """
     pending_tasks = [rc.task.path for rc in batch.pending]
     label = str(task.path.relative_to(task.parent.path) if task.parent else task.path.resolve())
     if task.path in pending_tasks:
@@ -91,7 +108,7 @@ class BatchScreen(Screen):
             task_nodes[task] = node
 
         # Create child task nodes
-        for task in find_child_tasks(self.app.batch):
+        for task in find_sub_tasks(self.app.batch):
             parent = task_nodes[task.parent]
             node = parent.add(format_task_label(self.app.batch, task), expand = True, data = task)
             task_nodes[task] = node
@@ -108,7 +125,12 @@ class BatchScreen(Screen):
         yield Static(id = 'batch-pending')
         yield Footer()
 
-    def action_add_task(self):
+    def action_add_task(self) -> None:
+        """
+        Add a sub-task for the selected task.
+
+        Does nothing if no task is selected.
+        """
         cursor = self.task_tree.cursor_node
         if cursor and cursor.data:
             screen = EditorScreen.new(parent_task = cursor.data)
@@ -117,7 +139,12 @@ class BatchScreen(Screen):
                     self.update_task_tree()
             self.app.push_screen(screen, add_task)
 
-    def action_edit_task(self):
+    def action_edit_task(self) -> None:
+        """
+        Edit the selected task.
+        
+        Does nothing if no task is selected.
+        """
         cursor = self.task_tree.cursor_node
         if cursor and cursor.data:
             screen = EditorScreen.edit(task = cursor.data)
@@ -126,7 +153,14 @@ class BatchScreen(Screen):
                     self.update_task_tree()
             self.app.push_screen(screen, update_task)
 
-    def action_delete_task(self):
+    def action_delete_task(self) -> None:
+        """
+        Delete the selected task and all sub-tasks.
+
+        A confirmation dialog based on :class:`.ConfirmScreen` is shown before deleting the task.
+
+        Does nothing if no task is selected.
+        """
         cursor = self.task_tree.cursor_node
         if cursor and cursor.data:
             screen = ConfirmScreen(
@@ -141,7 +175,15 @@ class BatchScreen(Screen):
                     self.update_task_tree()
             self.app.push_screen(screen, confirm)
 
-    def action_run_task(self):
+    def action_run_task(self) -> None:
+        """
+        Run the selected task.
+
+        An instance of the :class:`.RunScreen` is pushed to the screen stack for running the task.
+
+        If the task is not pending, a notification is shown.
+        Does nothing if no task is selected.
+        """
         cursor = self.task_tree.cursor_node
         if cursor and cursor.data:
             contexts = [rc for rc in self.app.batch.pending if rc.task.path == cursor.data.path]
@@ -153,7 +195,14 @@ class BatchScreen(Screen):
                     self.update_task_tree()
                 self.app.push_screen(screen, update_task_tree)
 
-    def action_reset_task(self):
+    def action_reset_task(self) -> None:
+        """
+        Reset the selected task.
+
+        A confirmation dialog based on :class:`.ConfirmScreen` is shown before resetting the task.
+
+        Does nothing if no task is selected.
+        """
         cursor = self.task_tree.cursor_node
         if cursor and cursor.data:
             screen = ConfirmScreen(
