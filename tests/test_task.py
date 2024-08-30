@@ -549,7 +549,7 @@ class Task__marginal_stages(unittest.TestCase):
             parent = None,
             spec = dict(),
         )
-        self.assertEqual(task.marginal_stages, [])
+        self.assertEqual(list(task.marginal_stages), [])
 
     @testsuite.with_temporary_paths(1)
     def test_from_spec(self, path):
@@ -563,7 +563,7 @@ class Task__marginal_stages(unittest.TestCase):
                 ],
             ),
         )
-        self.assertEqual(task.marginal_stages, ['stage1', 'stage2'])
+        self.assertEqual(list(task.marginal_stages), ['stage1', 'stage2'])
 
     @testsuite.with_temporary_paths(1)
     def test_from_spec_class_names(self, path):
@@ -577,7 +577,7 @@ class Task__marginal_stages(unittest.TestCase):
                 ],
             ),
         )
-        self.assertEqual(task.marginal_stages, ['stage1', 'stage2'])
+        self.assertEqual(list(task.marginal_stages), ['stage1', 'stage2'])
 
     @testsuite.with_temporary_paths(1)
     def test_override(self, path):
@@ -593,7 +593,7 @@ class Task__marginal_stages(unittest.TestCase):
             parent = None,
             spec = dict(),
         )
-        self.assertEqual(task.marginal_stages, ['stage1', 'stage2'])
+        self.assertEqual(list(task.marginal_stages), ['stage1', 'stage2'])
 
 
 class Task__get_marginal_fields(unittest.TestCase):

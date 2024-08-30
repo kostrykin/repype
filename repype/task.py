@@ -160,28 +160,27 @@ class Task:
         return self.parent.root if self.parent else self
     
     @property
-    def marginal_stages(self) -> List[str]:
+    def marginal_stages(self) -> Iterator[str]:
         """
         The stages which are considered marginal.
 
         Outputs of marginal stages are removed from the *pipeline data objects* when storing the results of the task.
         The default implementation reads the list of marginal stages from the ``marginal_stages`` field in the task specification.
 
-        Returns:
-            List of the stage identifiers corresponding to the marginal stages.
+        Yields:
+            Stage identifiers corresponding to the marginal stages.
         """
-        marginal_stages = list()
         for stage_spec in self.full_spec.get('marginal_stages', []):
+            assert isinstance(stage_spec, str), f'Stage identifier must be a string (f{type(stage_spec)}).'
 
             # Load the stage from a module
             if '.' in stage_spec:
                 stage_cls = load_from_module(stage_spec)
-                marginal_stages.append(stage_cls().id)
+                yield stage_cls().id
 
             # Use the stage identifier directly
             else:
-                marginal_stages.append(stage_spec)
-        return marginal_stages
+                yield stage_spec
         
     @property
     def data_filepath(self) -> pathlib.Path:
@@ -363,7 +362,7 @@ class Task:
         Returns:
             Set of marginal fields.
         """
-        marginal_fields = sum((list(stage.outputs) for stage in pipeline.stages if stage.id in self.marginal_stages), list())
+        marginal_fields = sum((list(stage.outputs) for stage in pipeline.stages if stage.id in set(self.marginal_stages)), list())
         return frozenset(marginal_fields)
     
     def load(self, pipeline: Optional[repype.pipeline.Pipeline] = None) -> TaskData:
