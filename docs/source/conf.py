@@ -66,10 +66,14 @@ nitpick_ignore = [
     ('py:class', 'Screen'),
     ('py:class', 'textual.app.App'),
     ('py:class', 'textual.binding.Binding'),
+    ('py:class', 'textual.containers.Vertical'),
     ('py:class', 'textual.screen.ModalScreen'),
     ('py:class', 'textual.screen.Screen'),
     ('py:class', 'textual.widget.Widget'),
+    ('py:class', 'textual.widgets._collapsible.Collapsible'),
     ('py:class', 'textual.widgets._input.Input'),
+    ('py:class', 'textual.widgets._label.Label'),
+    ('py:class', 'textual.widgets._progress_bar.ProgressBar'),
     ('py:class', 'textual.widgets._text_area.TextArea'),
 
 ]
