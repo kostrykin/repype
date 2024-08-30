@@ -1,4 +1,5 @@
 import asyncio
+import pathlib
 import traceback
 import types
 import unittest.mock
@@ -19,7 +20,7 @@ async def test__success(test_case, mock_log):
         # Configure the `RunScreen` with a mocked `RunContext` object
         ctx1 = unittest.mock.MagicMock()
         ctx1.task.path.__str__.return_value = 'task1'
-        ctx1.task.path.resolve.return_value = '/path/to/task1'
+        ctx1.task.path.resolve.return_value = pathlib.Path('/path/to/task1')
         screen = repype.textual.run.RunScreen([ctx1])
 
         with unittest.mock.patch.object(test_case.app, 'batch') as mock_batch:
@@ -32,14 +33,16 @@ async def test__success(test_case, mock_log):
                     await asyncio.sleep(1)
                     task_ui = screen.task_ui(ctx1.task.path)
                     test_case.assertTrue(task_ui.collapsible.collapsed)
-                    test_case.assertEqual(task_ui.collapsible.title, ctx1.task.path.resolve())
+                    test_case.assertEqual(task_ui.collapsible.title, str(ctx1.task.path.resolve()))
                     test_case.assertEqual(len(task_ui.container.children), 0)
+                    test_case.assertIsNone(screen.current_task_path)
 
                     # Test `enter` status update
 
                     repype.status.update(status, info = 'enter', task = '/path/to/task1')
 
                     await asyncio.sleep(1)
+                    test_case.assertEqual(screen.current_task_path, ctx1.task.path.resolve())
                     test_case.assertFalse(task_ui.collapsible.collapsed)
                     test_case.assertEqual(len(task_ui.container.children), 1)
                     test_case.assertIsInstance(task_ui.container.children[0], repype.textual.run.Label)
@@ -226,6 +229,7 @@ async def test__success(test_case, mock_log):
             while mock_batch.task_process:
                 await asyncio.sleep(1)
             test_case.assertTrue(screen.success)
+            test_case.assertIsNone(screen.current_task_path)
 
 
 async def test__action_cancel(test_case):
@@ -262,6 +266,7 @@ async def test__action_cancel(test_case):
 
         # Verify the results
         test_case.assertFalse(screen.success)
+        test_case.assertIsNone(screen.current_task_path)
         test_case.assertFalse(mock_handle_new_status.call_args_list[-1].kwargs['intermediate'])
         test_case.assertEqual(
             mock_handle_new_status.call_args_list[-1].kwargs['status'],

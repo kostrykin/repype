@@ -1,9 +1,12 @@
 import hashlib
+import pathlib
 import traceback
 import types
 
+import repype.batch
 import repype.status
 from repype.typing import (
+    Iterable,
     Iterator,
     Optional,
     PathLike,
@@ -48,6 +51,12 @@ class StatusReaderAdapter(repype.status.StatusReader):
 
 
 class RunScreen(ModalScreen[bool]):
+    """
+    Screen that performs a batch run of tasks, displaying the progress.
+
+    Arguments:
+        contexts: The contexts of the tasks to run.
+    """
 
     BINDINGS = [
         Binding('ctrl+c', 'cancel', 'Cancel', priority = True),
@@ -57,20 +66,36 @@ class RunScreen(ModalScreen[bool]):
     Key bindings of the screen.
     """
 
+    contexts: list[repype.batch.RunContext]
+    """
+    The contexts of the tasks to run.
+    """
+
+    current_task_path: Optional[pathlib.Path]
+    """
+    The path of the current task being processed, or `None` if no task is being processed.
+    """
+
     finished_tasks: set[str]
     """
     The set of finished tasks (represented by their resolved task paths).
     """
 
-    def __init__(self, contexts):
+    success: bool
+    """
+    `True` if the batch run was completed successfully, `False` otherwise
+    (e.g., if the batch run is still in progress).
+    """
+
+    def __init__(self, contexts: Iterable[repype.batch.RunContext]):
         super().__init__()
         self.sub_title = 'Run tasks'
-        self.contexts = contexts
+        self.contexts = list(contexts)
         self.current_task_path = None
+        self.finished_tasks = set()
         self.intermediate = None
         self.intermediate_extra = ProgressBar()
         self.success = False
-        self.finished_tasks = set()
 
     def task_id(self, task_path: PathLike) -> str:
         """
@@ -148,6 +173,7 @@ class RunScreen(ModalScreen[bool]):
         with repype.status.create() as status:
             async with StatusReaderAdapter(status.filepath, self):
                 success = await self.app.batch.run(self.contexts, status = status)
+                self.current_task_path = None
 
                 # Report the success of the batch run
                 log('StatusReader.run_batch', success = success)
@@ -156,7 +182,7 @@ class RunScreen(ModalScreen[bool]):
     def handle_new_status(self, parents, positions, status, intermediate):
         log('StatusReader.handle_new_status', status = status, intermediate = intermediate)
         if isinstance(status, dict) and (task_path := status.get('task')):
-            self.current_task_path = task_path
+            self.current_task_path = pathlib.Path(task_path)
         else:
             task_path = self.current_task_path
 
