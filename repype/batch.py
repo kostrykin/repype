@@ -131,6 +131,13 @@ class Batch:
         self.task_cls = task_cls
         self.task_process = None
 
+    @property
+    def resolved_tasks(self) -> Dict[pathlib.Path, repype.task.Task]:
+        """
+        Get a dictionary of all tasks, indexed by their resolved path.
+        """
+        return {task.path.resolve(): task for task in self.tasks.values()}
+
     def task(self, path: PathLike, spec: Optional[dict] = None) -> Optional[repype.task.Task]:
         """
         Retrieve a task by its path.
@@ -147,7 +154,7 @@ class Batch:
         #. Resolve filepaths, see :meth:`repype.pipeline.Pipeline.resolve`
         """
         path = pathlib.Path(path)
-        task = self.tasks.get(path)
+        task = self.resolved_tasks.get(path.resolve())
 
         # Using the spec argument overrides the spec file
         if spec is None:

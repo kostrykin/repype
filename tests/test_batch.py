@@ -93,6 +93,14 @@ class Batch__task(unittest.TestCase):
         self.assertIs(task3.parent, task2)
         self.assertEqual(task3.full_spec, dict(pipeline = 'repype.pipeline.Pipeline', field1 = 'value1', field2 = 'value2'))
 
+    def test_path_identity(self):
+        batch = repype.batch.Batch()
+        task1 = batch.task(
+            path = '.',
+            spec = dict(),
+        )
+        self.assertIs(batch.task(task1.path.resolve()), task1)
+
 
 class Batch__load(unittest.TestCase):
 
