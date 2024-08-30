@@ -1,9 +1,12 @@
+import hashlib
 import traceback
+import types
 
-import bidict
 import repype.status
 from repype.typing import (
     Iterator,
+    Optional,
+    PathLike,
 )
 from textual import (
     log,
@@ -14,6 +17,9 @@ from textual.binding import (
 )
 from textual.containers import (
     Vertical,
+)
+from textual.css.query import (
+    NoMatches,
 )
 from textual.screen import (
     ModalScreen,
@@ -51,16 +57,27 @@ class RunScreen(ModalScreen[bool]):
     Key bindings of the screen.
     """
 
+    finished_tasks: set[str]
+    """
+    The set of finished tasks (represented by their resolved task paths).
+    """
+
     def __init__(self, contexts):
         super().__init__()
         self.sub_title = 'Run tasks'
         self.contexts = contexts
-        self.task_ids = bidict.bidict()  # path -> task_id
         self.current_task_path = None
         self.intermediate = None
         self.intermediate_extra = ProgressBar()
         self.success = False
-        self.finished_tasks = set()  # paths
+        self.finished_tasks = set()
+
+    def task_id(self, task_path: PathLike) -> str:
+        """
+        Get a unique alphanumeric identifier of a task.
+        """
+        task = self.app.batch.task(task_path)  # Resolve path identities
+        return hashlib.sha1(str(task.path).encode('utf8')).hexdigest()
 
     def compose(self) -> Iterator[Widget]:
         """
@@ -71,29 +88,47 @@ class RunScreen(ModalScreen[bool]):
         """
         yield Header()
 
-        for task_id, rc in enumerate(self.contexts, start = 1):
-            self.task_ids[str(rc.task.path.resolve())] = task_id
-            with Collapsible(collapsed = True, id = f'run-task-{task_id}'):
-                vertical = Vertical(id = f'run-task-{task_id}-container')
+        for rc in self.contexts:
+            with Collapsible(collapsed = True, id = f'run-task-{self.task_id(rc.task.path)}'):
+                vertical = Vertical(classes = 'run-task-container')
                 vertical.styles.height = 'auto'
                 yield vertical
 
         yield Footer()
 
-    def update_task_state(self, task_path = None, task_id = None):
-        assert task_path or task_id
-        if task_path:
-            task_id = self.task_ids[str(task_path)]
-        if task_id:
-            task_path = self.task_ids.inv[task_id]
-        collapsible = self.query_one(f'#run-task-{task_id}')
-        collapsible.title = str(task_path)
+    def task_ui(self, task_path: PathLike) -> types.SimpleNamespace:
+        """
+        Get the UI components of a task.
+
+        Returns:
+            A namespace with the `collapsible` and `container` widgets.
+        """
+        collapsible = self.query_one(f'#run-task-{self.task_id(task_path)}')
+        container = collapsible.query_one('.run-task-container')
+        return types.SimpleNamespace(
+            collapsible = collapsible,
+            container = container,
+        )
+
+    def task_ui_or_none(self, task_path: PathLike) -> Optional[types.SimpleNamespace]:
+        """
+        Get the UI components of a task, or `None` if they do not exist.
+        """
+        try:
+            return self.task_ui(task_path)
+        except NoMatches:
+            return None
+
+    def update_task_state(self, task_path: PathLike) -> None:
+        task = self.app.batch.task(task_path)
+        task_ui = self.task_ui(task_path)
+        task_ui.collapsible.title = str(task.path.resolve())
         if str(task_path) in self.finished_tasks:
-            collapsible.title += ' (done)'
+            task_ui.collapsible.title += ' (done)'
 
     def on_mount(self):
         for rc in self.contexts:
-            self.update_task_state(task_path = rc.task.path.resolve())
+            self.update_task_state(rc.task.path)
         self.run_batch()
 
     @work
@@ -125,12 +160,10 @@ class RunScreen(ModalScreen[bool]):
         else:
             task_path = self.current_task_path
 
-        task_id = self.task_ids[task_path] if task_path else None
-        task_container = self.screen.query_one(f'#run-task-{task_id}-container') if task_id else None
+        task_ui = self.task_ui_or_none(task_path)
         try:
-            if task_id:
-                task_collapsible = self.screen.query_one(f'#run-task-{task_id}')
-                task_collapsible.collapsed = False
+            if task_ui:
+                task_ui.collapsible.collapsed = False
                 self.ends_with_rule = False
 
             # If the new status is intermediate...
@@ -148,8 +181,8 @@ class RunScreen(ModalScreen[bool]):
                     label = Label()
                     self.intermediate = label
                     self.intermediate_extra.update(progress = 0, total = None)
-                    task_container.mount(self.intermediate)
-                    task_container.mount(self.intermediate_extra)
+                    task_ui.container.mount(self.intermediate)
+                    task_ui.container.mount(self.intermediate_extra)
 
                 # ...the previous was intermediate too, reuse its label
                 else:
@@ -164,14 +197,14 @@ class RunScreen(ModalScreen[bool]):
             # If the new status is *not* intermediate, and the previous wasn't either, create a new label
             else:
                 label = Label()
-                task_container.mount(label)
+                task_ui.container.mount(label)
 
             # Resolve dictionary-based status updates
             if isinstance(status, dict):
 
                 if status.get('info') == 'enter':
                     #label.update('Task has begun')
-                    #self.update_intermediate_extra(task_container, status = status, intermediate = intermediate)
+                    #self.update_intermediate_extra(task_ui.container, status = status, intermediate = intermediate)
                     return
 
                 if status.get('info') == 'start':
@@ -198,13 +231,13 @@ class RunScreen(ModalScreen[bool]):
                     label.update(f'Results have been stored')
                     label.add_class('status-success')
                     self.finished_tasks.add(status['task'])
-                    self.update_task_state(task_id = self.task_ids[status['task']])
+                    self.update_task_state(status['task'])
                     return
 
                 if status.get('info') == 'error':
                     label.update('An error occurred:')
                     label.add_class('status-error')
-                    task_container.mount(Label(status['traceback']))
+                    task_ui.container.mount(Label(status['traceback']))
                     return
 
                 if status.get('info') == 'progress':
