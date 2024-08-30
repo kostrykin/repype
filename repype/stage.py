@@ -45,7 +45,7 @@ def suggest_stage_id(class_name: str) -> str:
     """
     Suggests a stage identifier based on a class name.
 
-    This function validates the `class_name``, then tokenizes it.
+    This function validates the `class_name`, then tokenizes it.
     Tokens are grouped if they are consecutive and alphanumeric, but do not start with numbers.
     The function then converts the tokens to lowercase, removes underscores, and joins them with hyphens.
 
