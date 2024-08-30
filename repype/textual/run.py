@@ -1,7 +1,6 @@
 import hashlib
 import pathlib
 import traceback
-import types
 
 import repype.batch
 import repype.status
@@ -23,9 +22,6 @@ from textual.binding import (
 from textual.containers import (
     Vertical,
 )
-from textual.css.query import (
-    NoMatches,
-)
 from textual.screen import (
     ModalScreen,
 )
@@ -40,6 +36,53 @@ from textual.widgets import (
     ProgressBar,
 )
 from .confirm import confirm
+
+
+class TaskUI:
+    """
+    Widgets of a task.
+
+    Arguments:
+        collapsible: The collapsible widget of the task.
+    """
+
+    collapsible: Collapsible
+    """
+    The collapsible widget of the task.
+    """
+
+    def __init__(self, collapsible: Collapsible):
+        self.collapsible = collapsible
+
+    @property
+    def container(self) -> Vertical:
+        """
+        Container for permanent status updates.
+        """
+        return self.collapsible.query_one('.run-task-container')
+    
+    @property
+    def intermediate(self) -> Vertical:
+        """
+        Container with widgets for intermediate status updates.
+
+        Contains the :attr:`intermediate_label` and :attr:`intermediate_progressbar` widgets.
+        """
+        return self.collapsible.query_one('.run-task-intermediate')
+    
+    @property
+    def intermediate_label(self) -> Label:
+        """
+        Label for intermediate status updates.
+        """
+        return self.intermediate.query_one('.run-task-intermediate > Label')
+    
+    @property
+    def intermediate_progressbar(self) -> ProgressBar:
+        """
+        Progress bar for intermediate status updates.
+        """
+        return self.intermediate.query_one('.run-task-intermediate > ProgressBar')
 
 
 class RunScreen(ModalScreen[bool]):
@@ -118,35 +161,12 @@ class RunScreen(ModalScreen[bool]):
 
         yield Footer()
 
-    def task_ui(self, task_path: PathLike) -> types.SimpleNamespace:
+    def task_ui(self, task_path: PathLike) -> TaskUI:
         """
         Get the UI components of a task.
-
-        Returns:
-            A namespace with the `collapsible` and `container` widgets,
-            as well as the `intermediate`, `intermediate_label`, and `intermediate_progressbar` widgets.
         """
         collapsible = self.query_one(f'#run-task-{self.task_id(task_path)}')
-        container = collapsible.query_one('.run-task-container')
-        intermediate = collapsible.query_one('.run-task-intermediate')
-        intermediate_label = intermediate.query_one('.run-task-intermediate > Label')
-        intermediate_progressbar = intermediate.query_one('.run-task-intermediate > ProgressBar')
-        return types.SimpleNamespace(
-            collapsible = collapsible,
-            container = container,
-            intermediate = intermediate,
-            intermediate_label = intermediate_label,
-            intermediate_progressbar = intermediate_progressbar,
-        )
-
-    def task_ui_or_none(self, task_path: PathLike) -> Optional[types.SimpleNamespace]:
-        """
-        Get the UI components of a task, or `None` if they do not exist.
-        """
-        try:
-            return self.task_ui(task_path)
-        except NoMatches:
-            return None
+        return TaskUI(collapsible)
 
     def update_task_ui(self, task_path: PathLike) -> None:
         """
@@ -222,8 +242,8 @@ class RunScreen(ModalScreen[bool]):
         else:
             task_path = self.current_task_path
 
-        task_ui = self.task_ui_or_none(task_path)
         try:
+            task_ui = self.task_ui(task_path)
             task_ui.collapsible.collapsed = False
             self.ends_with_rule = False
 
