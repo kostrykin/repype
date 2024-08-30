@@ -170,7 +170,18 @@ class Task:
         Returns:
             List of the stage identifiers corresponding to the marginal stages.
         """
-        return self.full_spec.get('marginal_stages', [])
+        marginal_stages = list()
+        for stage_spec in self.full_spec.get('marginal_stages', []):
+
+            # Load the stage from a module
+            if '.' in stage_spec:
+                stage_cls = load_from_module(stage_spec)
+                marginal_stages.append(stage_cls().id)
+
+            # Use the stage identifier directly
+            else:
+                marginal_stages.append(stage_spec)
+        return marginal_stages
         
     @property
     def data_filepath(self) -> pathlib.Path:
