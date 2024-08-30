@@ -249,7 +249,7 @@ async def test__add_task__none(test_case):
         test_case.assertIsInstance(test_case.app.screen, repype.textual.batch.BatchScreen)
 
 
-@unittest.mock.patch('repype.textual.editor.EditorScreen.new')
+@unittest.mock.patch('repype.textual.editor.EditorScreen.new', new_callable = unittest.mock.AsyncMock)
 async def test__add_task__task1(test_case, mock_EditorScreen_new):
 
     # Load the batch
@@ -267,16 +267,24 @@ async def test__add_task__task1(test_case, mock_EditorScreen_new):
         task1_node = find_tree_node_by_task(task_tree.root, ctx1.task)
         task_tree.select_node(task1_node)
 
-        # Patch `app.push_screen` method
-        with unittest.mock.patch.object(test_case.app, 'push_screen') as mock_push_screen:
+        # Patch `BatchScreen.update_task_tree` method
+        with unittest.mock.patch.object(test_case.app.screen, 'update_task_tree') as mock_update_task_tree:
 
-            # Add sub-task below selected task
+            # Test with `EditorScreen.new` returning `False`
+            mock_EditorScreen_new.return_value = False
             await pilot.press('a')
+            mock_EditorScreen_new.assert_awaited_once_with(test_case.app, parent_task = ctx1.task)
+            mock_update_task_tree.assert_not_called()
 
-            # Confirm that `EditorScreen.new` and `app.push_screen` were called
-            mock_EditorScreen_new.assert_called_once_with(parent_task = ctx1.task)
-            mock_push_screen.assert_called_once()
-            test_case.assertIs(mock_push_screen.call_args[0][0], mock_EditorScreen_new.return_value)
+            # Reset the mocks
+            mock_EditorScreen_new.reset_mock()
+            mock_update_task_tree.reset_mock()
+
+            # Test with `EditorScreen.new` returning `True`
+            mock_EditorScreen_new.return_value = True
+            await pilot.press('a')
+            mock_EditorScreen_new.assert_awaited_once_with(test_case.app, parent_task = ctx1.task)
+            mock_update_task_tree.assert_called_once()
 
 
 async def test__edit_task__none(test_case):
@@ -299,7 +307,7 @@ async def test__edit_task__none(test_case):
         test_case.assertIsInstance(test_case.app.screen, repype.textual.batch.BatchScreen)
 
 
-@unittest.mock.patch('repype.textual.editor.EditorScreen.edit')
+@unittest.mock.patch('repype.textual.editor.EditorScreen.edit', new_callable = unittest.mock.AsyncMock)
 async def test__edit_task__task1(test_case, mock_EditorScreen_edit):
 
     # Load the batch
@@ -317,16 +325,24 @@ async def test__edit_task__task1(test_case, mock_EditorScreen_edit):
         task1_node = find_tree_node_by_task(task_tree.root, ctx1.task)
         task_tree.select_node(task1_node)
 
-        # Patch `app.push_screen` method
-        with unittest.mock.patch.object(test_case.app, 'push_screen') as mock_push_screen:
+        # Patch `BatchScreen.update_task_tree` method
+        with unittest.mock.patch.object(test_case.app.screen, 'update_task_tree') as mock_update_task_tree:
 
-            # Edit the selected task
+            # Test with `EditorScreen.edit` returning `False`
+            mock_EditorScreen_edit.return_value = False
             await pilot.press('e')
+            mock_EditorScreen_edit.assert_awaited_once_with(test_case.app, task = ctx1.task)
+            mock_update_task_tree.assert_not_called()
 
-            # Confirm that `EditorScreen.edit` and `app.push_screen` were called
-            mock_EditorScreen_edit.assert_called_once_with(task = ctx1.task)
-            mock_push_screen.assert_called_once()
-            test_case.assertIs(mock_push_screen.call_args[0][0], mock_EditorScreen_edit.return_value)
+            # Reset the mocks
+            mock_EditorScreen_edit.reset_mock()
+            mock_update_task_tree.reset_mock()
+
+            # Test with `EditorScreen.edit` returning `True`
+            mock_EditorScreen_edit.return_value = True
+            await pilot.press('e')
+            mock_EditorScreen_edit.assert_awaited_once_with(test_case.app, task = ctx1.task)
+            mock_update_task_tree.assert_called_once()
 
 
 async def test__run_task__none(test_case):

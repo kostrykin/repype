@@ -4,6 +4,7 @@ import repype.task
 import repype.batch
 from repype.typing import (
     Iterator,
+    Type,
 )
 from textual import (
     work,
@@ -12,6 +13,7 @@ from textual.binding import (
     Binding,
 )
 from textual.screen import (
+    ModalScreen,
     Screen,
 )
 from textual.widget import (
@@ -77,7 +79,12 @@ class BatchScreen(Screen):
         Binding('R', 'reset_task', 'Reset task'),
     ]
     """
-    Key bindings for the screen.
+    Key bindings of the screen.
+    """
+
+    editor_screen_cls: Type[ModalScreen[bool]] = EditorScreen
+    """
+    The editor screen class.
     """
 
     def __init__(self):
@@ -128,47 +135,42 @@ class BatchScreen(Screen):
         yield Static(id = 'batch-pending')
         yield Footer()
 
-    def action_add_task(self) -> None:
+    @work
+    async def action_add_task(self) -> None:
         """
-        Add a sub-task for the selected task.
+        Create a sub-task for the selected task using an editor of the :attr:`editor_screen_cls` type.
 
         Does nothing if no task is selected.
         """
         cursor = self.task_tree.cursor_node
         if cursor and cursor.data:
-            screen = EditorScreen.new(parent_task = cursor.data)
-            def add_task(ok):
-                if ok:
-                    self.update_task_tree()
-            self.app.push_screen(screen, add_task)
+            if await self.editor_screen_cls.new(self.app, parent_task = cursor.data):
+                self.update_task_tree()
 
-    def action_edit_task(self) -> None:
+    @work
+    async def action_edit_task(self) -> None:
         """
-        Edit the selected task.
+        Edit the selected task using an editor of the :attr:`editor_screen_cls` type.
         
         Does nothing if no task is selected.
         """
         cursor = self.task_tree.cursor_node
         if cursor and cursor.data:
-            screen = EditorScreen.edit(task = cursor.data)
-            def update_task(ok):
-                if ok:
-                    self.update_task_tree()
-            self.app.push_screen(screen, update_task)
+            if await self.editor_screen_cls.edit(self.app, task = cursor.data):
+                self.update_task_tree()
 
     @work
     async def action_delete_task(self) -> None:
         """
         Delete the selected task and all sub-tasks.
 
-        A confirmation dialog based on :class:`.ConfirmScreen` is shown before deleting the task.
+        A confirmation dialog based on :meth:`confirm` is shown before resetting the task.
 
         Does nothing if no task is selected.
         """
         cursor = self.task_tree.cursor_node
         if cursor and cursor.data:
-            if await confirm(
-                    self.app,
+            if await self.confirm(
                     'Delete the task and all sub-tasks?'
                     '\n' '[bold]' + str(cursor.data.path) + '[/bold]',
                     yes_variant = 'warning',
@@ -202,14 +204,13 @@ class BatchScreen(Screen):
         """
         Reset the selected task.
 
-        A confirmation dialog based on :class:`.ConfirmScreen` is shown before resetting the task.
+        A confirmation dialog based on :meth:`confirm` is shown before resetting the task.
 
         Does nothing if no task is selected.
         """
         cursor = self.task_tree.cursor_node
         if cursor and cursor.data:
-            if await confirm(
-                    self.app,
+            if await self.confirm(
                     'Reset the task?'
                     '\n' '[bold]' + str(cursor.data.path) + '[/bold]',
                     yes_variant = 'warning',
@@ -217,3 +218,9 @@ class BatchScreen(Screen):
                 ):
                 cursor.data.reset()
                 self.update_task_tree()
+
+    async def confirm(self, *args, **kwargs) -> bool:
+        """
+        Shortcut for :class:`repype.textual.confirm.confirm`.
+        """
+        return await confirm(self.app, *args, **kwargs)

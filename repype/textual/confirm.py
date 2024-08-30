@@ -142,8 +142,13 @@ async def confirm(
     """
     Display a confirmation dialog and wait for it to be dismissed.
 
+    Arguments:
+        app: The application instance.
+        args: The arguments to pass to the :class:`.ConfirmScreen` constructor.
+        kwargs: The keyword arguments to pass to the :class:`.ConfirmScreen` constructor.
+
     Returns:
-        The value of the button that was pressed.
+        `True` if the "Yes" button was pressed, and `False` otherwise.
     """
     screen = ConfirmScreen(
         *args,

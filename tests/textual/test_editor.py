@@ -1,7 +1,11 @@
+import asyncio
 import unittest.mock
 
 import repype.textual.confirm
 import repype.textual.editor
+from textual import (
+    work,
+)
 import textual.css.query
 
 
@@ -20,10 +24,16 @@ async def test__new(test_case):
     # Run the app and push the editor screen
     async with test_case.app.run_test() as pilot:
 
-        screen = repype.textual.editor.EditorScreen.new(parent_task = ctx1.task)
-        await test_case.app.push_screen(screen)
+        # Await `EditorScreen.new` in a background task
+        @work
+        async def EditorScreen__new(app):
+            return await repype.textual.editor.EditorScreen.new(app, parent_task = ctx1.task)
+        EditorScreen__new(test_case.app)
+        await pilot.pause(0)
 
         # Verify the editor screen
+        screen = test_case.app.screen
+        test_case.assertIsInstance(screen, repype.textual.editor.EditorScreen)
         test_case.assertEqual(screen.parent_task, ctx1.task)
         test_case.assertIsNone(screen.my_task)
         test_case.assertEqual(screen.mode, 'new')
@@ -45,10 +55,16 @@ async def test__edit(test_case):
     # Run the app and push the editor screen
     async with test_case.app.run_test() as pilot:
 
-        screen = repype.textual.editor.EditorScreen.edit(task = ctx1.task)
-        await test_case.app.push_screen(screen)
+        # Await `EditorScreen.edit` in a background task
+        @work
+        async def EditorScreen__edit(app):
+            return await repype.textual.editor.EditorScreen.edit(app, task = ctx1.task)
+        EditorScreen__edit(test_case.app)
+        await pilot.pause(1)
 
         # Verify the editor screen
+        screen = test_case.app.screen
+        test_case.assertIsInstance(screen, repype.textual.editor.EditorScreen)
         test_case.assertEqual(screen.my_task, ctx1.task)
         test_case.assertIsNone(screen.parent_task)
         test_case.assertEqual(screen.mode, 'edit')
@@ -75,8 +91,12 @@ async def test__action_cancel(test_case, mock_EditorScreen_dismiss):
     # Run the app and push the editor screen
     async with test_case.app.run_test() as pilot:
 
-        screen = repype.textual.editor.EditorScreen.edit(task = ctx1.task)
-        await test_case.app.push_screen(screen)
+        # Await `EditorScreen.edit` in a background task
+        @work
+        async def EditorScreen__edit(app):
+            return await repype.textual.editor.EditorScreen.edit(app, task = ctx1.task)
+        EditorScreen__edit(test_case.app)
+        await pilot.pause(1)
 
         # Close the editor without saving
         await pilot.press('ctrl+c')
@@ -103,8 +123,12 @@ async def test__action_save__new(test_case, mock_EditorScreen_dismiss):
     # Run the app and push the editor screen
     async with test_case.app.run_test() as pilot:
 
-        screen = repype.textual.editor.EditorScreen.new(parent_task = task1)
-        await test_case.app.push_screen(screen)
+        # Await `EditorScreen.new` in a background task
+        @work
+        async def EditorScreen__new(app):
+            return await repype.textual.editor.EditorScreen.new(app, parent_task = task1)
+        EditorScreen__new(test_case.app)
+        await pilot.pause(1)
 
         # Set the task name and specification
         await pilot.press(*list('task3'))
@@ -145,8 +169,16 @@ async def test__action_save__new__error(test_case, mock_EditorScreen_dismiss):
         ]
 
         for input in inputs:
-            screen = repype.textual.editor.EditorScreen.new(parent_task = task1)
-            await test_case.app.push_screen(screen)
+
+            # Await `EditorScreen.new` in a background task
+            @work
+            async def EditorScreen__new(app):
+                try:
+                    return await repype.textual.editor.EditorScreen.new(app, parent_task = task1)
+                except asyncio.CancelledError:
+                    pass
+            worker = EditorScreen__new(test_case.app)
+            await pilot.pause(1)
 
             # Set the task name and specification
             await pilot.press(*list(input['name']))
@@ -163,6 +195,8 @@ async def test__action_save__new__error(test_case, mock_EditorScreen_dismiss):
             test_case.assertFalse((task1.path / 'task3').exists())
 
             # Reset the screen for the next set of inputs
+            worker.cancel()
+            await worker.wait()
             test_case.app.pop_screen()
 
 
@@ -179,11 +213,15 @@ async def test__action_save__edit(test_case, mock_EditorScreen_dismiss):
     # Run the app and push the editor screen
     async with test_case.app.run_test() as pilot:
 
-        screen = repype.textual.editor.EditorScreen.edit(task = task2)
-        await test_case.app.push_screen(screen)
+        # Await `EditorScreen.edit` in a background task
+        @work
+        async def EditorScreen__edit(app):
+            return await repype.textual.editor.EditorScreen.edit(app, task = task2)
+        EditorScreen__edit(test_case.app)
+        await pilot.pause(1)
 
         # Update the specification
-        screen.task_spec_editor.text = 'runnable: true'
+        test_case.app.screen.task_spec_editor.text = 'runnable: true'
 
         # Save and close the editor
         await pilot.press('ctrl+s')
@@ -217,11 +255,19 @@ async def test__action_save__edit__error(test_case, mock_EditorScreen_dismiss):
         ]
 
         for input in inputs:
-            screen = repype.textual.editor.EditorScreen.edit(task = task2)
-            await test_case.app.push_screen(screen)
+
+            # Await `EditorScreen.edit` in a background task
+            @work
+            async def EditorScreen__edit(app):
+                try:
+                    return await repype.textual.editor.EditorScreen.edit(app, task = task2)
+                except asyncio.CancelledError:
+                    pass
+            worker = EditorScreen__edit(test_case.app)
+            await pilot.pause(1)
 
             # Update the specification
-            screen.task_spec_editor.text = input['spec']
+            test_case.app.screen.task_spec_editor.text = input['spec']
 
             # Save and close the editor
             await pilot.press('ctrl+s')
@@ -234,4 +280,6 @@ async def test__action_save__edit__error(test_case, mock_EditorScreen_dismiss):
             test_case.assertEqual(spec, original_spec)
 
             # Reset the screen for the next set of inputs
+            worker.cancel()
+            await worker.wait()
             test_case.app.pop_screen()
