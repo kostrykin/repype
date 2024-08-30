@@ -66,8 +66,10 @@ class EditorScreen(ModalScreen[bool]):
         ):
         assert mode in get_args(ModeLiteral), f'Invalid mode: "{mode}"'
         assert any(
-            mode == 'new' and task is None and parent_task is not None,
-            mode == 'edit' and task is not None and parent_task is None,
+            (
+                mode == 'new' and task is None and parent_task is not None,
+                mode == 'edit' and task is not None and parent_task is None,
+            )
         ), (mode, task, parent_task)
         super().__init__()
         self.mode = mode
