@@ -45,9 +45,17 @@ def suggest_stage_id(class_name: str) -> str:
     """
     Suggests a stage identifier based on a class name.
 
-    This function validates the class name, then finds and groups tokens in the class name.
+    This function validates the `class_name`, then tokenizes it.
     Tokens are grouped if they are consecutive and alphanumeric, but do not start with numbers.
     The function then converts the tokens to lowercase, removes underscores, and joins them with hyphens.
+
+    Example:
+
+        .. runblock:: pycon
+
+            >>> from repype.stage import suggest_stage_id
+            >>> print(suggest_stage_id('TheGreatMapperStage'))
+            >>> print(suggest_stage_id('TheGreat123PCMapper'))
 
     Arguments:
         class_name: The name of the class to suggest a configuration namespace for.
@@ -59,7 +67,11 @@ def suggest_stage_id(class_name: str) -> str:
         AssertionError: If the class name is not valid.
     """
     assert class_name != '_' and re.match('[a-zA-Z]', class_name) and re.match('^[a-zA-Z_](?:[a-zA-Z0-9_])*$', class_name), f'not a valid class name: "{class_name}"'
-    tokens1 = re.findall('[A-Z0-9][^A-Z0-9_]*', class_name)
+
+    # Find all tokens in the class name (letters or numbers, followed by lowercase letters until the next underscore)
+    tokens1 = re.findall('[a-zA-Z0-9][^A-Z0-9_]*', class_name)
+
+    # Join tokens that are alphanumeric and consecutive
     tokens2 = list()
     i1 = 0
     while i1 < len(tokens1):
@@ -73,7 +85,12 @@ def suggest_stage_id(class_name: str) -> str:
                 else:
                     break
         tokens2.append(token.lower().replace('_', ''))
-    if len(tokens2) >= 2 and tokens2[-1] == 'stage': tokens2 = tokens2[:-1]
+
+    # Remove the last token if it is "stage"
+    if len(tokens2) >= 2 and tokens2[-1] == 'stage':
+        tokens2 = tokens2[:-1]
+
+    # Join the tokens
     return '-'.join(tokens2)
 
 

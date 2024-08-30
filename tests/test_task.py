@@ -540,7 +540,7 @@ class Task__is_pending(unittest.TestCase):
         self.assertTrue(task.is_pending(self.pipeline, config))
 
 
-class Task__marginal_states(unittest.TestCase):
+class Task__marginal_stages(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_from_spec_missing(self, path):
@@ -549,7 +549,7 @@ class Task__marginal_states(unittest.TestCase):
             parent = None,
             spec = dict(),
         )
-        self.assertEqual(task.marginal_stages, [])
+        self.assertEqual(list(task.marginal_stages), [])
 
     @testsuite.with_temporary_paths(1)
     def test_from_spec(self, path):
@@ -563,7 +563,21 @@ class Task__marginal_states(unittest.TestCase):
                 ],
             ),
         )
-        self.assertEqual(task.marginal_stages, ['stage1', 'stage2'])
+        self.assertEqual(list(task.marginal_stages), ['stage1', 'stage2'])
+
+    @testsuite.with_temporary_paths(1)
+    def test_from_spec_class_names(self, path):
+        task = repype.task.Task(
+            path = path,
+            parent = None,
+            spec = dict(
+                marginal_stages = [
+                    'tests.test_task.Task__create_pipeline.stage1_cls',
+                    'tests.test_task.Task__create_pipeline.stage2_cls',
+                ],
+            ),
+        )
+        self.assertEqual(list(task.marginal_stages), ['stage1', 'stage2'])
 
     @testsuite.with_temporary_paths(1)
     def test_override(self, path):
@@ -579,7 +593,7 @@ class Task__marginal_states(unittest.TestCase):
             parent = None,
             spec = dict(),
         )
-        self.assertEqual(task.marginal_stages, ['stage1', 'stage2'])
+        self.assertEqual(list(task.marginal_stages), ['stage1', 'stage2'])
 
 
 class Task__get_marginal_fields(unittest.TestCase):
