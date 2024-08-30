@@ -2,6 +2,9 @@ import traceback
 
 import bidict
 import repype.status
+from repype.typing import (
+    Iterator,
+)
 from textual import (
     log,
     work,
@@ -14,6 +17,9 @@ from textual.containers import (
 )
 from textual.screen import (
     ModalScreen,
+)
+from textual.widget import (
+    Widget,
 )
 from textual.widgets import (
     Collapsible,
@@ -41,6 +47,9 @@ class RunScreen(ModalScreen[bool]):
         Binding('ctrl+c', 'cancel', 'Cancel', priority = True),
         Binding('escape', 'close', 'Close'),
     ]
+    """
+    Key bindings of the screen.
+    """
 
     def __init__(self, contexts):
         super().__init__()
@@ -53,7 +62,13 @@ class RunScreen(ModalScreen[bool]):
         self.success = False
         self.finished_tasks = set()  # paths
 
-    def compose(self):
+    def compose(self) -> Iterator[Widget]:
+        """
+        Compose the screen.
+
+        Yields:
+            The components of the screen.
+        """
         yield Header()
 
         for task_id, rc in enumerate(self.contexts, start = 1):
