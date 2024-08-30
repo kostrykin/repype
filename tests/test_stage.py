@@ -23,6 +23,7 @@ class suggest_id(unittest.TestCase):
         self.assertEqual(repype.stage.suggest_stage_id('TheGreat123PCMapper'  ), 'the-great-123-pc-mapper')
         self.assertEqual(repype.stage.suggest_stage_id('TheGreatMapperStage'  ), 'the-great-mapper'       )
         self.assertEqual(repype.stage.suggest_stage_id('Stage'                ), 'stage'                  )
+        self.assertEqual(repype.stage.suggest_stage_id('stage1_abc_cls'       ), 'stage-1-abc-cls'        )
 
     def test_illegal(self):
         self.assertRaises(AssertionError, lambda: repype.stage.suggest_stage_id(''))
