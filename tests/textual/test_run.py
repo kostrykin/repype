@@ -42,78 +42,78 @@ async def test__success(test_case, mock_log):
                     repype.status.update(status, info = 'enter', task = '/path/to/task1')
 
                     await asyncio.sleep(1)
+                    test_case.assertEqual(task_ui.intermediate.styles.display, 'none')
                     test_case.assertEqual(screen.current_task_path, ctx1.task.path.resolve())
                     test_case.assertFalse(task_ui.collapsible.collapsed)
                     test_case.assertEqual(len(task_ui.container.children), 1)
-                    test_case.assertIsInstance(task_ui.container.children[0], repype.textual.run.Label)
-                    test_case.assertEqual(str(task_ui.container.children[0].renderable), '')  # FIXME: Why is there an empty label?
+                    test_case.assertIsInstance(task_ui.container.children[-1], repype.textual.run.Label)
+                    test_case.assertEqual(str(task_ui.container.children[-1].renderable), '')  # FIXME: Why is there an empty label?
 
                     # Test plain status update
 
                     repype.status.update(status, 'update 1')
 
                     await asyncio.sleep(1)
+                    test_case.assertEqual(task_ui.intermediate.styles.display, 'none')
                     test_case.assertEqual(len(task_ui.container.children), 2)
-                    test_case.assertIsInstance(task_ui.container.children[1], repype.textual.run.Label)
-                    test_case.assertEqual(str(task_ui.container.children[1].renderable), 'update 1')
+                    test_case.assertIsInstance(task_ui.container.children[-1], repype.textual.run.Label)
+                    test_case.assertEqual(str(task_ui.container.children[-1].renderable), 'update 1')
 
                     # Test intermediate status update
 
                     repype.status.update(status, 'intermediate 1', intermediate = True)
 
                     await asyncio.sleep(1)
-                    test_case.assertEqual(len(task_ui.container.children), 4)
-                    test_case.assertIsInstance(task_ui.container.children[2], repype.textual.run.Label)
-                    test_case.assertEqual(str(task_ui.container.children[2].renderable), 'intermediate 1')
-                    test_case.assertIsInstance(task_ui.container.children[3], repype.textual.run.ProgressBar)
-                    test_case.assertEqual(task_ui.container.children[3].progress, 0)
-                    test_case.assertIsNone(task_ui.container.children[3].total)
+                    test_case.assertEqual(task_ui.intermediate.styles.display, 'block')
+                    test_case.assertEqual(len(task_ui.container.children), 2)
+                    test_case.assertEqual(str(task_ui.intermediate_label.renderable), 'intermediate 1')
+                    test_case.assertEqual(task_ui.intermediate_progressbar.progress, 0)
+                    test_case.assertIsNone(task_ui.intermediate_progressbar.total)
 
                     # Test intermediate status clearance
 
                     repype.status.update(status, None, intermediate = True)
 
                     await asyncio.sleep(1)
+                    test_case.assertEqual(task_ui.intermediate.styles.display, 'none')
                     test_case.assertEqual(len(task_ui.container.children), 2)
-                    test_case.assertIsInstance(task_ui.container.children[1], repype.textual.run.Label)
-                    test_case.assertEqual(str(task_ui.container.children[1].renderable), 'update 1')
 
                     # Test two subsequent intermediate status updates
 
                     repype.status.update(status, 'intermediate 2', intermediate = True)
 
                     await asyncio.sleep(1)
-                    test_case.assertEqual(len(task_ui.container.children), 4)
-                    test_case.assertIsInstance(task_ui.container.children[2], repype.textual.run.Label)
-                    test_case.assertEqual(str(task_ui.container.children[2].renderable), 'intermediate 2')
-                    test_case.assertIsInstance(task_ui.container.children[3], repype.textual.run.ProgressBar)
-                    test_case.assertEqual(task_ui.container.children[3].progress, 0)
-                    test_case.assertIsNone(task_ui.container.children[3].total)
+                    test_case.assertEqual(task_ui.intermediate.styles.display, 'block')
+                    test_case.assertEqual(len(task_ui.container.children), 2)
+                    test_case.assertEqual(str(task_ui.intermediate_label.renderable), 'intermediate 2')
+                    test_case.assertEqual(task_ui.intermediate_progressbar.progress, 0)
+                    test_case.assertIsNone(task_ui.intermediate_progressbar.total)
 
                     repype.status.update(status, 'intermediate 3', intermediate = True)
 
                     await asyncio.sleep(1)
-                    test_case.assertEqual(len(task_ui.container.children), 4)
-                    test_case.assertIsInstance(task_ui.container.children[2], repype.textual.run.Label)
-                    test_case.assertEqual(str(task_ui.container.children[2].renderable), 'intermediate 3')
-                    test_case.assertIsInstance(task_ui.container.children[3], repype.textual.run.ProgressBar)
-                    test_case.assertEqual(task_ui.container.children[3].progress, 0)
-                    test_case.assertIsNone(task_ui.container.children[3].total)
+                    test_case.assertEqual(task_ui.intermediate.styles.display, 'block')
+                    test_case.assertEqual(len(task_ui.container.children), 2)
+                    test_case.assertEqual(str(task_ui.intermediate_label.renderable), 'intermediate 3')
+                    test_case.assertEqual(task_ui.intermediate_progressbar.progress, 0)
+                    test_case.assertIsNone(task_ui.intermediate_progressbar.total)
 
                     # Test permanent status update after intermediate status
 
                     repype.status.update(status, 'update 2')
 
                     await asyncio.sleep(1)
+                    test_case.assertEqual(task_ui.intermediate.styles.display, 'none')
                     test_case.assertEqual(len(task_ui.container.children), 3)
-                    test_case.assertIsInstance(task_ui.container.children[2], repype.textual.run.Label)
-                    test_case.assertEqual(str(task_ui.container.children[2].renderable), 'update 2')
+                    test_case.assertIsInstance(task_ui.container.children[-1], repype.textual.run.Label)
+                    test_case.assertEqual(str(task_ui.container.children[-1].renderable), 'update 2')
 
                     # Test `start` status update
 
                     repype.status.update(status, info = 'start', pickup = None, first_stage = None)
 
                     await asyncio.sleep(1)
+                    test_case.assertEqual(task_ui.intermediate.styles.display, 'none')
                     test_case.assertEqual(len(task_ui.container.children), 4)
                     test_case.assertIsInstance(task_ui.container.children[-1], repype.textual.run.Label)
                     test_case.assertEqual(str(task_ui.container.children[-1].renderable), 'Starting from scratch')
@@ -121,6 +121,7 @@ async def test__success(test_case, mock_log):
                     repype.status.update(status, info = 'start', pickup = '/some/task', first_stage = None)
 
                     await asyncio.sleep(1)
+                    test_case.assertEqual(task_ui.intermediate.styles.display, 'none')
                     test_case.assertEqual(len(task_ui.container.children), 5)
                     test_case.assertIsInstance(task_ui.container.children[-1], repype.textual.run.Label)
                     test_case.assertEqual(str(task_ui.container.children[-1].renderable), f'Picking up from: /some/task (copy)')
@@ -128,6 +129,7 @@ async def test__success(test_case, mock_log):
                     repype.status.update(status, info = 'start', pickup = '/some/task', first_stage = 'some-stage')
 
                     await asyncio.sleep(1)
+                    test_case.assertEqual(task_ui.intermediate.styles.display, 'none')
                     test_case.assertEqual(len(task_ui.container.children), 6)
                     test_case.assertIsInstance(task_ui.container.children[-1], repype.textual.run.Label)
                     test_case.assertEqual(str(task_ui.container.children[-1].renderable), f'Picking up from: /some/task (some-stage)')
@@ -137,6 +139,7 @@ async def test__success(test_case, mock_log):
                     repype.status.update(status, info = 'process', step = 0, step_count = 1, input_id = 'input-1')
 
                     await asyncio.sleep(1)
+                    test_case.assertEqual(task_ui.intermediate.styles.display, 'none')
                     test_case.assertEqual(len(task_ui.container.children), 7)
                     test_case.assertIsInstance(task_ui.container.children[-1], repype.textual.run.Label)
                     test_case.assertEqual(str(task_ui.container.children[-1].renderable), f'(1/1) Processing: input-1')  # FIXME: How to check the `[bold]...[/bold]` tags?
@@ -146,6 +149,7 @@ async def test__success(test_case, mock_log):
                     repype.status.update(status, info = 'start-stage', stage = 'some-stage')
 
                     await asyncio.sleep(1)
+                    test_case.assertEqual(task_ui.intermediate.styles.display, 'none')
                     test_case.assertEqual(len(task_ui.container.children), 8)
                     test_case.assertIsInstance(task_ui.container.children[-1], repype.textual.run.Label)
                     test_case.assertEqual(str(task_ui.container.children[-1].renderable), f'Starting stage: some-stage')
@@ -155,6 +159,7 @@ async def test__success(test_case, mock_log):
                     repype.status.update(status, info = 'storing')
 
                     await asyncio.sleep(1)
+                    test_case.assertEqual(task_ui.intermediate.styles.display, 'none')
                     test_case.assertEqual(len(task_ui.container.children), 9)
                     test_case.assertIsInstance(task_ui.container.children[-1], repype.textual.run.Label)
                     test_case.assertEqual(str(task_ui.container.children[-1].renderable), f'Storing results...')
@@ -164,6 +169,7 @@ async def test__success(test_case, mock_log):
                     repype.status.update(status, info = 'completed', task = '/path/to/task1')
 
                     await asyncio.sleep(1)
+                    test_case.assertEqual(task_ui.intermediate.styles.display, 'none')
                     test_case.assertEqual(len(task_ui.container.children), 10)
                     test_case.assertIsInstance(task_ui.container.children[-1], repype.textual.run.Label)
                     test_case.assertEqual(str(task_ui.container.children[-1].renderable), f'Results have been stored')
@@ -174,6 +180,7 @@ async def test__success(test_case, mock_log):
                     repype.status.update(status, info = 'error', traceback = 'the traceback')
 
                     await asyncio.sleep(1)
+                    test_case.assertEqual(task_ui.intermediate.styles.display, 'none')
                     test_case.assertEqual(len(task_ui.container.children), 12)
                     test_case.assertIsInstance(task_ui.container.children[-2], repype.textual.run.Label)
                     test_case.assertEqual(str(task_ui.container.children[-2].renderable), f'An error occurred:')
@@ -185,6 +192,7 @@ async def test__success(test_case, mock_log):
                     repype.status.update(status, info = 'interrupted')
 
                     await asyncio.sleep(1)
+                    test_case.assertEqual(task_ui.intermediate.styles.display, 'none')
                     test_case.assertEqual(len(task_ui.container.children), 13)
                     test_case.assertIsInstance(task_ui.container.children[-1], repype.textual.run.Label)
                     test_case.assertEqual(str(task_ui.container.children[-1].renderable), f'Batch run interrupted')
@@ -194,22 +202,20 @@ async def test__success(test_case, mock_log):
                     repype.status.update(status, info = 'progress', details = 'the details', step = 0, max_steps = 2, intermediate = True)
 
                     await asyncio.sleep(1)
-                    test_case.assertEqual(len(task_ui.container.children), 15)
-                    test_case.assertIsInstance(task_ui.container.children[-2], repype.textual.run.Label)
-                    test_case.assertEqual(str(task_ui.container.children[-2].renderable), 'the details')
-                    test_case.assertIsInstance(task_ui.container.children[-1], repype.textual.run.ProgressBar)
-                    test_case.assertEqual(task_ui.container.children[-1].progress, 0)
-                    test_case.assertEqual(task_ui.container.children[-1].total, 2)
+                    test_case.assertEqual(task_ui.intermediate.styles.display, 'block')
+                    test_case.assertEqual(len(task_ui.container.children), 13)
+                    test_case.assertEqual(str(task_ui.intermediate_label.renderable), 'the details')
+                    test_case.assertEqual(task_ui.intermediate_progressbar.progress, 0)
+                    test_case.assertEqual(task_ui.intermediate_progressbar.total, 2)
 
                     repype.status.update(status, info = 'progress', details = 'the details', step = 1, max_steps = 2, intermediate = True)
 
                     await asyncio.sleep(1)
-                    test_case.assertEqual(len(task_ui.container.children), 15)
-                    test_case.assertIsInstance(task_ui.container.children[-2], repype.textual.run.Label)
-                    test_case.assertEqual(str(task_ui.container.children[-2].renderable), 'the details')
-                    test_case.assertIsInstance(task_ui.container.children[-1], repype.textual.run.ProgressBar)
-                    test_case.assertEqual(task_ui.container.children[-1].progress, 1)
-                    test_case.assertEqual(task_ui.container.children[-1].total, 2)
+                    test_case.assertEqual(task_ui.intermediate.styles.display, 'block')
+                    test_case.assertEqual(len(task_ui.container.children), 13)
+                    test_case.assertEqual(str(task_ui.intermediate_label.renderable), 'the details')
+                    test_case.assertEqual(task_ui.intermediate_progressbar.progress, 1)
+                    test_case.assertEqual(task_ui.intermediate_progressbar.total, 2)
 
                     return True
                 

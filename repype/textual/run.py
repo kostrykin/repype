@@ -85,8 +85,6 @@ class RunScreen(ModalScreen[bool]):
         self.contexts = list(contexts)
         self.current_task_path = None
         self.finished_tasks = set()
-        self.intermediate = None
-        self.intermediate_extra = ProgressBar()
         self.success = False
 
     def task_id(self, task_path: PathLike) -> str:
@@ -107,9 +105,16 @@ class RunScreen(ModalScreen[bool]):
 
         for rc in self.contexts:
             with Collapsible(collapsed = True, id = f'run-task-{self.task_id(rc.task.path)}'):
-                vertical = Vertical(classes = 'run-task-container')
-                vertical.styles.height = 'auto'
-                yield vertical
+
+                container = Vertical(classes = 'run-task-container')
+                container.styles.height = 'auto'
+                yield container
+
+                with Vertical(classes = 'run-task-intermediate') as intermediate:
+                    intermediate.styles.height = 'auto'
+                    intermediate.styles.display = 'none'
+                    yield Label()
+                    yield ProgressBar()
 
         yield Footer()
 
@@ -118,13 +123,20 @@ class RunScreen(ModalScreen[bool]):
         Get the UI components of a task.
 
         Returns:
-            A namespace with the `collapsible` and `container` widgets.
+            A namespace with the `collapsible` and `container` widgets,
+            as well as the `intermediate`, `intermediate_label`, and `intermediate_progressbar` widgets.
         """
         collapsible = self.query_one(f'#run-task-{self.task_id(task_path)}')
         container = collapsible.query_one('.run-task-container')
+        intermediate = collapsible.query_one('.run-task-intermediate')
+        intermediate_label = intermediate.query_one('.run-task-intermediate > Label')
+        intermediate_progressbar = intermediate.query_one('.run-task-intermediate > ProgressBar')
         return types.SimpleNamespace(
             collapsible = collapsible,
             container = container,
+            intermediate = intermediate,
+            intermediate_label = intermediate_label,
+            intermediate_progressbar = intermediate_progressbar,
         )
 
     def task_ui_or_none(self, task_path: PathLike) -> Optional[types.SimpleNamespace]:
@@ -212,42 +224,33 @@ class RunScreen(ModalScreen[bool]):
 
         task_ui = self.task_ui_or_none(task_path)
         try:
-            if task_ui:
-                task_ui.collapsible.collapsed = False
-                self.ends_with_rule = False
+            task_ui.collapsible.collapsed = False
+            self.ends_with_rule = False
 
-            # If the new status is intermediate...
+            # If the status is intermediate, update the corresponding widgets
             if intermediate:
 
-                # ...and empty, then clear the previous intermediate status
-                if status is None and self.intermediate:
-                    self.intermediate.remove()
-                    self.intermediate = None
-                    self.intermediate_extra.remove()
+                # If the status is None, hide the intermediate widgets
+                if status is None:
+                    task_ui.intermediate.styles.display = 'none'
                     return
-
-                # ...the previous was *not* intermediate, creata a new label
-                elif self.intermediate is None:
-                    label = Label()
-                    self.intermediate = label
-                    self.intermediate_extra.update(progress = 0, total = None)
-                    task_ui.container.mount(self.intermediate)
-                    task_ui.container.mount(self.intermediate_extra)
-
-                # ...the previous was intermediate too, reuse its label
+                
+                # Otherwise, show the intermediate widgets
                 else:
-                    label = self.intermediate
+                    task_ui.intermediate.styles.display = 'block'
+                    target = task_ui.intermediate_label
 
-            # If the new status is *not* intermediate, but the previous status *was* intermediate, reuse its label
-            elif self.intermediate:
-                label = self.intermediate
-                self.intermediate = None
-                self.intermediate_extra.remove()
-
-            # If the new status is *not* intermediate, and the previous wasn't either, create a new label
+                    # Update the intermediate progress bar
+                    if isinstance(status, dict) and status.get('info') == 'progress':
+                        task_ui.intermediate_progressbar.update(progress = status.get('step'), total = status.get('max_steps'))
+                    else:
+                        task_ui.intermediate_progressbar.update(progress = 0, total = None)
+            
+            # If the status is not intermediate, hide the intermediate widgets
             else:
-                label = Label()
-                task_ui.container.mount(label)
+                task_ui.intermediate.styles.display = 'none'
+                target = Label()
+                task_ui.container.mount(target)
 
             # Resolve dictionary-based status updates
             if isinstance(status, dict):
@@ -259,49 +262,48 @@ class RunScreen(ModalScreen[bool]):
 
                 if status.get('info') == 'start':
                     if status['pickup'] or status['first_stage']:
-                        label.update(f'Picking up from: {status["pickup"]} ({status["first_stage"] or "copy"})')
+                        target.update(f'Picking up from: {status["pickup"]} ({status["first_stage"] or "copy"})')
                     else:
-                        label.update('Starting from scratch')
+                        target.update('Starting from scratch')
                     return
 
                 if status.get('info') == 'process':
-                    label.update(f'[bold]({status["step"] + 1}/{status["step_count"]})[/bold] Processing: {status["input_id"]}')
-                    label.add_class('status-process')
+                    target.update(f'[bold]({status["step"] + 1}/{status["step_count"]})[/bold] Processing: {status["input_id"]}')
+                    target.add_class('status-process')
                     return
 
                 if status.get('info') == 'start-stage':
-                    label.update(f'Starting stage: {status["stage"]}')
+                    target.update(f'Starting stage: {status["stage"]}')
                     return
 
                 if status.get('info') == 'storing':
-                    label.update(f'Storing results...')
+                    target.update(f'Storing results...')
                     return
 
                 if status.get('info') == 'completed':
-                    label.update(f'Results have been stored')
-                    label.add_class('status-success')
+                    target.update(f'Results have been stored')
+                    target.add_class('status-success')
                     self.finished_tasks.add(status['task'])
                     self.update_task_ui(status['task'])
                     return
 
                 if status.get('info') == 'error':
-                    label.update('An error occurred:')
-                    label.add_class('status-error')
+                    target.update('An error occurred:')
+                    target.add_class('status-error')
                     task_ui.container.mount(Label(status['traceback']))
                     return
 
                 if status.get('info') == 'progress':
-                    label.update(str(status.get('details')))
-                    self.intermediate_extra.update(progress = status['step'], total = status['max_steps'])
+                    target.update(str(status.get('details')))
                     return
                 
                 if status.get('info') == 'interrupted':
-                    label.update('Batch run interrupted')
-                    label.add_class('status-error')
+                    target.update('Batch run interrupted')
+                    target.add_class('status-error')
                     return
 
             # Handle all remaining status updates
-            label.update(str(status))
+            target.update(str(status))
 
         except:
             log('RunScreen.handle_new_status', error = traceback.format_exc())
