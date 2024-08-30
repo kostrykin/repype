@@ -70,7 +70,13 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
         line = line.replace('\n', ' ')
         return line + ' ' * max((0, self._intermediate_line_length - len(line)))
 
-    def handle_new_status(self, parents: List[Union[str, dict]], positions: List[int], status: Optional[Union[str, dict]], intermediate: bool) -> None:
+    def handle_new_status(
+            self,
+            parents: List[Union[str, dict]],
+            positions: List[int],
+            status: Optional[Union[str, dict]],
+            intermediate: bool,
+        ) -> None:
         # If status is intermediate, ...
         if intermediate:
             

@@ -8,8 +8,10 @@ import repype.status
 from repype.typing import (
     Iterable,
     Iterator,
+    List,
     Optional,
     PathLike,
+    Union,
 )
 from textual import (
     log,
@@ -38,16 +40,6 @@ from textual.widgets import (
     ProgressBar,
 )
 from .confirm import confirm
-
-
-class StatusReaderAdapter(repype.status.StatusReader):
-
-    def __init__(self, filepath, run_screen):
-        self.screen = run_screen
-        super().__init__(filepath)
-
-    def handle_new_status(self, *args, **kwargs):
-        self.screen.handle_new_status(*args, **kwargs)
 
 
 class RunScreen(ModalScreen[bool]):
@@ -83,8 +75,8 @@ class RunScreen(ModalScreen[bool]):
 
     success: bool
     """
-    `True` if the batch run was completed successfully, `False` otherwise
-    (e.g., if the batch run is still in progress).
+    `True` if the batch run was completed successfully, and `False` otherwise
+    (i.e. if the batch run was not started yet, or it is still in progress).
     """
 
     def __init__(self, contexts: Iterable[repype.batch.RunContext]):
@@ -144,43 +136,75 @@ class RunScreen(ModalScreen[bool]):
         except NoMatches:
             return None
 
-    def update_task_state(self, task_path: PathLike) -> None:
+    def update_task_ui(self, task_path: PathLike) -> None:
+        """
+        Update the UI components of a task.
+        """
         task = self.app.batch.task(task_path)
         task_ui = self.task_ui(task_path)
         task_ui.collapsible.title = str(task.path.resolve())
         if str(task_path) in self.finished_tasks:
             task_ui.collapsible.title += ' (done)'
 
-    def on_mount(self):
+    def on_mount(self) -> None:
+        """
+        Update the UI components of a task and run the batch.
+        """
         for rc in self.contexts:
-            self.update_task_state(rc.task.path)
+            self.update_task_ui(rc.task.path)
         self.run_batch()
 
     @work
-    async def action_cancel(self):
+    async def action_cancel(self) -> None:
+        """
+        Cancel the batch run.
+
+        A confirmation dialog based on :meth:`confirm` is shown before cancellation.
+        """
         if self.app.batch.task_process:
-            if await confirm(self.app, 'Cancel the unfinished tasks?', default = 'no'):
+            if await self.confirm('Cancel the unfinished tasks?', default = 'no'):
                 await self.app.batch.cancel()
 
-    def action_close(self):
+    def action_close(self) -> None:
+        """
+        Close the screen, if no tasks are running.
+
+        If tasks are running, an error message is shown.
+
+        Dismisses the screen with a value of :attr:`.success` if the screen is closed.
+        """
         if self.app.batch.task_process is None:
             self.dismiss(self.success)
         else:
             self.app.notify('Cancel before closing, or wait to finish', severity='error', timeout=3)
 
     @work(exclusive = True)
-    async def run_batch(self):
+    async def run_batch(self) -> None:
+        """
+        Run the batch of tasks.
+        """
         with repype.status.create() as status:
             async with StatusReaderAdapter(status.filepath, self):
                 success = await self.app.batch.run(self.contexts, status = status)
                 self.current_task_path = None
 
                 # Report the success of the batch run
-                log('StatusReader.run_batch', success = success)
+                log('RunScreen.run_batch', success = success)
                 self.success = success
 
-    def handle_new_status(self, parents, positions, status, intermediate):
-        log('StatusReader.handle_new_status', status = status, intermediate = intermediate)
+    def handle_new_status(
+            self,
+            parents: List[Union[str, dict]],
+            positions: List[int],
+            status: Optional[Union[str, dict]],
+            intermediate: bool,
+        ) -> None:
+        """
+        Process a new status update.
+
+        The arguments are the same as those of the :meth:`~repype.status.StatusReader.handle_new_status` method of the :class:`repype.status.StatusReader` class.
+        """
+        log('RunScreen.handle_new_status', status = status, intermediate = intermediate)
         if isinstance(status, dict) and (task_path := status.get('task')):
             self.current_task_path = pathlib.Path(task_path)
         else:
@@ -257,7 +281,7 @@ class RunScreen(ModalScreen[bool]):
                     label.update(f'Results have been stored')
                     label.add_class('status-success')
                     self.finished_tasks.add(status['task'])
-                    self.update_task_state(status['task'])
+                    self.update_task_ui(status['task'])
                     return
 
                 if status.get('info') == 'error':
@@ -280,5 +304,33 @@ class RunScreen(ModalScreen[bool]):
             label.update(str(status))
 
         except:
-            log('StatusReader.handle_new_status', error = traceback.format_exc())
+            log('RunScreen.handle_new_status', error = traceback.format_exc())
             raise
+
+    async def confirm(self, *args, **kwargs) -> bool:
+        """
+        Shortcut for :class:`repype.textual.confirm.confirm`.
+        """
+        return await confirm(self.app, *args, **kwargs)
+
+
+class StatusReaderAdapter(repype.status.StatusReader):
+
+    screen: RunScreen
+    """
+    The screen to which the status updates are delegated.
+
+    Arguments:
+        filepath: The path to the status file.
+        screen: The screen to which the status updates are delegated.
+    """
+
+    def __init__(self, filepath: PathLike, screen: RunScreen):
+        self.screen = screen
+        super().__init__(filepath)
+
+    def handle_new_status(self, *args, **kwargs):
+        """
+        Delegates the handling of new status updates to the :meth:`screen.handle_new_status <RunScreen.handle_new_status>` method.
+        """
+        self.screen.handle_new_status(*args, **kwargs)
