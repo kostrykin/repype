@@ -114,7 +114,7 @@ class BatchScreen(Screen):
 
         # Remove completed tasks from queued tasks
         non_pending_tasks = frozenset(self.non_pending_tasks)
-        self.queued_tasks = [task for task in self.queued_tasks if task not in non_pending_tasks]  # FIXME: Add test for this
+        self.queued_tasks = [task for task in self.queued_tasks if task not in non_pending_tasks]
 
         # Create root task nodes
         task_nodes = dict()
