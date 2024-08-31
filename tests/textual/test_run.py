@@ -36,6 +36,7 @@ async def test__success(test_case, mock_log):
                     test_case.assertEqual(task_ui.collapsible.title, str(ctx1.task.path.resolve()))
                     test_case.assertEqual(len(task_ui.container.children), 0)
                     test_case.assertIsNone(screen.current_task_path)
+                    test_case.assertEqual(screen.success_count, 0)
 
                     # Test `enter` status update
 
@@ -234,7 +235,7 @@ async def test__success(test_case, mock_log):
             await test_case.app.push_screen(screen)
             while mock_batch.task_process:
                 await asyncio.sleep(1)
-            test_case.assertTrue(screen.success)
+            test_case.assertEqual(screen.success_count, 1)
             test_case.assertIsNone(screen.current_task_path)
 
 
@@ -271,7 +272,7 @@ async def test__action_cancel(test_case):
             await pilot.pause(1)
 
         # Verify the results
-        test_case.assertFalse(screen.success)
+        test_case.assertEqual(screen.success_count, 0)
         test_case.assertIsNone(screen.current_task_path)
         test_case.assertFalse(mock_handle_new_status.call_args_list[-1].kwargs['intermediate'])
         test_case.assertEqual(
