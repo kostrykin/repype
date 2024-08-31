@@ -492,6 +492,88 @@ async def test__toggle_task__task1(test_case):
         test_case.assertEqual(str(task_tree.cursor_node.label), '[ ] ' + label)
 
 
+async def test__non_pending_tasks__task1(test_case):
+
+    # Load the batch
+    batch = repype.batch.Batch()
+    batch.load(test_case.root_path)
+
+    # Load the tasks
+    ctx1 = batch.context(test_case.root_path / 'task')
+    ctx2 = batch.context(test_case.root_path / 'task' / 'sigma=2')
+
+    # Mark `task1` as completed
+    ctx1.run()
+
+    # Load the tasks
+    ctx1 = batch.context(test_case.root_path / 'task')
+
+    # Verify the batch screen and its contents
+    async with test_case.app.run_test() as pilot:
+
+        test_case.assertEqual(
+            frozenset(test_case.app.screen.non_pending_tasks),
+            frozenset(
+                [
+                    ctx1.task,
+                ],
+            ),
+        )
+
+
+async def test__non_pending_tasks__all(test_case):
+
+    # Load the batch
+    batch = repype.batch.Batch()
+    batch.load(test_case.root_path)
+
+    # Load the tasks
+    ctx1 = batch.context(test_case.root_path / 'task')
+    ctx2 = batch.context(test_case.root_path / 'task' / 'sigma=2')
+
+    # Mark `task1` and `task2` as completed
+    ctx1.run()
+    ctx2.run()
+
+    # Load the tasks
+    ctx1 = batch.context(test_case.root_path / 'task')
+
+    # Verify the batch screen and its contents
+    async with test_case.app.run_test() as pilot:
+
+        test_case.assertEqual(
+            frozenset(test_case.app.screen.non_pending_tasks),
+            frozenset(
+                [
+                    ctx1.task,
+                    ctx2.task,
+                ],
+            ),
+        )
+
+
+async def test__non_pending_tasks__none(test_case):
+
+    # Load the batch
+    batch = repype.batch.Batch()
+    batch.load(test_case.root_path)
+
+    # Load the tasks
+    ctx1 = batch.context(test_case.root_path / 'task')
+    ctx2 = batch.context(test_case.root_path / 'task' / 'sigma=2')
+
+    # Load the tasks
+    ctx1 = batch.context(test_case.root_path / 'task')
+
+    # Verify the batch screen and its contents
+    async with test_case.app.run_test() as pilot:
+
+        test_case.assertEqual(
+            frozenset(test_case.app.screen.non_pending_tasks),
+            frozenset(),
+        )
+
+
 async def test__toggle_task__completed(test_case):
 
     # Load the batch

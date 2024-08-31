@@ -94,6 +94,15 @@ class BatchScreen(Screen):
         self.task_tree.root.expand()
         self.update_task_tree()
 
+    @property
+    def non_pending_tasks(self) -> Iterator[repype.task.Task]:
+        """
+        Yields the non-pending tasks of the batch (i.e. completed and the non-runnable tasks).
+        """
+        for rc in self.app.batch.contexts:
+            if rc not in self.app.batch.pending:
+                yield rc.task
+
     def update_task_tree(self) -> None:
         """
         Reload the task tree.
@@ -102,6 +111,10 @@ class BatchScreen(Screen):
         self.app.batch.load(self.app.path)
         self.task_tree.clear()
         self.update_summary()
+
+        # Remove completed tasks from queued tasks
+        non_pending_tasks = frozenset(self.non_pending_tasks)
+        self.queued_tasks = [task for task in self.queued_tasks if task not in non_pending_tasks]  # FIXME: Add test for this
 
         # Create root task nodes
         task_nodes = dict()
@@ -242,15 +255,18 @@ class BatchScreen(Screen):
     async def action_toggle_task(self) -> None:
         """
         Toggle the selected task (queued or not queued).
+
+        Does nothing if the task is not pending.
         """
         cursor = self.task_tree.cursor_node
         if cursor and cursor.data:
-            if cursor.data in self.queued_tasks:
-                self.queued_tasks.remove(cursor.data)
-            else:
-                self.queued_tasks.append(cursor.data)
-            self.task_tree.cursor_node.label = self.format_task_label(cursor.data)
-            self.update_summary()
+            if cursor.data not in self.non_pending_tasks:
+                if cursor.data in self.queued_tasks:
+                    self.queued_tasks.remove(cursor.data)
+                else:
+                    self.queued_tasks.append(cursor.data)
+                self.task_tree.cursor_node.label = self.format_task_label(cursor.data)
+                self.update_summary()
 
     async def confirm(self, *args, **kwargs) -> bool:
         """
