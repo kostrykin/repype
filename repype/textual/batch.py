@@ -260,6 +260,8 @@ class BatchScreen(Screen):
         """
         cursor = self.task_tree.cursor_node
         if cursor and cursor.data:
+
+            # Toggle the task
             if cursor.data not in self.non_pending_tasks:
                 if cursor.data in self.queued_tasks:
                     self.queued_tasks.remove(cursor.data)
@@ -267,6 +269,10 @@ class BatchScreen(Screen):
                     self.queued_tasks.append(cursor.data)
                 self.task_tree.cursor_node.label = self.format_task_label(cursor.data)
                 self.update_summary()
+
+            # Show an error if the task is not pending
+            else:
+                self.app.notify('Only pending tasks can be queued', severity = 'error', timeout = 3)
 
     async def confirm(self, *args, **kwargs) -> bool:
         """

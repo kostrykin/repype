@@ -505,9 +505,6 @@ async def test__non_pending_tasks__task1(test_case):
     # Mark `task1` as completed
     ctx1.run()
 
-    # Load the tasks
-    ctx1 = batch.context(test_case.root_path / 'task')
-
     # Verify the batch screen and its contents
     async with test_case.app.run_test() as pilot:
 
@@ -535,9 +532,6 @@ async def test__non_pending_tasks__all(test_case):
     ctx1.run()
     ctx2.run()
 
-    # Load the tasks
-    ctx1 = batch.context(test_case.root_path / 'task')
-
     # Verify the batch screen and its contents
     async with test_case.app.run_test() as pilot:
 
@@ -562,9 +556,6 @@ async def test__non_pending_tasks__none(test_case):
     ctx1 = batch.context(test_case.root_path / 'task')
     ctx2 = batch.context(test_case.root_path / 'task' / 'sigma=2')
 
-    # Load the tasks
-    ctx1 = batch.context(test_case.root_path / 'task')
-
     # Verify the batch screen and its contents
     async with test_case.app.run_test() as pilot:
 
@@ -586,9 +577,6 @@ async def test__toggle_task__completed(test_case):
     # Mark `task1` as completed
     ctx1.run()
 
-    # Load the tasks
-    ctx1 = batch.context(test_case.root_path / 'task')
-
     # Verify the batch screen and its contents
     async with test_case.app.run_test() as pilot:
 
@@ -603,3 +591,44 @@ async def test__toggle_task__completed(test_case):
 
         # Verify that nothing happened
         test_case.assertEqual(str(task_tree.cursor_node.label), label)
+
+
+async def test__update_task_tree(test_case):
+
+    # Load the batch
+    batch = repype.batch.Batch()
+    batch.load(test_case.root_path)
+
+    # Load the tasks
+    ctx1 = batch.context(test_case.root_path / 'task')
+    ctx2 = batch.context(test_case.root_path / 'task' / 'sigma=2')
+
+    # Verify the batch screen and its contents
+    async with test_case.app.run_test() as pilot:
+
+        # Wait for the screen to finish loading
+        await pilot.pause(0)
+
+        # Mark both tasks as queued
+        test_case.app.screen.queued_tasks = [
+            ctx1.task,
+            ctx2.task,
+        ]
+
+        # Mark `task1` as completed
+        ctx1.run()
+
+        # Call the `update_task_tree` method
+        test_case.app.screen.update_task_tree()
+
+        # Test the results
+        test_case.assertEqual(
+            test_case.app.screen.queued_tasks,
+            [ctx2.task]
+        )
+        label1 = str(find_tree_node_by_task(test_case.app.screen.task_tree.root, ctx1.task).label)
+        label2 = str(find_tree_node_by_task(test_case.app.screen.task_tree.root, ctx2.task).label)
+        test_case.assertTrue(label1.startswith('[ ] '))
+        test_case.assertTrue(label2.startswith('[x] '))
+        test_case.assertTrue('pending' not in label1)
+        test_case.assertTrue('pending' in label2)
