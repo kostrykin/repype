@@ -438,3 +438,86 @@ async def test__run_task__pending(test_case, mock_confirm, mock_RunScreen):
                 # Perform the checks
                 mock_RunScreen.assert_called_once_with([ctx1])
                 mock_update_task_tree.assert_called_once()
+
+
+async def test__toggle_task__none(test_case):
+
+    # Load the batch
+    batch = repype.batch.Batch()
+    batch.load(test_case.root_path)
+
+    # Verify the batch screen and its contents
+    async with test_case.app.run_test() as pilot:
+
+        # Select the root node (not a task)
+        task_tree = test_case.app.screen.query_one('#setup-tasks')
+        task_tree.select_node(task_tree.root)
+        label = str(task_tree.cursor_node.label)
+
+        # Toggle selected task (none)
+        await pilot.press('x')
+
+        # Verify that nothing happened
+        test_case.assertEqual(str(task_tree.cursor_node.label), label)
+
+
+async def test__toggle_task__task1(test_case):
+
+    # Load the batch
+    batch = repype.batch.Batch()
+    batch.load(test_case.root_path)
+
+    # Load the tasks
+    ctx1 = batch.context(test_case.root_path / 'task')
+
+    # Verify the batch screen and its contents
+    async with test_case.app.run_test() as pilot:
+
+        # Select the root node (not a task)
+        task_tree = test_case.app.screen.query_one('#setup-tasks')
+        task1_node = find_tree_node_by_task(task_tree.root, ctx1.task)
+        task_tree.select_node(task1_node)
+        label = str(task_tree.cursor_node.label)[4:]
+
+        # Toggle selected task (none)
+        await pilot.press('x')
+
+        # Verify that nothing happened
+        test_case.assertEqual(str(task_tree.cursor_node.label), '[x] ' + label)
+
+        # Toggle selected task (none)
+        await pilot.press('x')
+
+        # Verify that nothing happened
+        test_case.assertEqual(str(task_tree.cursor_node.label), '[ ] ' + label)
+
+
+async def test__toggle_task__completed(test_case):
+
+    # Load the batch
+    batch = repype.batch.Batch()
+    batch.load(test_case.root_path)
+
+    # Load the tasks
+    ctx1 = batch.context(test_case.root_path / 'task')
+
+    # Mark `task1` as completed
+    ctx1.run()
+
+    # Load the tasks
+    ctx1 = batch.context(test_case.root_path / 'task')
+
+    # Verify the batch screen and its contents
+    async with test_case.app.run_test() as pilot:
+
+        # Select the root node (not a task)
+        task_tree = test_case.app.screen.query_one('#setup-tasks')
+        task1_node = find_tree_node_by_task(task_tree.root, ctx1.task)
+        task_tree.select_node(task1_node)
+        label = str(task_tree.cursor_node.label)
+
+        # Toggle selected task (none)
+        await pilot.press('x')
+
+        # Verify that nothing happened
+        test_case.assertEqual(str(task_tree.cursor_node.label), label)
