@@ -16,3 +16,4 @@ Examples
 .. toctree::
    
    examples/segmentation
+   examples/textual
