@@ -54,29 +54,18 @@ def find_sub_tasks(batch: repype.batch.Batch) -> Iterator[repype.task.Task]:
         yield task
 
 
-def format_task_label(batch: repype.batch.Batch, task: repype.task.Task) -> str:
-    """
-    Format the label of a `task` from the `batch` for display in the task tree.
-    """
-    pending_tasks = [rc.task.path for rc in batch.pending]
-    label = str(task.path.relative_to(task.parent.path) if task.parent else task.path.resolve())
-    if task.path in pending_tasks:
-        return f'{label} [bold](pending)[/bold]'
-    else:
-        return f'{label}'
-
-
 class BatchScreen(Screen):
     """
     App screen for managing tasks.
     """
 
     BINDINGS = [
-        Binding('a', 'add_task', 'Add child task'),
+        Binding('a', 'add_task', 'Add sub-task'),
         Binding('e', 'edit_task', 'Edit task'),
         Binding('d', 'delete_task', 'Delete task'),
-        Binding('r', 'run_task', 'Run task'),
+        Binding('r', 'run_tasks', 'Run tasks'),
         Binding('R', 'reset_task', 'Reset task'),
+        Binding('x', 'toggle_task', 'Toggle task'),
     ]
     """
     Key bindings of the screen.
@@ -87,10 +76,16 @@ class BatchScreen(Screen):
     The editor screen class.
     """
 
+    queued_tasks: list[repype.task.Task]
+    """
+    The tasks that are queued for running.
+    """
+
     def __init__(self):
         super().__init__()
         self.sub_title = 'Manage tasks'
         self.task_tree = Tree('Loaded tasks', id = 'setup-tasks')
+        self.queued_tasks = list()
 
     def on_mount(self) -> None:
         """
@@ -106,22 +101,31 @@ class BatchScreen(Screen):
         self.app.batch.tasks.clear()
         self.app.batch.load(self.app.path)
         self.task_tree.clear()
-
-        # Update number of pending tasks
-        label_pending = self.query_one(f'#batch-pending')
-        label_pending.update(f'Tasks: {str(len(self.app.batch.pending))} pending')
+        self.update_summary()
 
         # Create root task nodes
         task_nodes = dict()
         for task in find_root_tasks(self.app.batch):
-            node = self.task_tree.root.add(format_task_label(self.app.batch, task), expand = True, data = task)
+            node = self.task_tree.root.add(self.format_task_label(task), expand = True, data = task)
             task_nodes[task] = node
 
         # Create child task nodes
         for task in find_sub_tasks(self.app.batch):
             parent = task_nodes[task.parent]
-            node = parent.add(format_task_label(self.app.batch, task), expand = True, data = task)
+            node = parent.add(self.format_task_label(task), expand = True, data = task)
             task_nodes[task] = node
+
+    def update_summary(self) -> None:
+        """
+        Update the batch summary.
+        """
+        label_summary = self.query_one(f'#batch-summary')
+        label_summary.update(
+            f'[bold]Tasks:[/bold] '
+            f'{len(self.queued_tasks)} queued'
+            f' / '
+            f'{len(self.app.batch.pending)} pending'
+        )
 
     def compose(self) -> Iterator[Widget]:
         """
@@ -132,7 +136,7 @@ class BatchScreen(Screen):
         """
         yield Header()
         yield self.task_tree
-        yield Static(id = 'batch-pending')
+        yield Static(id = 'batch-summary')
         yield Footer()
 
     @work
@@ -179,25 +183,41 @@ class BatchScreen(Screen):
                 shutil.rmtree(cursor.data.path)
                 self.update_task_tree()
 
-    def action_run_task(self) -> None:
+    @work
+    async def action_run_tasks(self) -> None:
         """
-        Run the selected task.
+        Run the queued tasks.
 
-        An instance of the :class:`.RunScreen` is pushed to the screen stack for running the task.
+        An instance of the :class:`.RunScreen` is pushed to the screen stack for running the tasks.
 
-        If the task is not pending, a notification is shown.
-        Does nothing if no task is selected.
+        If no tasks are queued and the selected task is not pending, an error is shown.
+        Does nothing if no tasks are queued and no task is selected.
         """
         cursor = self.task_tree.cursor_node
         if cursor and cursor.data:
-            contexts = [rc for rc in self.app.batch.pending if rc.task.path == cursor.data.path]
-            if len(contexts) == 0:
-                self.app.notify('No pending tasks selected', severity = 'error', timeout = 3)
-            else:
-                screen = RunScreen(contexts)
-                def update_task_tree(ok):
+
+            # Gather the queued run contexts and the selected task context
+            queued_contexts  = [rc for rc in self.app.batch.pending if rc.task in self.queued_tasks]
+            selected_context = self.app.batch.context(cursor.data.path)
+
+            # Determine the contexts to run
+            if len(queued_contexts) == 0:
+                if selected_context in self.app.batch.pending:
+                    if self.confirm(
+                            'No tasks queued. Run the selected task?' '\n'
+                            '[bold]' + str(selected_context.task.path) + '[/bold]',
+                            default = 'yes',
+                        ):
+                        queued_contexts = [selected_context]
+
+                else:
+                    self.app.notify('No tasks queued', severity = 'error', timeout = 3)
+
+            # Run the contexts
+            if len(queued_contexts) > 0:
+                screen = RunScreen(queued_contexts)
+                if await self.app.push_screen_wait(screen) > 0:
                     self.update_task_tree()
-                self.app.push_screen(screen, update_task_tree)
 
     @work
     async def action_reset_task(self) -> None:
@@ -219,8 +239,31 @@ class BatchScreen(Screen):
                 cursor.data.reset()
                 self.update_task_tree()
 
+    async def action_toggle_task(self) -> None:
+        """
+        Toggle the selected task (queued or not queued).
+        """
+        cursor = self.task_tree.cursor_node
+        if cursor and cursor.data:
+            if cursor.data in self.queued_tasks:
+                self.queued_tasks.remove(cursor.data)
+            else:
+                self.queued_tasks.append(cursor.data)
+            self.task_tree.cursor_node.label = self.format_task_label(cursor.data)
+            self.update_summary()
+
     async def confirm(self, *args, **kwargs) -> bool:
         """
         Shortcut for :class:`repype.textual.confirm.confirm`.
         """
         return await confirm(self.app, *args, **kwargs)
+
+    def format_task_label(self, task: repype.task.Task) -> str:
+        """
+        Format the label of a `task` from the `batch` for display in the task tree.
+        """
+        pending_tasks = [rc.task.path for rc in self.app.batch.pending]
+        label = str(task.path.relative_to(task.parent.path) if task.parent else task.path.resolve())
+        queued_str = r'\[[bold]x[/bold]]' if task in self.queued_tasks else '[ ]'
+        pending_str = '[bold](pending)[/bold]' if task.path in pending_tasks else ''
+        return f'{queued_str} {label} {pending_str}'

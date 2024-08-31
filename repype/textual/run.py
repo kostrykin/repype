@@ -85,7 +85,7 @@ class TaskUI:
         return self.intermediate.query_one('.run-task-intermediate > ProgressBar')
 
 
-class RunScreen(ModalScreen[bool]):
+class RunScreen(ModalScreen[int]):
     """
     Screen that performs a batch run of tasks, displaying the progress.
 
@@ -116,10 +116,9 @@ class RunScreen(ModalScreen[bool]):
     The set of finished tasks (represented by their resolved task paths).
     """
 
-    success: bool
+    success_count: int
     """
-    `True` if the batch run was completed successfully, and `False` otherwise
-    (i.e. if the batch run was not started yet, or it is still in progress).
+    The number of successfully completed tasks.
     """
 
     def __init__(self, contexts: Iterable[repype.batch.RunContext]):
@@ -128,7 +127,7 @@ class RunScreen(ModalScreen[bool]):
         self.contexts = list(contexts)
         self.current_task_path = None
         self.finished_tasks = set()
-        self.success = False
+        self.success_count = 0
 
     def task_id(self, task_path: PathLike) -> str:
         """
@@ -203,10 +202,10 @@ class RunScreen(ModalScreen[bool]):
 
         If tasks are running, an error message is shown.
 
-        Dismisses the screen with a value of :attr:`.success` if the screen is closed.
+        Dismisses the screen with the number of successfully completed tasks.
         """
         if self.app.batch.task_process is None:
-            self.dismiss(self.success)
+            self.dismiss(self.success_count)
         else:
             self.app.notify('Cancel before closing, or wait to finish', severity='error', timeout=3)
 
@@ -218,11 +217,8 @@ class RunScreen(ModalScreen[bool]):
         with repype.status.create() as status:
             async with StatusReaderAdapter(status.filepath, self):
                 success = await self.app.batch.run(self.contexts, status = status)
-                self.current_task_path = None
-
-                # Report the success of the batch run
                 log('RunScreen.run_batch', success = success)
-                self.success = success
+                self.current_task_path = None
 
     def handle_new_status(
             self,
@@ -305,6 +301,7 @@ class RunScreen(ModalScreen[bool]):
                     target.add_class('status-success')
                     self.finished_tasks.add(status['task'])
                     self.update_task_ui(status['task'])
+                    self.success_count += 1
                     return
 
                 if status.get('info') == 'error':

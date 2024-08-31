@@ -89,7 +89,7 @@ class EditorScreen(ModalScreen[bool]):
             `True` if the task was created, and `False` otherwise.
         """
         screen = EditorScreen(mode = 'new', parent_task = parent_task)
-        screen.sub_title = 'Add child task'
+        screen.sub_title = 'Add sub-task'
         return await app.push_screen_wait(screen)
 
     @staticmethod
