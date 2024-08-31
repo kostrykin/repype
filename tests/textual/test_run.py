@@ -48,7 +48,7 @@ async def test__success(test_case, mock_log):
                     test_case.assertFalse(task_ui.collapsible.collapsed)
                     test_case.assertEqual(len(task_ui.container.children), 1)
                     test_case.assertIsInstance(task_ui.container.children[-1], repype.textual.run.Label)
-                    test_case.assertEqual(str(task_ui.container.children[-1].renderable), '')  # FIXME: Why is there an empty label?
+                    test_case.assertEqual(str(task_ui.container.children[-1].renderable), '')  # The empty label is from entering the task
 
                     # Test plain status update
 
@@ -236,6 +236,119 @@ async def test__success(test_case, mock_log):
             while mock_batch.task_process:
                 await asyncio.sleep(1)
             test_case.assertEqual(screen.success_count, 1)
+            test_case.assertIsNone(screen.current_task_path)
+
+
+@unittest.mock.patch.object(repype.textual.run, 'log')
+async def test__two_tasks(test_case, mock_log):
+    async with test_case.app.run_test() as pilot:
+
+        # Configure the `RunScreen` with mocked `RunContext` objects
+        rc1 = unittest.mock.MagicMock()
+        rc1.task.path.__str__.return_value = 'task-1'
+        rc1.task.path.resolve.return_value = pathlib.Path('/path/to/task-1')
+        rc2 = unittest.mock.MagicMock()
+        rc2.task.path.__str__.return_value = 'task-2'
+        rc2.task.path.resolve.return_value = pathlib.Path('/path/to/task-2')
+        screen = repype.textual.run.RunScreen([rc1, rc2])
+
+        with unittest.mock.patch.object(test_case.app, 'batch') as mock_batch:
+
+            # Configure the mock batch
+            async def batch_run(self, contexts, status):
+                try:
+                    test_case.assertEqual(contexts, [rc1, rc2])
+
+                    await asyncio.sleep(1)
+                        
+                    test_case.assertIsNone(screen.current_task_path)
+                    test_case.assertEqual(screen.success_count, 0)
+
+                    task1_ui = screen.task_ui(rc1.task.path)
+                    task2_ui = screen.task_ui(rc2.task.path)
+
+                    for task_ui, task in ((task1_ui, rc1), (task2_ui, rc2)):
+                        test_case.assertTrue(task_ui.collapsible.collapsed)
+                        test_case.assertEqual(task_ui.collapsible.title, str(task.task.path.resolve()))
+                        test_case.assertEqual(len(task_ui.container.children), 0)
+
+                    # Verify that the tasks are displayed in the correct order
+                    test_case.assertLess(
+                        task1_ui.collapsible.virtual_region.y,
+                        task2_ui.collapsible.virtual_region.y,
+                    )
+
+                    # Test `enter` status update (task 1)
+
+                    repype.status.update(status, info = 'enter', task = '/path/to/task-1')
+                    await asyncio.sleep(1)
+
+                    test_case.assertEqual(screen.current_task_path, rc1.task.path.resolve())
+                    test_case.assertEqual(screen.success_count, 0)
+
+                    test_case.assertEqual(task1_ui.intermediate.styles.display, 'none')
+                    test_case.assertFalse(task1_ui.collapsible.collapsed)
+                    test_case.assertTrue(task2_ui.collapsible.collapsed)
+
+                    # Test `completed` status update (task 1)
+
+                    repype.status.update(status, info = 'completed', task = '/path/to/task-1')
+                    await asyncio.sleep(1)
+
+                    test_case.assertEqual(screen.current_task_path, rc1.task.path.resolve())
+                    test_case.assertEqual(screen.success_count, 1)
+
+                    test_case.assertIsInstance(task1_ui.container.children[-1], repype.textual.run.Label)
+                    test_case.assertEqual(str(task1_ui.container.children[-1].renderable), f'Results have been stored')
+                    test_case.assertEqual(task1_ui.collapsible.title, '/path/to/task-1 (done)')
+
+                    # Test `enter` status update (task 2)
+
+                    repype.status.update(status, info = 'enter', task = '/path/to/task-2')
+                    await asyncio.sleep(1)
+
+                    test_case.assertEqual(screen.current_task_path, rc2.task.path.resolve())
+                    test_case.assertEqual(screen.success_count, 1)
+
+                    test_case.assertEqual(task2_ui.intermediate.styles.display, 'none')
+                    test_case.assertFalse(task2_ui.collapsible.collapsed)
+                    test_case.assertTrue(task1_ui.collapsible.collapsed)
+
+                    # Test `completed` status update (task 2)
+
+                    repype.status.update(status, info = 'completed', task = '/path/to/task-2')
+                    await asyncio.sleep(1)
+
+                    test_case.assertEqual(screen.current_task_path, rc2.task.path.resolve())
+                    test_case.assertEqual(screen.success_count, 2)
+
+                    test_case.assertIsInstance(task2_ui.container.children[-1], repype.textual.run.Label)
+                    test_case.assertEqual(str(task2_ui.container.children[-1].renderable), f'Results have been stored')
+                    test_case.assertEqual(task2_ui.collapsible.title, '/path/to/task-2 (done)')
+
+                    return True
+                
+                except:
+                    print(traceback.format_exc())
+                    raise
+
+                finally:
+                    mock_batch.task_process = None
+
+            mock_batch.task.side_effect = lambda path: {
+                'task-1': rc1,
+                '/path/to/task-1': rc1,
+                'task-2': rc2,
+                '/path/to/task-2': rc2,
+            }[str(path)].task
+            mock_batch.task_process = 1
+            mock_batch.run = types.MethodType(batch_run, mock_batch)
+
+            # Push the `RunScreen` and wait for the batch to complete
+            await test_case.app.push_screen(screen)
+            while mock_batch.task_process:
+                await asyncio.sleep(1)
+            test_case.assertEqual(screen.success_count, 2)
             test_case.assertIsNone(screen.current_task_path)
 
 

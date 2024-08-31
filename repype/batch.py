@@ -76,6 +76,9 @@ class RunContext:
     
     def __hash__(self) -> int:
         return hash((self.task, self.pipeline, self.config))
+    
+    def __repr__(self) -> str:
+        return f'<{type(self).__name__} "{self.task.path})">'
 
 
 def run_task_process(rc, status) -> int:
@@ -247,6 +250,7 @@ class Batch:
         try:
             
             contexts = self.pending if contexts is None else contexts
+            contexts = sorted(contexts, key = lambda rc: rc.task.path.resolve())
             for rc_idx, rc in enumerate(contexts):
                 task_status = repype.status.derive(status)
     

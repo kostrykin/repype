@@ -233,6 +233,7 @@ class RunScreen(ModalScreen[int]):
         The arguments are the same as those of the :meth:`~repype.status.StatusReader.handle_new_status` method of the :class:`repype.status.StatusReader` class.
         """
         log('RunScreen.handle_new_status', status = status, intermediate = intermediate)
+        previous_task_path = self.current_task_path
         if isinstance(status, dict) and (task_path := status.get('task')):
             self.current_task_path = pathlib.Path(task_path)
         else:
@@ -272,8 +273,8 @@ class RunScreen(ModalScreen[int]):
             if isinstance(status, dict):
 
                 if status.get('info') == 'enter':
-                    #label.update('Task has begun')
-                    #self.update_intermediate_extra(task_ui.container, status = status, intermediate = intermediate)
+                    if previous_task_path:
+                        self.task_ui(previous_task_path).collapsible.collapsed = True
                     return
 
                 if status.get('info') == 'start':

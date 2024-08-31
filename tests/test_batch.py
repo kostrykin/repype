@@ -291,6 +291,22 @@ class Batch__run(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(ret)
         self.assertEqual([list(item.keys()) for item in status.data], [['expand']] * 3, '\n' + pprint.pformat(status.data))
 
+    @unittest.mock.patch('dill.dumps', side_effect = lambda args: args)
+    @unittest.mock.patch('asyncio.create_subprocess_exec', new_callable = unittest.mock.AsyncMock)
+    @unittest.mock.patch('repype.status')
+    async def test_wrong_order(self, mock_status, mock_create_subprocess_exec, mock_dill_dumps):
+        mock_task_process = await mock_create_subprocess_exec()
+        mock_task_process.communicate.return_value = ('0', None)
+
+        rc1 = self.batch.context(self.root_path)
+        rc2 = self.batch.context(self.root_path / 'task-2')
+        rc3 = self.batch.context(self.root_path / 'task-3')
+        ret = await self.batch.run([rc2, rc1, rc3])
+
+        call_order = [call.kwargs['input'][0] for call in mock_task_process.communicate.call_args_list]
+        self.assertEqual(call_order, [rc1, rc2, rc3])
+        self.assertTrue(ret)
+
 
 class Batch__cancel(unittest.IsolatedAsyncioTestCase):
 
