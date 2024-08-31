@@ -203,7 +203,7 @@ class BatchScreen(Screen):
             # Determine the contexts to run
             if len(queued_contexts) == 0:
                 if selected_context in self.app.batch.pending:
-                    if self.confirm(
+                    if await self.confirm(
                             'No tasks queued. Run the selected task?' '\n'
                             '[bold]' + str(selected_context.task.path) + '[/bold]',
                             default = 'yes',

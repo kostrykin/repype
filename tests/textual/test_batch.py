@@ -59,8 +59,9 @@ async def test(test_case):
         test_case.assertNotIn('pending', task2_node.label)
 
         # Verify the `pending` label
-        test_case.assertIn('Tasks:', screen.query_one(f'#batch-pending').renderable)
-        test_case.assertIn('1 pending', screen.query_one(f'#batch-pending').renderable)
+        test_case.assertIn('Tasks:', screen.query_one(f'#batch-summary').renderable)
+        test_case.assertIn('1 pending', screen.query_one(f'#batch-summary').renderable)
+        test_case.assertIn('0 queued', screen.query_one(f'#batch-summary').renderable)
 
 
 async def test__action_delete_task__none(test_case):
@@ -392,34 +393,48 @@ async def test__run_task__completed(test_case):
         test_case.assertIsInstance(test_case.app.screen, repype.textual.batch.BatchScreen)
 
 
-@unittest.mock.patch.object(repype.textual.batch, 'RunScreen')
-async def test__run_task__pending(test_case, mock_RunScreen):
+@unittest.mock.patch('repype.textual.batch.RunScreen')
+@unittest.mock.patch.object(repype.textual.batch.BatchScreen, 'confirm', return_value = True)
+async def test__run_task__pending(test_case, mock_confirm, mock_RunScreen):
 
     # Load the batch
     batch = repype.batch.Batch()
     batch.load(test_case.root_path)
 
     # Load the tasks
-    task1 = batch.task(test_case.root_path / 'task')
+    ctx1 = batch.context(test_case.root_path / 'task')
 
     # Verify the batch screen and its contents
     async with test_case.app.run_test() as pilot:
 
         # Select the first task
         task_tree = test_case.app.screen.query_one('#setup-tasks')
-        task1_node = find_tree_node_by_task(task_tree.root, task1)
+        task1_node = find_tree_node_by_task(task_tree.root, ctx1.task)
         task_tree.select_node(task1_node)
 
-        # Patch `app.push_screen` method
-        with unittest.mock.patch.object(test_case.app, 'push_screen') as mock_push_screen:
+        # Patch `app.push_screen_wait` method
+        with unittest.mock.patch.object(test_case.app, 'push_screen_wait') as mock_push_screen_wait:
 
-            # Run the selected task
-            await pilot.press('r')
+            # Patch `BatchScreen.update_task_tree` method
+            with unittest.mock.patch.object(test_case.app.screen, 'update_task_tree') as mock_update_task_tree:
 
-            # Confirm that `RunScreen` and `app.push_screen` were called
-            mock_RunScreen.assert_called_once()
-            test_case.assertEqual(len(mock_RunScreen.call_args[0]), 1)
-            test_case.assertEqual(len(mock_RunScreen.call_args[0][0]), 1)
-            test_case.assertEqual(mock_RunScreen.call_args[0][0][0].task, task1)
-            mock_push_screen.assert_called_once()
-            test_case.assertIs(mock_push_screen.call_args[0][0], mock_RunScreen.return_value)
+                # Test with `mock_push_screen_wait` returning 0
+                mock_push_screen_wait.return_value = 0
+                await pilot.press('r')
+
+                # Perform the checks
+                mock_RunScreen.assert_called_once_with([ctx1])
+                mock_update_task_tree.assert_not_called()
+
+                # Reset the mocks
+                mock_RunScreen.reset_mock()
+                mock_push_screen_wait.reset_mock()
+                mock_update_task_tree.reset_mock()
+
+                # Test with `mock_push_screen_wait` returning 1
+                mock_push_screen_wait.return_value = 1
+                await pilot.press('r')
+
+                # Perform the checks
+                mock_RunScreen.assert_called_once_with([ctx1])
+                mock_update_task_tree.assert_called_once()

@@ -358,6 +358,18 @@ class Pipeline:
         for stage in self.stages:
             fields -= frozenset(stage.consumes)
         return frozenset(fields)
+    
+    def __eq__(self, other: object) -> bool:
+        return other is not None and all(
+            (
+                isinstance(other, type(self)),
+                self.stages == other.stages,
+                self.scopes == other.scopes,
+            )
+        )
+    
+    def __hash__(self) -> int:
+        return hash((self.stages, self.scopes))
 
 
 def create_pipeline(stages: Sequence[repype.stage.Stage], *args, pipeline_cls: Type[Pipeline] = Pipeline, **kwargs) -> Pipeline:

@@ -407,3 +407,14 @@ class Stage:
 
     def __repr__(self) -> str:
         return f'<{type(self).__name__}, id: {self.id}>'
+    
+    def __eq__(self, other: object) -> bool:
+        return other is not None and all(
+            (
+                isinstance(other, type(self)),
+                self.signature == other.signature,
+            )
+        )
+    
+    def __hash__(self) -> int:
+        return hash(self.signature)

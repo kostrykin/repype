@@ -138,7 +138,7 @@ class Task:
         self.parent = parent
         self.path   = pathlib.Path(path)
 
-    def __eq__(self, other):
+    def __eq__(self, other: object):
         return other is not None and all(
             (
                 isinstance(other, type(self)),

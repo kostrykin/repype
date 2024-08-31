@@ -63,6 +63,19 @@ class RunContext:
             The *task data object* returned by the task.
         """
         return self.task.run(self.config, pipeline = self.pipeline, *args, **kwargs)
+    
+    def __eq__(self, other: object) -> bool:
+        return other is not None and all(
+            (
+                isinstance(other, type(self)),
+                self.task == other.task,
+                self.pipeline == other.pipeline,
+                self.config == other.config,
+            )
+        )
+    
+    def __hash__(self) -> int:
+        return hash((self.task, self.pipeline, self.config))
 
 
 def run_task_process(rc, status) -> int:

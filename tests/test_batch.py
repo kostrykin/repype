@@ -13,6 +13,35 @@ from . import test_cli
 import repype.status
 
 
+class RunContext__eq__(unittest.TestCase):
+
+    def setUp(self):
+        self.task1 = repype.task.Task(
+            path = 'task1',
+            spec = dict(
+                runnable = True,
+                pipeline = 'repype.pipeline.Pipeline',
+            ),
+        )
+        self.task2 = repype.task.Task(
+            path = 'task1',
+            spec = dict(
+                runnable = True,
+                pipeline = 'repype.pipeline.Pipeline',
+            ),
+        )
+        self.rc1 = repype.batch.RunContext(self.task1)
+        self.rc2 = repype.batch.RunContext(self.task2)
+
+    def test__equality(self):
+        self.assertEqual(self.rc1, self.rc1)
+        self.assertEqual(self.rc1, self.rc2)
+
+    def test__inequality(self):
+        self.rc2.config['key'] = 'value'
+        self.assertNotEqual(self.rc1, self.rc2)
+
+
 class Batch__task(unittest.TestCase):
 
     def test_virtual_paths(self):
