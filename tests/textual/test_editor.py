@@ -19,7 +19,7 @@ async def test__new(test_case):
     batch.load(test_case.root_path)
 
     # Load the tasks
-    ctx1 = batch.context(test_case.root_path / 'task')
+    rc1 = batch.context(test_case.root_path / 'task')
 
     # Run the app and push the editor screen
     async with test_case.app.run_test() as pilot:
@@ -27,18 +27,18 @@ async def test__new(test_case):
         # Await `EditorScreen.new` in a background task
         @work
         async def EditorScreen__new(app):
-            return await repype.textual.editor.EditorScreen.new(app, parent_task = ctx1.task)
+            return await repype.textual.editor.EditorScreen.new(app, parent_task = rc1.task)
         EditorScreen__new(test_case.app)
         await pilot.pause(0)
 
         # Verify the editor screen
         screen = test_case.app.screen
         test_case.assertIsInstance(screen, repype.textual.editor.EditorScreen)
-        test_case.assertEqual(screen.parent_task, ctx1.task)
+        test_case.assertEqual(screen.parent_task, rc1.task)
         test_case.assertIsNone(screen.my_task)
         test_case.assertEqual(screen.mode, 'new')
         test_case.assertIn('Parent task:', screen.query_one('#editor-main-header').renderable)
-        test_case.assertIn(str(ctx1.task.path), screen.query_one('#editor-main-header').renderable)
+        test_case.assertIn(str(rc1.task.path), screen.query_one('#editor-main-header').renderable)
         test_case.assertEqual(screen.query_one('#editor-main-name').value, '')
         test_case.assertEqual(screen.query_one('#editor-code').text, '')
 
@@ -50,7 +50,7 @@ async def test__edit(test_case):
     batch.load(test_case.root_path)
 
     # Load the tasks
-    ctx1 = batch.context(test_case.root_path / 'task')
+    rc1 = batch.context(test_case.root_path / 'task')
 
     # Run the app and push the editor screen
     async with test_case.app.run_test() as pilot:
@@ -58,23 +58,23 @@ async def test__edit(test_case):
         # Await `EditorScreen.edit` in a background task
         @work
         async def EditorScreen__edit(app):
-            return await repype.textual.editor.EditorScreen.edit(app, task = ctx1.task)
+            return await repype.textual.editor.EditorScreen.edit(app, task = rc1.task)
         EditorScreen__edit(test_case.app)
         await pilot.pause(1)
 
         # Verify the editor screen
         screen = test_case.app.screen
         test_case.assertIsInstance(screen, repype.textual.editor.EditorScreen)
-        test_case.assertEqual(screen.my_task, ctx1.task)
+        test_case.assertEqual(screen.my_task, rc1.task)
         test_case.assertIsNone(screen.parent_task)
         test_case.assertEqual(screen.mode, 'edit')
         test_case.assertIn('Task:', screen.query_one('#editor-main-header').renderable)
-        test_case.assertIn(str(ctx1.task.path), screen.query_one('#editor-main-header').renderable)
+        test_case.assertIn(str(rc1.task.path), screen.query_one('#editor-main-header').renderable)
         with test_case.assertRaises(textual.css.query.NoMatches):
             screen.query_one('#editor-main-name')
         test_case.assertEqual(
             screen.query_one('#editor-code').text,
-            (ctx1.task.path / 'task.yml').read_text(),
+            (rc1.task.path / 'task.yml').read_text(),
         )
 
 
@@ -86,7 +86,7 @@ async def test__action_cancel(test_case, mock_EditorScreen_dismiss):
     batch.load(test_case.root_path)
 
     # Load the tasks
-    ctx1 = batch.context(test_case.root_path / 'task')
+    rc1 = batch.context(test_case.root_path / 'task')
 
     # Run the app and push the editor screen
     async with test_case.app.run_test() as pilot:
@@ -94,7 +94,7 @@ async def test__action_cancel(test_case, mock_EditorScreen_dismiss):
         # Await `EditorScreen.edit` in a background task
         @work
         async def EditorScreen__edit(app):
-            return await repype.textual.editor.EditorScreen.edit(app, task = ctx1.task)
+            return await repype.textual.editor.EditorScreen.edit(app, task = rc1.task)
         EditorScreen__edit(test_case.app)
         await pilot.pause(1)
 

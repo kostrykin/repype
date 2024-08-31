@@ -18,22 +18,22 @@ async def test__success(test_case, mock_log):
     async with test_case.app.run_test() as pilot:
 
         # Configure the `RunScreen` with a mocked `RunContext` object
-        ctx1 = unittest.mock.MagicMock()
-        ctx1.task.path.__str__.return_value = 'task1'
-        ctx1.task.path.resolve.return_value = pathlib.Path('/path/to/task1')
-        screen = repype.textual.run.RunScreen([ctx1])
+        rc1 = unittest.mock.MagicMock()
+        rc1.task.path.__str__.return_value = 'task1'
+        rc1.task.path.resolve.return_value = pathlib.Path('/path/to/task1')
+        screen = repype.textual.run.RunScreen([rc1])
 
         with unittest.mock.patch.object(test_case.app, 'batch') as mock_batch:
 
             # Configure the mock batch
             async def batch_run(self, contexts, status):
                 try:
-                    test_case.assertEqual(contexts, [ctx1])
+                    test_case.assertEqual(contexts, [rc1])
 
                     await asyncio.sleep(1)
-                    task_ui = screen.task_ui(ctx1.task.path)
+                    task_ui = screen.task_ui(rc1.task.path)
                     test_case.assertTrue(task_ui.collapsible.collapsed)
-                    test_case.assertEqual(task_ui.collapsible.title, str(ctx1.task.path.resolve()))
+                    test_case.assertEqual(task_ui.collapsible.title, str(rc1.task.path.resolve()))
                     test_case.assertEqual(len(task_ui.container.children), 0)
                     test_case.assertIsNone(screen.current_task_path)
                     test_case.assertEqual(screen.success_count, 0)
@@ -44,7 +44,7 @@ async def test__success(test_case, mock_log):
 
                     await asyncio.sleep(1)
                     test_case.assertEqual(task_ui.intermediate.styles.display, 'none')
-                    test_case.assertEqual(screen.current_task_path, ctx1.task.path.resolve())
+                    test_case.assertEqual(screen.current_task_path, rc1.task.path.resolve())
                     test_case.assertFalse(task_ui.collapsible.collapsed)
                     test_case.assertEqual(len(task_ui.container.children), 1)
                     test_case.assertIsInstance(task_ui.container.children[-1], repype.textual.run.Label)
@@ -174,7 +174,7 @@ async def test__success(test_case, mock_log):
                     test_case.assertEqual(len(task_ui.container.children), 10)
                     test_case.assertIsInstance(task_ui.container.children[-1], repype.textual.run.Label)
                     test_case.assertEqual(str(task_ui.container.children[-1].renderable), f'Results have been stored')
-                    test_case.assertEqual(task_ui.collapsible.title, f'{ctx1.task.path.resolve()} (done)')
+                    test_case.assertEqual(task_ui.collapsible.title, f'{rc1.task.path.resolve()} (done)')
 
                     # Test `error` status update
 
@@ -227,7 +227,7 @@ async def test__success(test_case, mock_log):
                 finally:
                     mock_batch.task_process = None
 
-            mock_batch.task.return_value = ctx1.task
+            mock_batch.task.return_value = rc1.task
             mock_batch.task_process = 1
             mock_batch.run = types.MethodType(batch_run, mock_batch)
 
@@ -359,13 +359,13 @@ async def test__action_cancel(test_case):
     batch.load(test_case.root_path)
 
     # Load the tasks
-    ctx1 = batch.context(test_case.root_path / 'task')
+    rc1 = batch.context(test_case.root_path / 'task')
 
     # Verify the `RunScreen` and its contents
     async with test_case.app.run_test() as pilot:
 
         # Configure the `RunScreen` with a mocked `RunContext` object
-        screen = repype.textual.run.RunScreen([ctx1])
+        screen = repype.textual.run.RunScreen([rc1])
         with unittest.mock.patch.object(screen, 'handle_new_status') as mock_handle_new_status:
             await test_case.app.push_screen(screen)
 
@@ -405,13 +405,13 @@ async def test__action_close__while_running(test_case, mock_log):
     batch.load(test_case.root_path)
 
     # Load the tasks
-    ctx1 = batch.context(test_case.root_path / 'task')
+    rc1 = batch.context(test_case.root_path / 'task')
 
     # Verify the `RunScreen` and its contents
     async with test_case.app.run_test() as pilot:
 
         # Configure the `RunScreen` with a mocked `RunContext` object
-        screen = repype.textual.run.RunScreen([ctx1])
+        screen = repype.textual.run.RunScreen([rc1])
         await test_case.app.push_screen(screen)
         await pilot.pause(0)
 
@@ -434,13 +434,13 @@ async def test__action_close(test_case, mock_dismiss, mock_log):
     batch.load(test_case.root_path)
 
     # Load the tasks
-    ctx1 = batch.context(test_case.root_path / 'task')
+    rc1 = batch.context(test_case.root_path / 'task')
 
     # Verify the `RunScreen` and its contents
     async with test_case.app.run_test() as pilot:
 
         # Configure the `RunScreen` with a mocked `RunContext` object
-        screen = repype.textual.run.RunScreen([ctx1])
+        screen = repype.textual.run.RunScreen([rc1])
         await test_case.app.push_screen(screen)
         await pilot.pause(0)
 

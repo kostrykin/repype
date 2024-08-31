@@ -26,11 +26,11 @@ async def test(test_case):
     batch.load(test_case.root_path)
 
     # Load the tasks
-    ctx1 = batch.context(test_case.root_path / 'task')
-    ctx2 = batch.context(test_case.root_path / 'task' / 'sigma=2')
+    rc1 = batch.context(test_case.root_path / 'task')
+    rc2 = batch.context(test_case.root_path / 'task' / 'sigma=2')
 
     # Mark `task2` as completed
-    ctx2.run()
+    rc2.run()
 
     # Verify the batch screen and its contents
     async with test_case.app.run_test() as pilot:
@@ -51,9 +51,9 @@ async def test(test_case):
         # Verify task nodes
         task1_node = task_tree.root.children[0]
         task2_node = task_tree.root.children[0].children[0]
-        test_case.assertEqual(task1_node.data, ctx1.task)
-        test_case.assertEqual(task2_node.data, ctx2.task)
-        test_case.assertIn(str(ctx1.task.path), task1_node.label)
+        test_case.assertEqual(task1_node.data, rc1.task)
+        test_case.assertEqual(task2_node.data, rc2.task)
+        test_case.assertIn(str(rc1.task.path), task1_node.label)
         test_case.assertIn('sigma=2', task2_node.label)
         test_case.assertIn('pending', task1_node.label)
         test_case.assertNotIn('pending', task2_node.label)
@@ -71,11 +71,11 @@ async def test__action_delete_task__none(test_case):
     batch.load(test_case.root_path)
 
     # Load the tasks
-    ctx1 = batch.context(test_case.root_path / 'task')
-    ctx2 = batch.context(test_case.root_path / 'task' / 'sigma=2')
+    rc1 = batch.context(test_case.root_path / 'task')
+    rc2 = batch.context(test_case.root_path / 'task' / 'sigma=2')
 
     # Mark `task2` as completed
-    ctx2.run()
+    rc2.run()
 
     # Verify the batch screen and its contents
     async with test_case.app.run_test() as pilot:
@@ -98,18 +98,18 @@ async def test__action_delete_task__task1(test_case):
     batch.load(test_case.root_path)
 
     # Load the tasks
-    ctx1 = batch.context(test_case.root_path / 'task')
-    ctx2 = batch.context(test_case.root_path / 'task' / 'sigma=2')
+    rc1 = batch.context(test_case.root_path / 'task')
+    rc2 = batch.context(test_case.root_path / 'task' / 'sigma=2')
 
     # Mark `task2` as completed
-    ctx2.run()
+    rc2.run()
 
     # Verify the batch screen and its contents
     async with test_case.app.run_test() as pilot:
 
         # Select the second task
         task_tree = test_case.app.screen.query_one('#setup-tasks')
-        task1_node = find_tree_node_by_task(task_tree.root, ctx1.task)
+        task1_node = find_tree_node_by_task(task_tree.root, rc1.task)
         task_tree.select_node(task1_node)
 
         # Delete the selected task
@@ -132,18 +132,18 @@ async def test__action_delete_task__task2(test_case):
     batch.load(test_case.root_path)
 
     # Load the tasks
-    ctx1 = batch.context(test_case.root_path / 'task')
-    ctx2 = batch.context(test_case.root_path / 'task' / 'sigma=2')
+    rc1 = batch.context(test_case.root_path / 'task')
+    rc2 = batch.context(test_case.root_path / 'task' / 'sigma=2')
 
     # Mark `task2` as completed
-    ctx2.run()
+    rc2.run()
 
     # Verify the batch screen and its contents
     async with test_case.app.run_test() as pilot:
 
         # Select the second task
         task_tree = test_case.app.screen.query_one('#setup-tasks')
-        task2_node = find_tree_node_by_task(task_tree.root, ctx2.task)
+        task2_node = find_tree_node_by_task(task_tree.root, rc2.task)
         task_tree.select_node(task2_node)
 
         # Delete the selected task
@@ -161,7 +161,7 @@ async def test__action_delete_task__task2(test_case):
 
         # Verify task nodes
         task1_node = task_tree.root.children[0]
-        test_case.assertEqual(task1_node.data, ctx1.task)
+        test_case.assertEqual(task1_node.data, rc1.task)
 
 
 async def test__reset_task__none(test_case):
@@ -171,12 +171,12 @@ async def test__reset_task__none(test_case):
     batch.load(test_case.root_path)
 
     # Load the tasks
-    ctx1 = batch.context(test_case.root_path / 'task')
-    ctx2 = batch.context(test_case.root_path / 'task' / 'sigma=2')
+    rc1 = batch.context(test_case.root_path / 'task')
+    rc2 = batch.context(test_case.root_path / 'task' / 'sigma=2')
 
     # Mark `task1` and `task2` as completed
-    ctx1.run()
-    ctx2.run()
+    rc1.run()
+    rc2.run()
 
     # Verify the batch screen and its contents
     async with test_case.app.run_test() as pilot:
@@ -199,19 +199,19 @@ async def test__reset_task__task1(test_case):
     batch.load(test_case.root_path)
 
     # Load the tasks
-    ctx1 = batch.context(test_case.root_path / 'task')
-    ctx2 = batch.context(test_case.root_path / 'task' / 'sigma=2')
+    rc1 = batch.context(test_case.root_path / 'task')
+    rc2 = batch.context(test_case.root_path / 'task' / 'sigma=2')
 
     # Mark `task1` and `task2` as completed
-    ctx1.run()
-    ctx2.run()
+    rc1.run()
+    rc2.run()
 
     # Verify the batch screen and its contents
     async with test_case.app.run_test() as pilot:
 
         # Select the first task
         task_tree = test_case.app.screen.query_one('#setup-tasks')
-        task1_node = find_tree_node_by_task(task_tree.root, ctx1.task)
+        task1_node = find_tree_node_by_task(task_tree.root, rc1.task)
         task_tree.select_node(task1_node)
 
         # Delete the selected task
@@ -224,8 +224,8 @@ async def test__reset_task__task1(test_case):
         await pilot.pause(0)
 
         # Verify task nodes
-        task1_node = find_tree_node_by_task(task_tree.root, ctx1.task)
-        task2_node = find_tree_node_by_task(task_tree.root, ctx2.task)
+        task1_node = find_tree_node_by_task(task_tree.root, rc1.task)
+        task2_node = find_tree_node_by_task(task_tree.root, rc2.task)
         test_case.assertIn('pending', task1_node.label)
         test_case.assertNotIn('pending', task2_node.label)
 
@@ -258,14 +258,14 @@ async def test__add_task__task1(test_case, mock_EditorScreen_new):
     batch.load(test_case.root_path)
 
     # Load the tasks
-    ctx1 = batch.context(test_case.root_path / 'task')
+    rc1 = batch.context(test_case.root_path / 'task')
 
     # Verify the batch screen and its contents
     async with test_case.app.run_test() as pilot:
 
         # Select the first task
         task_tree = test_case.app.screen.query_one('#setup-tasks')
-        task1_node = find_tree_node_by_task(task_tree.root, ctx1.task)
+        task1_node = find_tree_node_by_task(task_tree.root, rc1.task)
         task_tree.select_node(task1_node)
 
         # Patch `BatchScreen.update_task_tree` method
@@ -274,7 +274,7 @@ async def test__add_task__task1(test_case, mock_EditorScreen_new):
             # Test with `EditorScreen.new` returning `False`
             mock_EditorScreen_new.return_value = False
             await pilot.press('a')
-            mock_EditorScreen_new.assert_awaited_once_with(test_case.app, parent_task = ctx1.task)
+            mock_EditorScreen_new.assert_awaited_once_with(test_case.app, parent_task = rc1.task)
             mock_update_task_tree.assert_not_called()
 
             # Reset the mocks
@@ -284,7 +284,7 @@ async def test__add_task__task1(test_case, mock_EditorScreen_new):
             # Test with `EditorScreen.new` returning `True`
             mock_EditorScreen_new.return_value = True
             await pilot.press('a')
-            mock_EditorScreen_new.assert_awaited_once_with(test_case.app, parent_task = ctx1.task)
+            mock_EditorScreen_new.assert_awaited_once_with(test_case.app, parent_task = rc1.task)
             mock_update_task_tree.assert_called_once()
 
 
@@ -316,14 +316,14 @@ async def test__edit_task__task1(test_case, mock_EditorScreen_edit):
     batch.load(test_case.root_path)
 
     # Load the tasks
-    ctx1 = batch.context(test_case.root_path / 'task')
+    rc1 = batch.context(test_case.root_path / 'task')
 
     # Verify the batch screen and its contents
     async with test_case.app.run_test() as pilot:
 
         # Select the first task
         task_tree = test_case.app.screen.query_one('#setup-tasks')
-        task1_node = find_tree_node_by_task(task_tree.root, ctx1.task)
+        task1_node = find_tree_node_by_task(task_tree.root, rc1.task)
         task_tree.select_node(task1_node)
 
         # Patch `BatchScreen.update_task_tree` method
@@ -332,7 +332,7 @@ async def test__edit_task__task1(test_case, mock_EditorScreen_edit):
             # Test with `EditorScreen.edit` returning `False`
             mock_EditorScreen_edit.return_value = False
             await pilot.press('e')
-            mock_EditorScreen_edit.assert_awaited_once_with(test_case.app, task = ctx1.task)
+            mock_EditorScreen_edit.assert_awaited_once_with(test_case.app, task = rc1.task)
             mock_update_task_tree.assert_not_called()
 
             # Reset the mocks
@@ -342,7 +342,7 @@ async def test__edit_task__task1(test_case, mock_EditorScreen_edit):
             # Test with `EditorScreen.edit` returning `True`
             mock_EditorScreen_edit.return_value = True
             await pilot.press('e')
-            mock_EditorScreen_edit.assert_awaited_once_with(test_case.app, task = ctx1.task)
+            mock_EditorScreen_edit.assert_awaited_once_with(test_case.app, task = rc1.task)
             mock_update_task_tree.assert_called_once()
 
 
@@ -373,17 +373,17 @@ async def test__run_task__completed(test_case):
     batch.load(test_case.root_path)
 
     # Load the tasks
-    ctx1 = batch.context(test_case.root_path / 'task')
+    rc1 = batch.context(test_case.root_path / 'task')
 
     # Mark `task1` as completed
-    ctx1.run()
+    rc1.run()
 
     # Verify the batch screen and its contents
     async with test_case.app.run_test() as pilot:
 
         # Select the first task
         task_tree = test_case.app.screen.query_one('#setup-tasks')
-        task1_node = find_tree_node_by_task(task_tree.root, ctx1.task)
+        task1_node = find_tree_node_by_task(task_tree.root, rc1.task)
         task_tree.select_node(task1_node)
 
         # Run the selected task
@@ -402,14 +402,14 @@ async def test__run_task__pending(test_case, mock_confirm, mock_RunScreen):
     batch.load(test_case.root_path)
 
     # Load the tasks
-    ctx1 = batch.context(test_case.root_path / 'task')
+    rc1 = batch.context(test_case.root_path / 'task')
 
     # Verify the batch screen and its contents
     async with test_case.app.run_test() as pilot:
 
         # Select the first task
         task_tree = test_case.app.screen.query_one('#setup-tasks')
-        task1_node = find_tree_node_by_task(task_tree.root, ctx1.task)
+        task1_node = find_tree_node_by_task(task_tree.root, rc1.task)
         task_tree.select_node(task1_node)
 
         # Patch `app.push_screen_wait` method
@@ -423,7 +423,7 @@ async def test__run_task__pending(test_case, mock_confirm, mock_RunScreen):
                 await pilot.press('r')
 
                 # Perform the checks
-                mock_RunScreen.assert_called_once_with([ctx1])
+                mock_RunScreen.assert_called_once_with([rc1])
                 mock_update_task_tree.assert_not_called()
 
                 # Reset the mocks
@@ -436,7 +436,7 @@ async def test__run_task__pending(test_case, mock_confirm, mock_RunScreen):
                 await pilot.press('r')
 
                 # Perform the checks
-                mock_RunScreen.assert_called_once_with([ctx1])
+                mock_RunScreen.assert_called_once_with([rc1])
                 mock_update_task_tree.assert_called_once()
 
 
@@ -468,14 +468,14 @@ async def test__toggle_task__task1(test_case):
     batch.load(test_case.root_path)
 
     # Load the tasks
-    ctx1 = batch.context(test_case.root_path / 'task')
+    rc1 = batch.context(test_case.root_path / 'task')
 
     # Verify the batch screen and its contents
     async with test_case.app.run_test() as pilot:
 
         # Select the root node (not a task)
         task_tree = test_case.app.screen.query_one('#setup-tasks')
-        task1_node = find_tree_node_by_task(task_tree.root, ctx1.task)
+        task1_node = find_tree_node_by_task(task_tree.root, rc1.task)
         task_tree.select_node(task1_node)
         label = str(task_tree.cursor_node.label)[4:]
 
@@ -499,11 +499,11 @@ async def test__non_pending_tasks__task1(test_case):
     batch.load(test_case.root_path)
 
     # Load the tasks
-    ctx1 = batch.context(test_case.root_path / 'task')
-    ctx2 = batch.context(test_case.root_path / 'task' / 'sigma=2')
+    rc1 = batch.context(test_case.root_path / 'task')
+    rc2 = batch.context(test_case.root_path / 'task' / 'sigma=2')
 
     # Mark `task1` as completed
-    ctx1.run()
+    rc1.run()
 
     # Verify the batch screen and its contents
     async with test_case.app.run_test() as pilot:
@@ -512,7 +512,7 @@ async def test__non_pending_tasks__task1(test_case):
             frozenset(test_case.app.screen.non_pending_tasks),
             frozenset(
                 [
-                    ctx1.task,
+                    rc1.task,
                 ],
             ),
         )
@@ -525,12 +525,12 @@ async def test__non_pending_tasks__all(test_case):
     batch.load(test_case.root_path)
 
     # Load the tasks
-    ctx1 = batch.context(test_case.root_path / 'task')
-    ctx2 = batch.context(test_case.root_path / 'task' / 'sigma=2')
+    rc1 = batch.context(test_case.root_path / 'task')
+    rc2 = batch.context(test_case.root_path / 'task' / 'sigma=2')
 
     # Mark `task1` and `task2` as completed
-    ctx1.run()
-    ctx2.run()
+    rc1.run()
+    rc2.run()
 
     # Verify the batch screen and its contents
     async with test_case.app.run_test() as pilot:
@@ -539,8 +539,8 @@ async def test__non_pending_tasks__all(test_case):
             frozenset(test_case.app.screen.non_pending_tasks),
             frozenset(
                 [
-                    ctx1.task,
-                    ctx2.task,
+                    rc1.task,
+                    rc2.task,
                 ],
             ),
         )
@@ -553,8 +553,8 @@ async def test__non_pending_tasks__none(test_case):
     batch.load(test_case.root_path)
 
     # Load the tasks
-    ctx1 = batch.context(test_case.root_path / 'task')
-    ctx2 = batch.context(test_case.root_path / 'task' / 'sigma=2')
+    rc1 = batch.context(test_case.root_path / 'task')
+    rc2 = batch.context(test_case.root_path / 'task' / 'sigma=2')
 
     # Verify the batch screen and its contents
     async with test_case.app.run_test() as pilot:
@@ -572,17 +572,17 @@ async def test__toggle_task__completed(test_case):
     batch.load(test_case.root_path)
 
     # Load the tasks
-    ctx1 = batch.context(test_case.root_path / 'task')
+    rc1 = batch.context(test_case.root_path / 'task')
 
     # Mark `task1` as completed
-    ctx1.run()
+    rc1.run()
 
     # Verify the batch screen and its contents
     async with test_case.app.run_test() as pilot:
 
         # Select the root node (not a task)
         task_tree = test_case.app.screen.query_one('#setup-tasks')
-        task1_node = find_tree_node_by_task(task_tree.root, ctx1.task)
+        task1_node = find_tree_node_by_task(task_tree.root, rc1.task)
         task_tree.select_node(task1_node)
         label = str(task_tree.cursor_node.label)
 
@@ -600,8 +600,8 @@ async def test__update_task_tree(test_case):
     batch.load(test_case.root_path)
 
     # Load the tasks
-    ctx1 = batch.context(test_case.root_path / 'task')
-    ctx2 = batch.context(test_case.root_path / 'task' / 'sigma=2')
+    rc1 = batch.context(test_case.root_path / 'task')
+    rc2 = batch.context(test_case.root_path / 'task' / 'sigma=2')
 
     # Verify the batch screen and its contents
     async with test_case.app.run_test() as pilot:
@@ -611,12 +611,12 @@ async def test__update_task_tree(test_case):
 
         # Mark both tasks as queued
         test_case.app.screen.queued_tasks = [
-            ctx1.task,
-            ctx2.task,
+            rc1.task,
+            rc2.task,
         ]
 
         # Mark `task1` as completed
-        ctx1.run()
+        rc1.run()
 
         # Call the `update_task_tree` method
         test_case.app.screen.update_task_tree()
@@ -624,10 +624,10 @@ async def test__update_task_tree(test_case):
         # Test the results
         test_case.assertEqual(
             test_case.app.screen.queued_tasks,
-            [ctx2.task]
+            [rc2.task]
         )
-        label1 = str(find_tree_node_by_task(test_case.app.screen.task_tree.root, ctx1.task).label)
-        label2 = str(find_tree_node_by_task(test_case.app.screen.task_tree.root, ctx2.task).label)
+        label1 = str(find_tree_node_by_task(test_case.app.screen.task_tree.root, rc1.task).label)
+        label2 = str(find_tree_node_by_task(test_case.app.screen.task_tree.root, rc2.task).label)
         test_case.assertTrue(label1.startswith('[ ] '))
         test_case.assertTrue(label2.startswith('[x] '))
         test_case.assertTrue('pending' not in label1)
