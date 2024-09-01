@@ -142,7 +142,7 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
                 text = f'({status["step"] + 1}/{status["step_count"]}) Processing: {status["input_id"]}'
 
             if status.get('info') == 'start-stage':
-                text = f'Starting stage: {status["stage"]}'
+                text = f'Running stage: {status["stage"]}'
 
             if status.get('info') == 'storing':
                 text = f'Storing results...'

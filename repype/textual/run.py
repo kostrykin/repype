@@ -292,7 +292,7 @@ class RunScreen(ModalScreen[int]):
                     return
 
                 if status.get('info') == 'start-stage':
-                    target.update(f'Starting stage: {status["stage"]}')
+                    target.update(f'Running stage: {status["stage"]}')
                     return
 
                 if status.get('info') == 'storing':

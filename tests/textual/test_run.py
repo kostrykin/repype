@@ -153,7 +153,7 @@ async def test__success(test_case, mock_log):
                     test_case.assertEqual(task_ui.intermediate.styles.display, 'none')
                     test_case.assertEqual(len(task_ui.container.children), 8)
                     test_case.assertIsInstance(task_ui.container.children[-1], repype.textual.run.Label)
-                    test_case.assertEqual(str(task_ui.container.children[-1].renderable), f'Starting stage: some-stage')
+                    test_case.assertEqual(str(task_ui.container.children[-1].renderable), f'Running stage: some-stage')
 
                     # Test `storing` status update
 
