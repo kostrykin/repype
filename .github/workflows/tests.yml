@@ -54,6 +54,6 @@ jobs:
         run: |
           coverage run -m unittest discover
           coverage combine
-          coverage json --omit "tests/*"
+          coverage json --omit "tests/*","repype/textual/demo.py"
       env:
         REPYPE_WATCHDOG_TIMEOUT: 1
