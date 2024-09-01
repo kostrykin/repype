@@ -15,3 +15,7 @@ div.nbinput.container + section,
 section + section {
     margin-top: 24px;
 }
+
+div.nboutput.container > div.output_area.rendered_html > pre {
+    font-size: 0.6em;
+}

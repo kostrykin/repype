@@ -45,12 +45,39 @@ html_theme = 'sphinx_rtd_theme'
 # -- Options for EPUB output
 epub_show_urls = 'footnote'
 
+# -- Options for nbsphinx
+
+nbsphinx_execute = 'always'
+
 # -- Report broken links
 nitpicky = True
 nitpick_ignore = [
-    ('py:class', 'watchdog.events.FileSystemEventHandler'),
+
+    # Standard library
+
+    ('py:class', 'asyncio.events.AbstractEventLoop'),
+    ('py:class', 'multiprocessing.context.Process'),
+
+    # WatchDog
+
     ('py:class', 'watchdog.events.DirModifiedEvent'),
     ('py:class', 'watchdog.events.FileModifiedEvent'),
-    ('py:class', 'multiprocessing.context.Process'),
-    ('py:class', 'asyncio.events.AbstractEventLoop'),
+    ('py:class', 'watchdog.events.FileSystemEventHandler'),
+
+    # Textual
+    ('py:class', 'BindingType'),
+    ('py:class', 'CSSPathType'),
+    ('py:class', 'Screen'),
+    ('py:class', 'textual.app.App'),
+    ('py:class', 'textual.binding.Binding'),
+    ('py:class', 'textual.containers.Vertical'),
+    ('py:class', 'textual.screen.ModalScreen'),
+    ('py:class', 'textual.screen.Screen'),
+    ('py:class', 'textual.widget.Widget'),
+    ('py:class', 'textual.widgets._collapsible.Collapsible'),
+    ('py:class', 'textual.widgets._input.Input'),
+    ('py:class', 'textual.widgets._label.Label'),
+    ('py:class', 'textual.widgets._progress_bar.ProgressBar'),
+    ('py:class', 'textual.widgets._text_area.TextArea'),
+
 ]

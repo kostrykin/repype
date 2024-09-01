@@ -1,6 +1,8 @@
+import hashlib
 import io
 import pathlib
 import tempfile
+import time
 import unittest
 import urllib.request
 import zipfile
@@ -31,8 +33,27 @@ class Download(repype.stage.Stage):
             status: Optional[repype.status.Status] = None,
         ) -> PipelineData:
         url = config['url']
-        with urllib.request.urlopen(url) as file:
-            data = file.read()
+
+        # Employ a cache to speed-up tests and reduce bandwith usage
+        cache_hit = False
+        cache_filepath = pathlib.Path('.cache')
+        cache_entry = cache_filepath / hashlib.sha1(url.encode('utf8')).hexdigest()
+        if cache_entry.is_file():
+            with cache_entry.open('rb') as file:
+                data = file.read()
+                cache_hit = True
+                time.sleep(1)
+
+        # Only perform the download if the cache is not hit
+        if not cache_hit:
+            with urllib.request.urlopen(url) as file:
+                data = file.read()
+
+            # Store the downloaded data in the cache
+            cache_filepath.mkdir(exist_ok = True)
+            with cache_entry.open('wb') as file:
+                file.write(data)
+
         return dict(
             download = data
         )
@@ -141,20 +162,20 @@ class repype_segmentation(unittest.TestCase):
                 f'  Starting from scratch' '\n'
                 f'    ' '\n'
                 f'    (1/1) Processing: B2--W00026--P00001--Z00000--T00000--dapi.tif' '\n'
-                f'    Starting stage: download' '\r'
-                f'    Starting stage: unzip   ' '\r'
-                f'    Starting stage: segmentation' '\r'
-                f'    Starting stage: output      ' '\r'
-                f'                                ' '\n'
+                f'    Running stage: download' '\r'
+                f'    Running stage: unzip   ' '\r'
+                f'    Running stage: segmentation' '\r'
+                f'    Running stage: output      ' '\r'
+                f'                               ' '\n'
                 f'  Results have been stored ✅' '\n'
                 f'  ' '\n'
                 f'  (2/2) Entering task: {self.root_path.resolve()}/task/sigma=2' '\n'
                 f'  Picking up from: {self.root_path.resolve()}/task (segmentation)' '\n'
                 f'    ' '\n'
                 f'    (1/1) Processing: B2--W00026--P00001--Z00000--T00000--dapi.tif' '\n'
-                f'    Starting stage: segmentation' '\r'
-                f'    Starting stage: output      ' '\r'
-                f'                                ' '\n'
+                f'    Running stage: segmentation' '\r'
+                f'    Running stage: output      ' '\r'
+                f'                               ' '\n'
                 f'  Results have been stored ✅' '\n'
             )
 

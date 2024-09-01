@@ -197,8 +197,8 @@ class Stage:
         """
         Run this stage of the `pipeline` by calling :meth:`process`, if the stage is enabled.
 
-        The stage is enabled if the ``enabled`` hyperparameter is set to ``True``, or
-        the ``enabled`` hyperparameter is not set and :attr:`enabled_by_default` is True.
+        The stage is enabled if the ``enabled`` hyperparameter is set to `True`, or
+        the ``enabled`` hyperparameter is not set and :attr:`enabled_by_default` is `True`.
 
         Arguments:
             pipeline: The pipeline object that this stage is a part of.
@@ -407,3 +407,14 @@ class Stage:
 
     def __repr__(self) -> str:
         return f'<{type(self).__name__}, id: {self.id}>'
+    
+    def __eq__(self, other: object) -> bool:
+        return other is not None and all(
+            (
+                isinstance(other, type(self)),
+                self.signature == other.signature,
+            )
+        )
+    
+    def __hash__(self) -> int:
+        return hash(self.signature)

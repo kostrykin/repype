@@ -52,22 +52,29 @@ def decode_input_ids(spec: Union[InputID, List[InputID]]) -> List[InputID]:
                 continue
 
             # Check if the token is a range of input identifiers
-            m = re.match(r'^([0-9]+)-([0-9]+)$', token)
+            m = re.match(r'^([0-9]+)?-([0-9]+)?$', token)
 
             # If the token is a single input identifier, add it to the list
             if m is None and re.match(r'^[0-9]+$', token):
                 input_ids.append(int(token))
                 continue
 
-            # If the token is a range of input identifiers, add all identifiers in the range to the list
+            # If the token looks like a range of integer input identifiers, ...
             elif m is not None:
-                first, last = int(m.group(1)), int(m.group(2))
-                if first < last:
-                    input_ids += list(range(first, last + 1))
-                    continue
+
+                # ... and it is a valid range, add all identifiers in the range to the list
+                if m.group(1) is not None and m.group(2) is not None:
+                    first, last = int(m.group(1)), int(m.group(2))
+                    if first < last:
+                        input_ids += list(range(first, last + 1))
+                        continue
+
+                # ... but it is not a valid range, raise an error
+                raise ValueError(f'Cannot parse input token "{token}"')
             
-            # If the token is neither a single input identifier nor a range of identifiers, raise an error
-            raise ValueError(f'Cannot parse input token "{token}"')
+            # Otherwise, treat the token as a string identifier
+            else:
+                input_ids.append(str(token))
 
         return sorted(frozenset(input_ids))
     
@@ -131,6 +138,19 @@ class Task:
         self.parent = parent
         self.path   = pathlib.Path(path)
 
+    def __eq__(self, other: object):
+        return other is not None and all(
+            (
+                isinstance(other, type(self)),
+                self.path == other.path,
+                self.spec == other.spec,
+                self.parent == other.parent,
+            )
+        )
+    
+    def __hash__(self):
+        return hash((self.path, json.dumps(self.spec), self.parent))
+
     @property
     def full_spec(self) -> Dict[str, Any]:
         """
@@ -141,7 +161,7 @@ class Task:
     @property
     def runnable(self) -> bool:
         """
-        True if the task is runnable, and False otherwise.
+        `True` if the task is runnable, and `False` otherwise.
         """
         return bool(self.full_spec.get('runnable'))
     
@@ -211,7 +231,7 @@ class Task:
     @property
     def digest(self) -> Mapping[str, Any]:
         """
-        Immutable full specification of the task completion (or None).
+        Immutable full specification of the task completion (or `None`).
         """
         if not self.digest_task_filepath.is_file():
             return None
@@ -326,7 +346,7 @@ class Task:
     
     def is_pending(self, pipeline: repype.pipeline.Pipeline, config: repype.config.Config) -> bool:
         """
-        True if the task needs to run, and False if the task is completed or not runnable.
+        `True` if the task needs to run, and `False` if the task is completed or not runnable.
         """
         # Non-runnable tasks never are pending
         if not self.runnable:
@@ -347,6 +367,17 @@ class Task:
 
         # If the task is completed, but the configuration has changed, the task is pending
         return hashes['task'] != self.compute_sha(config)
+    
+    def reset(self):
+        """
+        Reset the task by removing all stored data.
+        """
+        if self.digest_sha_filepath.exists():
+            self.digest_sha_filepath.unlink()
+        if self.digest_task_filepath.exists():
+            self.digest_task_filepath.unlink()
+        if self.data_filepath.exists():
+            self.data_filepath.unlink()
     
     def get_marginal_fields(self, pipeline: repype.pipeline.Pipeline) -> FrozenSet[str]:
         """
@@ -370,7 +401,7 @@ class Task:
         Load the previously computed *task data object*.
 
         To ensure consistency with the task specification, it is verified that the loaded data contains results for all input identifiers of the task, and no spurious identifiers.
-        If the `pipeline` is not None, a check for consistency of the data with the `pipeline` is also performed.
+        If the `pipeline` is not `None`, a check for consistency of the data with the `pipeline` is also performed.
         The loaded *task data object* is consistent with the `pipeline` if the data contains all fields which are not marginal according to the :meth:`get_marginal_fields` method, and no additional fields.
 
         Args:
@@ -458,7 +489,7 @@ class Task:
             config: The hyperparameters.
 
         Returns:
-            The first diverging stage of the task, or None if there is no diverging stage.
+            The first diverging stage of the task, or `None` if there is no diverging stage.
         """
         # If the task is not completed, the first diverging stage is the first stage of the pipeline
         if not self.digest_sha_filepath.is_file():
@@ -493,8 +524,8 @@ class Task:
 
         Returns a dictionary with the following keys:
 
-        - ``task``: The task to pick up from, or None if there is no task to pick up from.
-        - ``first_diverging_stage``: The first stage of the `pipeline` which needs to run, or None if no further computations are required.
+        - ``task``: The task to pick up from, or `None` if there is no task to pick up from.
+        - ``first_diverging_stage``: The first stage of the `pipeline` which needs to run, or `None` if no further computations are required.
         
         Arguments:
             pipeline: The pipeline object.
@@ -543,8 +574,8 @@ class Task:
         Arguments:
             config: The hyperparameters to run the task with.
             pipeline: The pipeline to run the task with. Defaults to :meth:`create_pipeline`.
-            pickup: If True, pick up computations from a previously completed task.
-            strip_marginals: If True, strip the marginal fields from the *task data object* before storing it.
+            pickup: If `True`, pick up computations from a previously completed task.
+            strip_marginals: If `True`, strip the marginal fields from the *task data object* before storing it.
             status: The status object to update.
 
         Raises:

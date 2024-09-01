@@ -30,7 +30,7 @@ class Config:
 
     Arguments:
         other: A dictionary to be wrapped (no copying occurs), or another :py:class:`Config` object (a deep copy is created).
-            Defaults to None, for which a blank configuration is created.
+            Defaults to `None`, for which a blank configuration is created.
     """
 
     entries: dict
@@ -100,7 +100,7 @@ class Config:
         Arguments:
             key: The hyperparameter to be set.
             default: Returned if the hyperparameter `key` is not set.
-            override_none: True if a hyperparameter set to None should be treated as not set.
+            override_none: `True` if a hyperparameter set to `None` should be treated as not set.
 
         Returns:
             The new or unmodified value of the hyperparameter `key`.
@@ -169,7 +169,7 @@ class Config:
             key: The hyperparameter to be queried.
 
         Returns:
-            True if the hyperparameter `key` is set and False otherwise.
+            `True` if the hyperparameter `key` is set and `False` otherwise.
         """
         try:
             self.__getitem__(key)
@@ -253,6 +253,6 @@ class Config:
     def __repr__(self):
         return f'<{type(self).__name__}, {str(self.entries)}>'
 
-    def __eq__(self, other):
+    def __eq__(self, other: object):
         return isinstance(other, Config) and str(self) == str(other)
 

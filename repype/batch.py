@@ -63,6 +63,22 @@ class RunContext:
             The *task data object* returned by the task.
         """
         return self.task.run(self.config, pipeline = self.pipeline, *args, **kwargs)
+    
+    def __eq__(self, other: object) -> bool:
+        return other is not None and all(
+            (
+                isinstance(other, type(self)),
+                self.task == other.task,
+                self.pipeline == other.pipeline,
+                self.config == other.config,
+            )
+        )
+    
+    def __hash__(self) -> int:
+        return hash((self.task, self.pipeline, self.config))
+    
+    def __repr__(self) -> str:
+        return f'<{type(self).__name__} "{self.task.path})">'
 
 
 def run_task_process(rc, status) -> int:
@@ -131,6 +147,13 @@ class Batch:
         self.task_cls = task_cls
         self.task_process = None
 
+    @property
+    def resolved_tasks(self) -> Dict[pathlib.Path, repype.task.Task]:
+        """
+        Get a dictionary of all tasks, indexed by their resolved path.
+        """
+        return {task.path.resolve(): task for task in self.tasks.values()}
+
     def task(self, path: PathLike, spec: Optional[dict] = None) -> Optional[repype.task.Task]:
         """
         Retrieve a task by its path.
@@ -146,8 +169,9 @@ class Batch:
         #. Establish parential relations, see :attr:`repype.task.Task.parent`
         #. Resolve filepaths, see :meth:`repype.pipeline.Pipeline.resolve`
         """
+        assert path is not None
         path = pathlib.Path(path)
-        task = self.tasks.get(path)
+        task = self.resolved_tasks.get(path.resolve())
 
         # Using the spec argument overrides the spec file
         if spec is None:
@@ -202,7 +226,7 @@ class Batch:
         Get a run context for a specific task.
 
         Returns:
-            The run context for the task, or None if the task is not loaded.
+            The run context for the task, or `None` if the task is not loaded.
         """
         for rc in self.contexts:
             if rc.task.path.resolve() == pathlib.Path(path).resolve():
@@ -221,12 +245,13 @@ class Batch:
             status: The status object to update during task execution. Defaults to a new status object.
 
         Returns:
-            True if all tasks were completed successfully, and False otherwise
+            `True` if all tasks were completed successfully, and `False` otherwise
         """
         assert self.task_process is None, 'A task is already running'
         try:
             
             contexts = self.pending if contexts is None else contexts
+            contexts = sorted(contexts, key = lambda rc: rc.task.path.resolve())
             for rc_idx, rc in enumerate(contexts):
                 task_status = repype.status.derive(status)
     

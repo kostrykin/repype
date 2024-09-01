@@ -1,2 +1,7 @@
 [run]
-omit = tests/*
+
+omit =
+    tests/*
+    repype/textual/demo.py
+
+parallel = True
