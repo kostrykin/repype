@@ -45,6 +45,10 @@ html_theme = 'sphinx_rtd_theme'
 # -- Options for EPUB output
 epub_show_urls = 'footnote'
 
+# -- Options for nbsphinx
+
+#nbsphinx_execute = 'always'
+
 # -- Report broken links
 nitpicky = True
 nitpick_ignore = [
