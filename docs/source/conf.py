@@ -47,7 +47,7 @@ epub_show_urls = 'footnote'
 
 # -- Options for nbsphinx
 
-#nbsphinx_execute = 'always'
+nbsphinx_execute = 'always'
 
 # -- Report broken links
 nitpicky = True

@@ -169,6 +169,7 @@ class Batch:
         #. Establish parential relations, see :attr:`repype.task.Task.parent`
         #. Resolve filepaths, see :meth:`repype.pipeline.Pipeline.resolve`
         """
+        assert path is not None
         path = pathlib.Path(path)
         task = self.resolved_tasks.get(path.resolve())
 

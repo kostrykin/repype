@@ -133,6 +133,7 @@ class RunScreen(ModalScreen[int]):
         """
         Get a unique alphanumeric identifier of a task.
         """
+        assert task_path is not None
         task = self.app.batch.task(task_path)  # Resolve path identities
         return hashlib.sha1(str(task.path).encode('utf8')).hexdigest()
 
@@ -237,6 +238,7 @@ class RunScreen(ModalScreen[int]):
         if isinstance(status, dict) and (task_path := status.get('task')):
             self.current_task_path = pathlib.Path(task_path)
         else:
+            assert self.current_task_path is not None, f'status: {status}'
             task_path = self.current_task_path
 
         try:
