@@ -80,4 +80,7 @@ nitpick_ignore = [
     ('py:class', 'textual.widgets._progress_bar.ProgressBar'),
     ('py:class', 'textual.widgets._text_area.TextArea'),
 
+    # Pandas
+    ('py:class', 'pandas.core.frame.DataFrame'),
+
 ]
