@@ -4,6 +4,6 @@
     },
 
     "[python]": {
-        "editor.rulers": [120]
+        "editor.rulers": [119]
     }
 }
