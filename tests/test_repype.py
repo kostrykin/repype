@@ -7,6 +7,8 @@ import unittest
 import urllib.request
 import zipfile
 
+import scipy.ndimage as ndi
+import skimage
 import skimage.segmentation
 
 import repype.cli
@@ -14,11 +16,10 @@ import repype.pipeline
 import repype.stage
 import repype.status
 from repype.typing import (
-    PipelineData,
     Optional,
+    PipelineData,
 )
-import scipy.ndimage as ndi
-import skimage
+
 from . import testsuite
 
 

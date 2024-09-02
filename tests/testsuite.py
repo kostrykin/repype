@@ -8,10 +8,7 @@ import sys
 import tempfile
 
 import repype.stage
-from repype.typing import (
-    PathLike,
-)
-
+from repype.typing import PathLike
 
 # Losen truncation limit for error messages
 try:

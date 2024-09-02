@@ -2,6 +2,22 @@ import hashlib
 import pathlib
 import traceback
 
+from textual import (
+    log,
+    work,
+)
+from textual.binding import Binding
+from textual.containers import Vertical
+from textual.screen import ModalScreen
+from textual.widget import Widget
+from textual.widgets import (
+    Collapsible,
+    Footer,
+    Header,
+    Label,
+    ProgressBar,
+)
+
 import repype.batch
 import repype.status
 from repype.typing import (
@@ -12,29 +28,7 @@ from repype.typing import (
     PathLike,
     Union,
 )
-from textual import (
-    log,
-    work,
-)
-from textual.binding import (
-    Binding,
-)
-from textual.containers import (
-    Vertical,
-)
-from textual.screen import (
-    ModalScreen,
-)
-from textual.widget import (
-    Widget,
-)
-from textual.widgets import (
-    Collapsible,
-    Footer,
-    Header,
-    Label,
-    ProgressBar,
-)
+
 from .confirm import confirm
 
 

@@ -7,10 +7,13 @@ import unittest
 
 import repype.batch
 import repype.pipeline
-import repype.task
-from . import testsuite
-from . import test_cli
 import repype.status
+import repype.task
+
+from . import (
+    test_cli,
+    testsuite,
+)
 
 
 class RunContext__eq__(unittest.TestCase):

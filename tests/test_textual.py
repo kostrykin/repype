@@ -13,7 +13,7 @@ import unittest
 
 import repype.textual.app
 import tests.test_repype
-                    
+
 
 class TextualTestCase(unittest.IsolatedAsyncioTestCase):
 

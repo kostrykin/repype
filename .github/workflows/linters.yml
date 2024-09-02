@@ -31,3 +31,4 @@ jobs:
       run: |
         flake8 repype
         isort repype --check-only --diff
+        isort tests --check-only --diff

@@ -1,17 +1,17 @@
 import asyncio
 import copy
+import hashlib
 import json
 import pathlib
-import hashlib
 import tempfile
 import uuid
 
-from watchdog.observers import Observer
 from watchdog.events import (
     DirModifiedEvent,
     FileModifiedEvent,
     FileSystemEventHandler,
 )
+from watchdog.observers import Observer
 
 from repype.typing import (
     ContextManager,
@@ -25,8 +25,7 @@ from repype.typing import (
     Union,
 )
 
-
-# hashlib.file_digest is available in Python 3.11+
+# `hashlib.file_digest`` is available in Python 3.11+
 if hasattr(hashlib, 'file_digest'):
     file_digest = hashlib.file_digest
 else:

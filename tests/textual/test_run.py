@@ -5,10 +5,9 @@ import types
 import unittest.mock
 
 import repype.status
-import repype.textual.confirm
 import repype.textual.app
+import repype.textual.confirm
 import repype.textual.run
-
 
 test_case = 'tests.test_textual.TextualTestCase'
 

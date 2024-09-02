@@ -7,17 +7,16 @@ import repype.config
 import repype.status
 from repype.typing import (
     Collection,
-    PipelineData,
     Dict,
-    Optional,
-    Pipeline,
-    Protocol,
     InputID,
     Iterable,
     List,
     Literal,
+    Optional,
+    Pipeline,
+    PipelineData,
+    Protocol,
 )
-
 
 StageEvent = Literal[
     'start',

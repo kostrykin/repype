@@ -6,8 +6,11 @@ import unittest
 from unittest.mock import patch
 
 import repype.cli
-from . import testsuite
-from . import test_status
+
+from . import (
+    test_status,
+    testsuite,
+)
 
 
 class StatusReaderConsoleAdapter__write(unittest.IsolatedAsyncioTestCase):

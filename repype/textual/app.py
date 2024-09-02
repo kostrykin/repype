@@ -1,16 +1,13 @@
 import pathlib
 
+from textual.app import App
+from textual.binding import Binding
+
 import repype.batch
-from textual.app import (
-    App,
-)
-from textual.binding import (
-    Binding,
-)
+
 from .batch import BatchScreen
 
-
-# Unbind CTRL+C
+# Unbind `CTRL+C`
 App.BINDINGS = []
 
 

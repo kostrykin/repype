@@ -1,5 +1,5 @@
-import json
 import hashlib
+import json
 
 from repype.typing import (
     Any,

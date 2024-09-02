@@ -2,13 +2,15 @@ import json
 import multiprocessing
 import unittest
 from unittest.mock import (
-    call,
     MagicMock,
+    call,
 )
 
 import dill
-import repype.stage
+
 import repype.config
+import repype.stage
+
 from . import testsuite
 
 

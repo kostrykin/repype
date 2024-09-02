@@ -1,4 +1,3 @@
-import dill
 import gzip
 import json
 import os
@@ -6,15 +5,18 @@ import pathlib
 import tempfile
 import unittest
 from unittest.mock import (
-    patch,
     PropertyMock,
+    patch,
 )
 
-import repype.pipeline
-import repype.task
-from . import testsuite
-import repype.status
+import dill
 import yaml
+
+import repype.pipeline
+import repype.status
+import repype.task
+
+from . import testsuite
 
 
 class decode_input_ids(unittest.TestCase):

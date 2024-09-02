@@ -7,13 +7,13 @@ import repype.stage
 import repype.status
 from repype.typing import (
     Any,
-    PipelineData,
     Dict,
     FrozenSet,
     InputID,
     Iterable,
     List,
     Optional,
+    PipelineData,
     Sequence,
     Tuple,
     Type,

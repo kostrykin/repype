@@ -1,4 +1,3 @@
-import dill
 import gzip
 import hashlib
 import importlib
@@ -7,15 +6,17 @@ import os
 import pathlib
 import re
 
+import dill
 import frozendict
 import mergedeep
-import repype.pipeline
+import yaml
+
 import repype.config
+import repype.pipeline
 import repype.stage
 import repype.status
 from repype.typing import (
     Any,
-    PipelineData,
     Dict,
     FrozenSet,
     InputID,
@@ -24,11 +25,10 @@ from repype.typing import (
     Mapping,
     Optional,
     PathLike,
+    PipelineData,
     Self,
     Union,
 )
-import yaml
-
 
 TaskData = Dict[InputID, PipelineData]
 """

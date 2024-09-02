@@ -1,13 +1,11 @@
 import asyncio
 import unittest.mock
 
+import textual.css.query
+from textual import work
+
 import repype.textual.confirm
 import repype.textual.editor
-from textual import (
-    work,
-)
-import textual.css.query
-
 
 test_case = 'tests.test_textual.TextualTestCase'
 

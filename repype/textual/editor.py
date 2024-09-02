@@ -1,38 +1,27 @@
-import repype.task
-from repype.typing import (
-    get_args,
-    Iterator,
-    Literal,
-    Optional,
-)
-from textual.app import (
-    App,
-)
-from textual.binding import (
-    Binding,
-)
-from textual import (
-    work,
-)
-from textual.containers import (
-    Vertical,
-)
-from textual.screen import (
-    ModalScreen,
-)
-from textual.widget import (
-    Widget,
-)
+import yaml
+from textual import work
+from textual.app import App
+from textual.binding import Binding
+from textual.containers import Vertical
+from textual.screen import ModalScreen
+from textual.widget import Widget
 from textual.widgets import (
     Footer,
-    Input,
     Header,
+    Input,
     Label,
     TextArea,
 )
-import yaml
-from .confirm import confirm
 
+import repype.task
+from repype.typing import (
+    Iterator,
+    Literal,
+    Optional,
+    get_args,
+)
+
+from .confirm import confirm
 
 ModeLiteral = Literal['new', 'edit']
 

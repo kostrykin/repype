@@ -6,3 +6,5 @@ extend-ignore = E221,E211,E222,E202,F541,E201,E203,E125,E251
 
 per-file-ignores =
     repype/typing.py:F405
+
+exclude = tests/*.py tests/textual/*.py

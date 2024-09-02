@@ -1,9 +1,8 @@
 import unittest.mock
 
-import repype.textual.confirm
 import repype.batch
 import repype.textual.batch
-
+import repype.textual.confirm
 
 test_case = 'tests.test_textual.TextualTestCase'
 

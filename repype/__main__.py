@@ -3,9 +3,7 @@ import sys
 import repype.batch
 import repype.cli
 import repype.status
-from repype.typing import (
-    Type,
-)
+from repype.typing import Type
 
 
 def run_cli(

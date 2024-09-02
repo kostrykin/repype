@@ -1,30 +1,26 @@
 import shutil
 
-import repype.task
-import repype.batch
-from repype.typing import (
-    Iterator,
-    Type,
-)
-from textual import (
-    work,
-)
-from textual.binding import (
-    Binding,
-)
+from textual import work
+from textual.binding import Binding
 from textual.screen import (
     ModalScreen,
     Screen,
 )
-from textual.widget import (
-    Widget,
-)
+from textual.widget import Widget
 from textual.widgets import (
     Footer,
     Header,
     Static,
     Tree,
 )
+
+import repype.batch
+import repype.task
+from repype.typing import (
+    Iterator,
+    Type,
+)
+
 from .confirm import confirm
 from .editor import EditorScreen
 from .run import RunScreen

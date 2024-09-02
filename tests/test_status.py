@@ -12,6 +12,7 @@ from unittest.mock import (
 )
 
 import repype.status
+
 from . import testsuite
 
 

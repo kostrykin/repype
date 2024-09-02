@@ -7,8 +7,10 @@ import sys
 import traceback
 
 import dill
-import repype.pipeline
+import yaml
+
 import repype.config
+import repype.pipeline
 import repype.status
 import repype.task
 from repype.typing import (
@@ -18,7 +20,6 @@ from repype.typing import (
     PathLike,
     Type,
 )
-import yaml
 
 
 class RunContext:

@@ -1,32 +1,21 @@
-from repype.typing import (
-    Literal,
-    Optional,
-)
-
-from textual import (
-    on,
-)
-from textual.app import (
-    App,
-)
-from repype.typing import (
-    Iterator,
-)
+from textual import on
+from textual.app import App
 from textual.containers import (
     Container,
     Horizontal,
 )
-from textual.screen import (
-    ModalScreen,
-)
-from textual.widget import (
-    Widget,
-)
+from textual.screen import ModalScreen
+from textual.widget import Widget
 from textual.widgets import (
     Button,
     Label,
 )
 
+from repype.typing import (
+    Iterator,
+    Literal,
+    Optional,
+)
 
 DefaultLiteral = Literal['yes', 'no']
 

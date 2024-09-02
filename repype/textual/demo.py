@@ -1,11 +1,8 @@
 import tempfile
 
-from repype.typing import (
-    Callable,
-)
-from textual.app import (
-    App,
-)
+from textual.app import App
+
+from repype.typing import Callable
 
 
 class Demo:
