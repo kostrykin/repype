@@ -52,6 +52,7 @@ setup(
         'pyyaml>=6.0.1',
         'watchdog>=4.0.2',
         'textual[syntax]==0.76.0',
+        'pandas>=2,<3',
     ],
     description = 'Reproducible batch processing using pipelines for scientific computing.',
     long_description = strip_raw(open('README.rst').read()),
