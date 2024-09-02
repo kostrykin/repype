@@ -190,7 +190,7 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
         return str(details)
 
 
-def run_cli_ex(*args, **kwargs) -> bool:
+def run_cli(*args, **kwargs) -> bool:
     """
     Run the command-line interface for batch processing.
     

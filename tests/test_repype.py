@@ -151,7 +151,7 @@ class repype_segmentation(unittest.TestCase):
 
     def test(self):
         with testsuite.CaptureStdout() as stdout:
-            ret = repype.cli.run_cli_ex(self.root_path, run = True)
+            ret = repype.cli.run_cli(self.root_path, run = True)
             self.assertTrue(ret)
             self.assertEqual(
                 str(stdout),

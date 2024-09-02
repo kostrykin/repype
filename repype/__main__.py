@@ -32,7 +32,7 @@ def run_cli(
     parser.add_argument('--task-dir', help='Run only the given task and those from its sub-directories.', type=str, default=[], action='append')
     args = parser.parse_args()
 
-    return repype.cli.run_cli_ex(
+    return repype.cli.run_cli(
         args.path,
         args.run,
         args.task,
