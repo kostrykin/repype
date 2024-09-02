@@ -108,3 +108,22 @@ class Benchmark__retain__float(unittest.TestCase):
                 }
             ),
         )
+
+
+class Benchmark__eq__(unittest.TestCase):
+
+    @testsuite.with_temporary_paths(1)
+    def test__equal__float(self, dirpath):
+        benchmark1 = repype.benchmark.Benchmark[float](dirpath / 'benchmark1.csv')
+        benchmark2 = repype.benchmark.Benchmark[float](dirpath / 'benchmark2.csv')
+        benchmark1['stage1', 'input-1'] = 10
+        benchmark2['stage1', 'input-1'] = 10
+        self.assertEqual(benchmark1, benchmark2)
+
+    @testsuite.with_temporary_paths(1)
+    def test__not_equal__float(self, dirpath):
+        benchmark1 = repype.benchmark.Benchmark[float](dirpath / 'benchmark1.csv')
+        benchmark2 = repype.benchmark.Benchmark[float](dirpath / 'benchmark2.csv')
+        benchmark1['stage1', 'input-1'] = 10
+        benchmark2['stage1', 'input-1'] = 20
+        self.assertNotEqual(benchmark1, benchmark2)

@@ -64,3 +64,11 @@ class Benchmark(Generic[ValueType]):
     def save(self) -> Self:
         self.df.to_csv(self.filepath)
         return self
+
+    def __eq__(self, other: object) -> bool:
+        return all(
+            (
+                isinstance(other, Benchmark),
+                self.df.equals(other.df),
+            )
+        )
