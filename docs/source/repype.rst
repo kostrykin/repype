@@ -2,6 +2,7 @@ repype
 ======
 
 .. toctree::
+    repype.__main__
     repype.batch
     repype.cli
     repype.config

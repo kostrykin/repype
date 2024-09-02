@@ -1,7 +1,5 @@
 import asyncio
 import pathlib
-import sys
-import tempfile
 import time
 
 import repype.batch
@@ -192,40 +190,6 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
         return str(details)
 
 
-def run_cli(
-        task_cls: Type[repype.task.Task] = repype.task.Task,
-        status_reader_cls: Type[repype.status.StatusReader] = StatusReaderConsoleAdapter,
-    ) -> bool:
-    """
-    Run the command-line interface for batch processing, parsing options from the command line.
-    
-    Arguments:
-        task_cls: The task class to use for loading tasks.
-        status_reader_cls: The status reader implementation to use for displaying status updates.
-
-    Returns:
-        `True` if the batch processing was successful, `False` if an error occurred.
-    """
-
-    import argparse
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument('path', help='Root directory for batch processing.')
-    parser.add_argument('--run', help='Run batch processing.', action='store_true')
-    parser.add_argument('--task', help='Run only the given task.', type=str, default=[], action='append')
-    parser.add_argument('--task-dir', help='Run only the given task and those from its sub-directories.', type=str, default=[], action='append')
-    args = parser.parse_args()
-
-    return run_cli_ex(
-        args.path,
-        args.run,
-        args.task,
-        args.task_dir,
-        task_cls,
-        status_reader_cls,
-    )
-
-
 def run_cli_ex(*args, **kwargs) -> bool:
     """
     Run the command-line interface for batch processing.
@@ -299,10 +263,3 @@ def main(
                     return True
     
     return _main
-
-
-if __name__ == '__main__':
-    if run_cli():
-        sys.exit(0)
-    else:
-        sys.exit(1)
