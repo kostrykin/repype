@@ -84,7 +84,7 @@ class Benchmark__retain__float(unittest.TestCase):
         self.tempdir.cleanup()
 
     def test_subset(self):
-        ret = self.benchmark.retain(['stage1'], ['input-1', 'input-2'])
+        ret = self.benchmark.retain(['stage1'], ['input-2', 'input-1'])
         self.assertIs(ret, self.benchmark)
         pd.testing.assert_frame_equal(
             self.benchmark.df,
