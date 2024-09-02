@@ -11,6 +11,7 @@ import scipy.ndimage as ndi
 import skimage
 import skimage.segmentation
 
+import repype.benchmark
 import repype.cli
 import repype.pipeline
 import repype.stage
@@ -189,3 +190,33 @@ class repype_segmentation(unittest.TestCase):
         segmentation = skimage.io.imread(self.root_path / 'task' / 'sigma=2' / 'seg' / 'B2--W00026--P00001--Z00000--T00000--dapi.tif.png')
         n_onjects = ndi.label(segmentation)[1]
         self.assertEqual(n_onjects, 435)
+
+        # Load and verify the times for `sigma=1`
+        times1 = repype.benchmark.Benchmark(self.root_path / 'task' / 'times.csv')
+        self.assertEqual(times1.df.shape, (4, 1))
+        self.assertGreater(float(times1['download', 'B2--W00026--P00001--Z00000--T00000--dapi.tif']), 0)
+        self.assertGreater(float(times1['unzip', 'B2--W00026--P00001--Z00000--T00000--dapi.tif']), 0)
+        self.assertGreater(float(times1['segmentation', 'B2--W00026--P00001--Z00000--T00000--dapi.tif']), 0)
+        self.assertGreater(float(times1['output', 'B2--W00026--P00001--Z00000--T00000--dapi.tif']), 0)
+
+        # Load and verify the times for `sigma=2`
+        times2 = repype.benchmark.Benchmark(self.root_path / 'task' / 'sigma=2' / 'times.csv')
+        self.assertEqual(times1.df.shape, (4, 1))
+        self.assertEqual(
+            times1['download', 'B2--W00026--P00001--Z00000--T00000--dapi.tif'],
+            times2['download', 'B2--W00026--P00001--Z00000--T00000--dapi.tif'],
+        )
+        self.assertEqual(
+            times1['unzip', 'B2--W00026--P00001--Z00000--T00000--dapi.tif'],
+            times2['unzip', 'B2--W00026--P00001--Z00000--T00000--dapi.tif'],
+        )
+        self.assertGreater(float(times2['segmentation', 'B2--W00026--P00001--Z00000--T00000--dapi.tif']), 0)
+        self.assertGreater(float(times2['output', 'B2--W00026--P00001--Z00000--T00000--dapi.tif']), 0)
+        self.assertNotEqual(
+            times1['segmentation', 'B2--W00026--P00001--Z00000--T00000--dapi.tif'],
+            times2['segmentation', 'B2--W00026--P00001--Z00000--T00000--dapi.tif'],
+        )
+        self.assertNotEqual(
+            times1['output', 'B2--W00026--P00001--Z00000--T00000--dapi.tif'],
+            times2['output', 'B2--W00026--P00001--Z00000--T00000--dapi.tif'],
+        )

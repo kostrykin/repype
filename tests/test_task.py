@@ -12,6 +12,7 @@ from unittest.mock import (
 import dill
 import yaml
 
+import repype.benchmark
 import repype.pipeline
 import repype.status
 import repype.task
@@ -713,7 +714,12 @@ class Task__store(unittest.TestCase):
                 'output3.1': 'value3.1',
             },
         }
-        task.store(pipeline, data, config)
+        times = repype.benchmark.Benchmark[float](task.times_filepath)
+        times['stage1', 'file-0'] = 1.0
+        times['stage2', 'file-0'] = 2.5
+        times['stage3', 'file-0'] = 3.0
+        times['stage4', 'file-0'] = 3.5
+        task.store(pipeline, data, config, times)
 
         # Load the stored data
         with gzip.open(task.data_filepath, 'rb') as data_file:
@@ -734,6 +740,7 @@ class Task__store(unittest.TestCase):
             },
         )
         self.assertEqual(task_digest, task.full_spec)
+        self.assertEqual(task.times, times)
 
 
 class Task__load(unittest.TestCase):
@@ -1013,7 +1020,7 @@ class Task__run(unittest.TestCase):
             self.task.run(self.config)
 
     def test_nothing_to_pickup(self, mock_create_pipeline, mock_load, mock_store):
-        mock_create_pipeline.return_value.process.return_value = (dict(), None, None)
+        mock_create_pipeline.return_value.process.return_value = (dict(), None, dict())
         self.task.run(self.config)
         mock_load.assert_not_called()
         mock_create_pipeline.assert_called_once_with()
@@ -1035,7 +1042,7 @@ class Task__run(unittest.TestCase):
         mock_store.assert_called_once()
 
     def test_with_pickup(self, mock_create_pipeline, mock_load, mock_store):
-        mock_create_pipeline.return_value.process.return_value = (dict(), None, None)
+        mock_create_pipeline.return_value.process.return_value = (dict(), None, dict())
         mock_load.return_value = {
             'file-0': dict(output = 'value1'),
             'file-1': dict(output = 'value2'),

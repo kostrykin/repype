@@ -188,9 +188,9 @@ class Pipeline:
             status: A status object to report the progress of the computations.
 
         Returns:
-            Tuple ``(data, config, timings)``, where ``data`` is the *pipeline data object* comprising all final and
-            intermediate results, ``config`` are the finally used hyperparameters, and ``timings`` is a dictionary
-            containing the run time of each individual pipeline stage (in seconds).
+            Tuple `(data, config, times)`, where `data` is the *pipeline data object* comprising all final and
+            intermediate results, `config` are the finally used hyperparameters, and `times` is a dictionary with the
+            run times of each individual pipeline stage (in seconds).
 
         Raises:
             StageError: If an error occurs during the run of a pipeline stage.
@@ -224,7 +224,7 @@ class Pipeline:
         ctrl = ProcessingControl(first_stage, last_stage)
 
         # Run the stages of the pipeline
-        timings = {}
+        times = dict()
         for stage in self.stages:
             if ctrl.step(stage.id) or stage.id in extra_stages:
                 stage_config = config.get(stage.id, {})
@@ -232,12 +232,12 @@ class Pipeline:
                     dt = stage.run(self, data, stage_config, status = status, **kwargs)
                 except:  # noqa: E722
                     raise StageError(stage)
-                timings[stage.id] = dt
+                times[stage.id] = dt
             else:
                 stage.skip(data, status = status, **kwargs)
 
-        # Return the pipeline data object, the final config, and timings
-        return data, config, timings
+        # Return the pipeline data object, the final config, and stage run times
+        return data, config, times
 
     def get_extra_stages(
             self,

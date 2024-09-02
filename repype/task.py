@@ -11,6 +11,7 @@ import frozendict
 import mergedeep
 import yaml
 
+import repype.benchmark
 import repype.config
 import repype.pipeline
 import repype.stage
@@ -240,6 +241,20 @@ class Task:
             return frozendict.deepfreeze(json.load(digest_task_file))
 
     @property
+    def times_filepath(self) -> pathlib.Path:
+        """
+        The path to the CSV file with the run times of the task completion.
+        """
+        return self.resolve_path('times.csv')
+
+    @property
+    def times(self) -> repype.benchmark.Benchmark[float]:
+        """
+        The run times of the task completion.
+        """
+        return repype.benchmark.Benchmark[float](self.times_filepath)
+
+    @property
     def parents(self) -> Iterator[Self]:
         """
         Generator which yields all parent tasks of this task, starting with the immediate parent.
@@ -455,7 +470,13 @@ class Task:
             field: data_chunk[field] for field in data_chunk if field not in marginal_fields
         }
 
-    def store(self, pipeline: repype.pipeline.Pipeline, data: TaskData, config: repype.config.Config) -> None:
+    def store(
+            self,
+            pipeline: repype.pipeline.Pipeline,
+            data: TaskData,
+            config: repype.config.Config,
+            times: repype.benchmark.Benchmark[float],
+        ) -> None:
         """
         Store the computed *task data object*.
 
@@ -463,6 +484,7 @@ class Task:
             pipeline: The pipeline used to compute `data`.
             data: The *task data object*.
             config: The hyperparameters used to vcompute `data`.
+            times: The run times of the pipeline stages.
         """
         assert self.runnable
         assert frozenset(data.keys()) == frozenset(self.input_ids)
@@ -487,6 +509,13 @@ class Task:
         )
         with self.digest_sha_filepath.open('w') as digest_sha_file:
             json.dump(hashes, digest_sha_file)
+
+        # Store the run times of the pipeline stages
+        assert (
+            times.filepath == self.times_filepath
+        ), f'Benchmark file path mismatch: "{times.filepath}" != "{self.times_filepath}"'
+        times.retain((stage.id for stage in pipeline.stages), self.input_ids)
+        times.save()
 
     def find_first_diverging_stage(
             self,
@@ -611,6 +640,7 @@ class Task:
             pickup_info = self.find_pickup_task(pipeline, config)
             if pickup_info['task'] is not None:
                 data = pickup_info['task'].load(pipeline)
+                times = self.times.set(pickup_info['task'].times)
                 first_stage = pickup_info['first_diverging_stage']
             else:
                 pickup = False
@@ -618,6 +648,7 @@ class Task:
         # If there is no task to pick up from, run the pipeline from the beginning
         if not pickup:
             data = dict()
+            times = repype.benchmark.Benchmark[float](self.times_filepath)
             first_stage = None
 
         # Announce the status of the task
@@ -648,16 +679,19 @@ class Task:
 
             # Process the input
             data_chunk = data.get(input_id, dict())
-            data_chunk, final_config, _ = pipeline.process(
+            data_chunk, final_config, times_chunk = pipeline.process(
                 input_id = input_id,
                 data = data_chunk,
                 config = input_config,
                 first_stage = first_stage.id if first_stage else None,
                 status = input_status,
             )
-
             if strip_marginals:
                 data_chunk = self.strip_marginals(pipeline, data_chunk)
+
+            # Update the times benchmark
+            for stage_id, time in times_chunk.items():
+                times[stage_id, input_id] = time
 
             # Store the final configuration used for the input, if a corresponding scope is defined
             if final_config and (final_config_filepath := pipeline.resolve('config', input_id)):
@@ -669,7 +703,7 @@ class Task:
 
         # Store the results for later pick up
         repype.status.update(status, info = 'storing', intermediate = True)
-        self.store(pipeline, data, config)
+        self.store(pipeline, data, config, times)
         repype.status.update(
             status = status,
             info = 'completed',
