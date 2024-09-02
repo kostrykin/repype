@@ -168,7 +168,7 @@ class BatchScreen(Screen):
     async def action_edit_task(self) -> None:
         """
         Edit the selected task using an editor of the :attr:`editor_screen_cls` type.
-        
+
         Does nothing if no task is selected.
         """
         cursor = self.task_tree.cursor_node
@@ -203,8 +203,8 @@ class BatchScreen(Screen):
 
         An instance of the :class:`.RunScreen` is pushed to the screen stack for running the tasks.
 
-        If no tasks are queued and the selected task is not pending, an error is shown.
-        Does nothing if no tasks are queued and no task is selected.
+        If no tasks are queued and the selected task is not pending, an error is shown. Does nothing if no tasks are
+        queued and no task is selected.
         """
         cursor = self.task_tree.cursor_node
         if cursor and cursor.data:

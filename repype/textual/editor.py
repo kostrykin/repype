@@ -177,11 +177,11 @@ class EditorScreen(ModalScreen[bool]):
 
     def action_save(self) -> None:
         """
-        Create a new task if the screen is in `'new'` mode, or update an existing task if the screen is in `'edit'` mode.
+        Create a new task if the screen is in `'new'` mode, or update an existing task if the screen is in `'edit'`
+        mode.
 
-        Validates the input before saving the task.
-        Shows an error if the task name is empty or the YAML code is invalid.
-        Dismisses the screen with a value of `True` if the task is saved successfully.
+        Validates the input before saving the task. Shows an error if the task name is empty or the YAML code is
+        invalid. Dismisses the screen with a value of `True` if the task is saved successfully.
         """
         # Validate task name
         if self.mode == 'new':

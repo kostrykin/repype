@@ -60,7 +60,7 @@ class TaskUI:
         Container for permanent status updates.
         """
         return self.collapsible.query_one('.run-task-container')
-    
+
     @property
     def intermediate(self) -> Vertical:
         """
@@ -69,14 +69,14 @@ class TaskUI:
         Contains the :attr:`intermediate_label` and :attr:`intermediate_progressbar` widgets.
         """
         return self.collapsible.query_one('.run-task-intermediate')
-    
+
     @property
     def intermediate_label(self) -> Label:
         """
         Label for intermediate status updates.
         """
         return self.intermediate.query_one('.run-task-intermediate > Label')
-    
+
     @property
     def intermediate_progressbar(self) -> ProgressBar:
         """
@@ -231,7 +231,8 @@ class RunScreen(ModalScreen[int]):
         """
         Process a new status update.
 
-        The arguments are the same as those of the :meth:`~repype.status.StatusReader.handle_new_status` method of the :class:`repype.status.StatusReader` class.
+        The arguments are the same as those of the :meth:`~repype.status.StatusReader.handle_new_status` method of the
+        :class:`repype.status.StatusReader` class.
         """
         log('RunScreen.handle_new_status', status = status, intermediate = intermediate)
         previous_task_path = self.current_task_path
@@ -253,7 +254,7 @@ class RunScreen(ModalScreen[int]):
                 if status is None:
                     task_ui.intermediate.styles.display = 'none'
                     return
-                
+
                 # Otherwise, show the intermediate widgets
                 else:
                     task_ui.intermediate.styles.display = 'block'
@@ -261,10 +262,13 @@ class RunScreen(ModalScreen[int]):
 
                     # Update the intermediate progress bar
                     if isinstance(status, dict) and status.get('info') == 'progress':
-                        task_ui.intermediate_progressbar.update(progress = status.get('step'), total = status.get('max_steps'))
+                        task_ui.intermediate_progressbar.update(
+                            progress = status.get('step'),
+                            total = status.get('max_steps'),
+                        )
                     else:
                         task_ui.intermediate_progressbar.update(progress = 0, total = None)
-            
+
             # If the status is not intermediate, hide the intermediate widgets
             else:
                 task_ui.intermediate.styles.display = 'none'
@@ -287,7 +291,10 @@ class RunScreen(ModalScreen[int]):
                     return
 
                 if status.get('info') == 'process':
-                    target.update(f'[bold]({status["step"] + 1}/{status["step_count"]})[/bold] Processing: {status["input_id"]}')
+                    target.update(
+                        f'[bold]({status["step"] + 1}/{status["step_count"]})[/bold] '
+                        f'Processing: {status["input_id"]}'
+                    )
                     target.add_class('status-process')
                     return
 
@@ -316,7 +323,7 @@ class RunScreen(ModalScreen[int]):
                 if status.get('info') == 'progress':
                     target.update(str(status.get('details')))
                     return
-                
+
                 if status.get('info') == 'interrupted':
                     target.update('Batch run interrupted')
                     target.add_class('status-error')
@@ -325,7 +332,7 @@ class RunScreen(ModalScreen[int]):
             # Handle all remaining status updates
             target.update(str(status))
 
-        except:
+        except:  # noqa: E722
             log('RunScreen.handle_new_status', error = traceback.format_exc())
             raise
 
@@ -353,6 +360,7 @@ class StatusReaderAdapter(repype.status.StatusReader):
 
     def handle_new_status(self, *args, **kwargs):
         """
-        Delegates the handling of new status updates to the :meth:`screen.handle_new_status <RunScreen.handle_new_status>` method.
+        Delegates the handling of new status updates to the
+        :meth:`screen.handle_new_status <RunScreen.handle_new_status>` method.
         """
         self.screen.handle_new_status(*args, **kwargs)

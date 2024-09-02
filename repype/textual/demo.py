@@ -19,7 +19,7 @@ class Demo:
         self.app = app
         self.ctx = app.run_test(**kwargs)
         self.pilot = None
-    
+
     def screenshot(self) -> None:
         """
         Capture a screenshot of the current state of the `app`.
