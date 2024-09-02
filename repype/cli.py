@@ -77,7 +77,7 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
         ) -> None:
         # If status is intermediate, ...
         if intermediate:
-            
+
             # ...clear the last line
             if status is None:
                 text = self.clear_line('')
@@ -97,9 +97,16 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
             print(self.full_format(parents, positions, status, intermediate = False))
             self._intermediate_line_length = 0
 
-    def full_format(self, parents: List[Union[str, dict]], positions: List[int], status: Union[str, dict], intermediate: bool) -> str:
+    def full_format(
+            self,
+            parents: List[Union[str, dict]],
+            positions: List[int],
+            status: Union[str, dict],
+            intermediate: bool,
+        ) -> str:
         """
-        Format the status update as a string, including indentation and empty lines between blocks of different indentation.
+        Format the status update as a string,
+        including indentation and empty lines between blocks of different indentation.
         """
         text = str(self.format(parents, positions, status, intermediate))
 
@@ -114,7 +121,13 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
         lines[0] = self.clear_line(lines[0])
         return '\n'.join(lines)
 
-    def format(self, parents: List[Union[str, dict]], positions: List[int], status: Union[str, dict], intermediate: bool) -> str:
+    def format(
+            self,
+            parents: List[Union[str, dict]],
+            positions: List[int],
+            status: Union[str, dict],
+            intermediate: bool,
+        ) -> str:
         """
         Format a status update as a string.
         """
@@ -123,9 +136,9 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
             text = None
 
             if status.get('info') == 'batch':
-                 text = '\n' f'{len(status["batch"])} task(s) selected for running'
-                 if not status['run']:
-                     text += '\n' 'DRY RUN: use "--run" to run the tasks instead'
+                text = '\n' f'{len(status["batch"])} task(s) selected for running'
+                if not status['run']:
+                    text += '\n' 'DRY RUN: use "--run" to run the tasks instead'
 
             if status.get('info') == 'enter':
                 text = f'\n({status["step"] + 1}/{status["step_count"]}) Entering task: {status["task"]}'
@@ -157,7 +170,7 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
                     '-' * 80 + '\n' + \
                     status['traceback'] + \
                     '-' * 80
-                
+
             if status.get('info') == 'interrupted':
                 text = f'🔴 Batch run interrupted'
 
@@ -169,7 +182,8 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
                     progress_t1 = time.time()
                     speed = (progress_t1 - self.progress_t0) / status.get('step')
                     eta = ', ETA: ' + format_hms(speed * (status.get('max_steps') - status.get('step')))
-                text = f'{100 * status.get("step") / status.get("max_steps"):.1f}% ({status.get("step")} / {status.get("max_steps")}{eta})'
+                text = f'{100 * status.get("step") / status.get("max_steps"):.1f}% '\
+                    f'({status.get("step")} / {status.get("max_steps")}{eta})'
                 progress_bar = ((self.progress_bar_length * status.get('step')) // status.get('max_steps')) * '='
                 progress_bar = progress_bar + (self.progress_bar_length - len(progress_bar)) * ' '
                 text = f'[{progress_bar}] {text}'
@@ -179,7 +193,7 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
                     text = f'{details} {text}'
 
             return text if text else status
-            
+
         else:
             return status
 
@@ -193,7 +207,7 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
 def run_cli(*args, **kwargs) -> bool:
     """
     Run the command-line interface for batch processing.
-    
+
     Arguments:
         *args: Passed through to :func:`main`.
         *kwargs: Passed through to :func:`main`.
@@ -215,12 +229,13 @@ def main(
     ) -> Coroutine[Any, Any, bool]:
     """
     Create a co-routine for running the command-line interface for batch processing.
-    
+
     Arguments:
         path: The root directory for batch processing. Tasks will be loaded recursively from this directory.
         run: Whether to run the batch processing. If `False`, the tasks will be loaded, but not executed.
         tasks: List of tasks to run. Tasks are identified by their paths. If given, only these tasks will be run.
-        task_dirs: List of task directories to run. If given, only tasks from these directories and their sub-directories will be run.
+        task_dirs: List of task directories to run. If given, only tasks from these directories and their
+            sub-directories will be run.
         task_cls: The task class to use for loading tasks.
         status_reader_cls: The status reader implementation to use for displaying status updates.
 
@@ -231,7 +246,7 @@ def main(
     path  = pathlib.Path(path).resolve()
     batch = repype.batch.Batch(task_cls)
     batch.load(path)
-    
+
     if tasks or task_dirs:
         tasks     = [pathlib.Path(p).resolve() for p in tasks]
         task_dirs = [pathlib.Path(p).resolve() for p in task_dirs]
@@ -258,8 +273,8 @@ def main(
 
                 if run:
                     return await batch.run(contexts, status = status)
-                
+
                 else:
                     return True
-    
+
     return _main
