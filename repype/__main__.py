@@ -14,7 +14,7 @@ def run_cli(
     ) -> bool:
     """
     Run the command-line interface for batch processing, parsing options from the command line.
-    
+
     Arguments:
         task_cls: The task class to use for loading tasks.
         status_reader_cls: The status reader implementation to use for displaying status updates.
@@ -26,12 +26,13 @@ def run_cli(
     import argparse
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('path', help='Root directory for batch processing.')
-    parser.add_argument('--run', help='Run batch processing.', action='store_true')
-    parser.add_argument('--task', help='Run only the given task.', type=str, default=[], action='append')
-    parser.add_argument('--task-dir', help='Run only the given task and those from its sub-directories.', type=str, default=[], action='append')
-    args = parser.parse_args()
+    parser.add_argument('path', help = 'Root directory for batch processing.')
+    parser.add_argument('--run', help = 'Run batch processing.', action = 'store_true')
+    parser.add_argument('--task', help = 'Run only the given task.', type = str, default = list(), action = 'append')
+    parser.add_argument('--task-dir', help = 'Run only the given task and those from its sub-directories.', type = str,
+                        default = list(), action='append')
 
+    args = parser.parse_args()
     return repype.cli.run_cli(
         args.path,
         args.run,
