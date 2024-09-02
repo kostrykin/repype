@@ -5,6 +5,7 @@ examples/**/.sha.json
 examples/**/.task.json
 examples/**/data.dill.gz
 examples/**/*.png
+examples/**/times.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
