@@ -138,6 +138,35 @@ class StatusReaderConsoleAdapter__progress(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(item_idx, 1)
 
 
+class ExtendedStatusReaderConsoleAdapter(repype.cli.StatusReaderConsoleAdapter):
+
+    def format(self, parents, positions, status, intermediate):
+
+        if isinstance(status, dict) and status.get('info') == 'custom':
+            return status['text']
+        
+        return super().format(parents, positions, status, intermediate)
+
+
+class ExtendedStatusReaderConsoleAdapter__format(unittest.IsolatedAsyncioTestCase):
+
+    async def asyncSetUp(self):
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.status = repype.status.Status(path = self.tempdir.name)
+        self.status_reader = ExtendedStatusReaderConsoleAdapter(self.status.filepath)
+        await self.status_reader.__aenter__()
+
+    async def asyncTearDown(self):
+        await self.status_reader.__aexit__(None, None, None)
+        self.tempdir.cleanup()
+
+    async def test(self):
+        with testsuite.CaptureStdout() as stdout:
+            repype.status.update(self.status, info = 'custom', text = 'message')
+            await test_status.wait_for_watchdog()
+            self.assertEqual(str(stdout), 'message\n')
+
+
 class DelayedTask(repype.task.Task):
 
     def store(self, *args, **kwargs):

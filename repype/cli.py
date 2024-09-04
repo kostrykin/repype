@@ -27,10 +27,31 @@ def format_hms(seconds):
 
 class StatusReaderConsoleAdapter(repype.status.StatusReader):
     """
-    Writes status updates to stdout.
+    Writes formatted status updates to stdout.
 
     The status updates are indented according to the level of the nesting hierarchy.
     In addition, an empty line is printed when the level of indentation changes.
+
+    Sub-classes can be used to customize the formatting of status updates, or to add entirely new types of status
+    updates:
+
+    .. runblock:: pycon
+    
+        >>> import repype.cli
+        >>>
+        >>> class ExtendedStatusReader(repype.cli.StatusReaderConsoleAdapter):
+        ...     def format(self, parents, positions, status, intermediate):
+        ...         if isinstance(status, dict) and status.get('info') == 'custom':
+        ...             return f'*** {status["text"]} ({status["number"]})'
+        ...         return super().format(parents, positions, status, intermediate)
+        >>>
+        >>> async def main():
+        ...     with repype.status.create() as status:
+        ...         async with ExtendedStatusReader(status.filepath):
+        ...             repype.status.update(status, info = 'custom', text = 'Text', number = 42)
+        >>>
+        >>> import asyncio
+        >>> asyncio.run(main())
 
     Arguments:
         *args: Passed through to the base class.
