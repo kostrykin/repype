@@ -4,6 +4,10 @@ from textual.app import App
 from textual.binding import Binding
 
 import repype.batch
+from repype.typing import (
+    Optional,
+    PathLike,
+)
 
 from .batch import BatchScreen
 
@@ -44,7 +48,22 @@ class Repype(App):
     The path to the stylesheet file.
     """
 
-    def __init__(self, path = None, headless = False):
+    headless: bool
+    """
+    If `True`, overwrites the `headless` argument passed to :meth:`run`.
+    """
+
+    path: pathlib.Path
+    """
+    The root directory for batch processing, where the tasks are loaded from.
+    """
+
+    batch: repype.batch.Batch
+    """
+    The batch object.
+    """
+
+    def __init__(self, path: Optional[PathLike] = None, headless: bool = False):
         if path is None:
             import argparse
             parser = argparse.ArgumentParser()
