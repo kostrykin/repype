@@ -392,9 +392,8 @@ async def test__run_task__completed(test_case):
         test_case.assertIsInstance(test_case.app.screen, repype.textual.batch.BatchScreen)
 
 
-@unittest.mock.patch('repype.textual.batch.RunScreen')
 @unittest.mock.patch.object(repype.textual.batch.BatchScreen, 'confirm', return_value = True)
-async def test__run_task__pending(test_case, mock_confirm, mock_RunScreen):
+async def test__run_task__pending(test_case, mock_confirm):
 
     # Load the batch
     batch = repype.batch.Batch()
@@ -417,26 +416,28 @@ async def test__run_task__pending(test_case, mock_confirm, mock_RunScreen):
             # Patch `BatchScreen.update_task_tree` method
             with unittest.mock.patch.object(test_case.app.screen, 'update_task_tree') as mock_update_task_tree:
 
-                # Test with `mock_push_screen_wait` returning 0
-                mock_push_screen_wait.return_value = 0
-                await pilot.press('r')
+                with unittest.mock.patch.object(test_case.app.screen, 'run_screen_cls') as mock_RunScreen:
 
-                # Perform the checks
-                mock_RunScreen.assert_called_once_with([rc1])
-                mock_update_task_tree.assert_not_called()
+                    # Test with `mock_push_screen_wait` returning 0
+                    mock_push_screen_wait.return_value = 0
+                    await pilot.press('r')
 
-                # Reset the mocks
-                mock_RunScreen.reset_mock()
-                mock_push_screen_wait.reset_mock()
-                mock_update_task_tree.reset_mock()
+                    # Perform the checks
+                    mock_RunScreen.assert_called_once_with([rc1])
+                    mock_update_task_tree.assert_not_called()
 
-                # Test with `mock_push_screen_wait` returning 1
-                mock_push_screen_wait.return_value = 1
-                await pilot.press('r')
+                    # Reset the mocks
+                    mock_RunScreen.reset_mock()
+                    mock_push_screen_wait.reset_mock()
+                    mock_update_task_tree.reset_mock()
 
-                # Perform the checks
-                mock_RunScreen.assert_called_once_with([rc1])
-                mock_update_task_tree.assert_called_once()
+                    # Test with `mock_push_screen_wait` returning 1
+                    mock_push_screen_wait.return_value = 1
+                    await pilot.press('r')
+
+                    # Perform the checks
+                    mock_RunScreen.assert_called_once_with([rc1])
+                    mock_update_task_tree.assert_called_once()
 
 
 async def test__toggle_task__none(test_case):
