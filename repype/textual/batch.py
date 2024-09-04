@@ -70,6 +70,16 @@ class BatchScreen(Screen):
     editor_screen_cls: Type[ModalScreen[bool]] = EditorScreen
     """
     The editor screen class.
+
+    The return value of the editor screen is used to determine if the task tree should be updated. It should be `True`
+    if changes were saved or tasks were created, and `False` otherwise.
+    """
+
+    run_screen_cls: Type[ModalScreen[int]] = RunScreen
+    """
+    The run screen class.
+
+    The return value of the run screen should be the number of successfully completed tasks.
     """
 
     queued_tasks: list[repype.task.Task]
@@ -106,11 +116,11 @@ class BatchScreen(Screen):
         self.app.batch.tasks.clear()
         self.app.batch.load(self.app.path)
         self.task_tree.clear()
-        self.update_summary()
 
         # Remove completed tasks from queued tasks
         non_pending_tasks = frozenset(self.non_pending_tasks)
         self.queued_tasks = [task for task in self.queued_tasks if task not in non_pending_tasks]
+        self.update_summary()
 
         # Create root task nodes
         task_nodes = dict()
@@ -197,7 +207,7 @@ class BatchScreen(Screen):
         """
         Run the queued tasks.
 
-        An instance of the :class:`.RunScreen` is pushed to the screen stack for running the tasks.
+        An instance of the :attr:`run_screen_cls` is pushed to the screen stack for running the tasks.
 
         If no tasks are queued and the selected task is not pending, an error is shown. Does nothing if no tasks are
         queued and no task is selected.
@@ -224,7 +234,7 @@ class BatchScreen(Screen):
 
             # Run the contexts
             if len(queued_contexts) > 0:
-                screen = RunScreen(queued_contexts)
+                screen = self.run_screen_cls(queued_contexts)
                 if await self.app.push_screen_wait(screen) > 0:
                     self.update_task_tree()
 
