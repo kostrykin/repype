@@ -36,7 +36,7 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
     updates:
 
     .. runblock:: pycon
-    
+
         >>> import repype.cli
         >>>
         >>> class ExtendedStatusReader(repype.cli.StatusReaderConsoleAdapter):
