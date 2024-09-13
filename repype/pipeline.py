@@ -226,15 +226,15 @@ class Pipeline:
         # Run the stages of the pipeline
         times = dict()
         for stage in self.stages:
+            stage_config = config.get(stage.id, {})
             if ctrl.step(stage.id) or stage.id in extra_stages:
-                stage_config = config.get(stage.id, {})
                 try:
-                    dt = stage.run(self, data, stage_config, status = status, **kwargs)
+                    dt = stage.run(pipeline = self, data = data, config = stage_config, status = status, **kwargs)
                 except:  # noqa: E722
                     raise StageError(stage)
                 times[stage.id] = dt
             else:
-                stage.skip(data, status = status, **kwargs)
+                stage.skip(pipeline = self, data = data, config = stage_config, status = status, **kwargs)
 
         # Return the pipeline data object, the final config, and stage run times
         return data, config, times

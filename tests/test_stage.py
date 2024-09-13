@@ -159,17 +159,17 @@ class Stage__callback(unittest.TestCase):
         self.assertEqual(
             self.callback.call_args_list,
             [
-                call(self.stage, 'start', self.data, status = None, config = self.config),
-                call(self.stage, 'end', self.data, status = None, config = self.config),
+                call(self.stage, 'start', pipeline = self.pipeline, data = self.data, status = None, config = self.config),
+                call(self.stage, 'end', pipeline = self.pipeline, data = self.data, status = None, config = self.config),
             ],
         )
 
     def test_skip(self):
-        self.stage.skip(data = self.data, config = self.config)
+        self.stage.skip(pipeline = self.pipeline, data = self.data, config = self.config)
         self.assertEqual(
             self.callback.call_args_list,
             [
-                call(self.stage, 'skip', self.data, status = None, config = self.config),
+                call(self.stage, 'skip', pipeline = self.pipeline, data = self.data, status = None, config = self.config),
             ],
         )
 
@@ -179,7 +179,7 @@ class Stage__callback(unittest.TestCase):
         self.assertEqual(
             self.callback.call_args_list,
             [
-                call(self.stage, 'skip', self.data, status = None, config = self.config),
+                call(self.stage, 'skip', pipeline = self.pipeline, data = self.data, status = None, config = self.config),
             ],
         )
 

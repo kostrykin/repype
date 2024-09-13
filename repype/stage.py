@@ -31,13 +31,25 @@ class StageCallback(Protocol):
     Stage callback protocol.
     """
 
-    def __call__(self, stage: 'Stage', event: StageEvent, *args, **kwargs) -> None:
+    def __call__(
+            self,
+            stage: 'Stage',
+            event: StageEvent,
+            pipeline: 'repype.pipeline.Pipeline',
+            data: PipelineData,
+            config: repype.config.Config,
+            status: Optional[repype.status.Status],
+            **kwargs,
+        ) -> None:
         """
         Arguments:
             stage: The stage that triggered the event.
             event: The event that triggered the callback.
-            *args: The arguments passed to the callback.
-            **kwargs: The keyword arguments passed to the callback.
+            pipeline: The pipeline object that the stage is a part of.
+            data: The current *pipeline data object*.
+            config: The hyperparameters to be used for this stage.
+            status: A status object to report the progress of the computations.
+            **kwargs: The keyword arguments passed to :meth:`pipeline.Pipeline.process`.
         """
         pass
 
@@ -224,7 +236,7 @@ class Stage:
                 stage = self.id,
                 intermediate = True,
             )
-            self.callback('start', data, status = status, config = config, **kwargs)
+            self.callback('start', pipeline = pipeline, data = data, config = config, status = status, **kwargs)
 
             # Extract the input fields for the stage
             input_data = {key: data[key] for key in self.inputs}
@@ -248,21 +260,29 @@ class Stage:
                 del data[key]
 
             # Finish the stage
-            self.callback('end', data, status = status, config = config, **kwargs)
+            self.callback('end', pipeline = pipeline, data = data, config = config, status = status, **kwargs)
             return dt
 
         # Skip the stage
         else:
-            self.skip(data, status = status, config = config, **kwargs)
+            self.skip(pipeline = pipeline, data = data, config = config, status = status, **kwargs)
             return 0.
 
-    def skip(self, data: PipelineData, status: Optional[repype.status.Status] = None, **kwargs) -> None:
+    def skip(
+            self,
+            pipeline: Pipeline,
+            data: PipelineData,
+            config: repype.config.Config,
+            status: Optional[repype.status.Status] = None,
+            **kwargs,
+        ) -> None:
         """
         Skips this stage of the pipeline.
 
         Arguments:
-            data: The *pipeline data object* to be used for this stage. This is a dictionary that contains all
-                available fields of the pipeline.
+            pipeline: The pipeline object that this stage is a part of.
+            data: The *pipeline data object*. This is a dictionary that contains all available fields of the pipeline.
+            config: The hyperparameters for this stage.
             status: A status object to report the progress of the computations.
         """
         repype.status.update(
@@ -271,7 +291,7 @@ class Stage:
             stage = self.id,
             intermediate = True,
         )
-        self.callback('skip', data, status = status, **kwargs)
+        self.callback('skip', pipeline = pipeline, data = data, config = config, status = status, **kwargs)
 
     def process(
             self,
