@@ -311,7 +311,14 @@ def main(
         task_dirs = [pathlib.Path(p).resolve() for p in task_dirs]
         contexts  = list()
         for rc in batch.pending:
-            if rc.task.path in tasks or any(task_dir in rc.task.path.parents for task_dir in task_dirs):
+            if any(
+                [
+                    rc.task.path in tasks,
+                    rc.task.path in task_dirs,
+                ] + [
+                    task_dir in rc.task.path.parents for task_dir in task_dirs
+                ]
+            ):
                 contexts.append(rc)
 
     else:
