@@ -19,7 +19,6 @@ import repype.status
 from repype.typing import (
     Any,
     Dict,
-    get_args,
     FrozenSet,
     InputID,
     Iterator,
@@ -30,6 +29,7 @@ from repype.typing import (
     PipelineData,
     Self,
     Union,
+    get_args,
 )
 
 TaskData = Dict[InputID, PipelineData]
