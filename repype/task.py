@@ -19,6 +19,7 @@ import repype.status
 from repype.typing import (
     Any,
     Dict,
+    get_args,
     FrozenSet,
     InputID,
     Iterator,
@@ -634,6 +635,7 @@ class Task:
         assert self.runnable
         if pipeline is None:
             pipeline = self.create_pipeline()
+            self.setup_callbacks(pipeline)
 
         # Find a task and stage to pick up from
         if pickup:
@@ -714,3 +716,18 @@ class Task:
     def __repr__(self):
         config = self.create_config()
         return f'<Task "{self.path}" {config.sha.hexdigest()[:7]}>'
+
+    def setup_callbacks(self, pipeline: repype.pipeline.Pipeline) -> None:
+        """
+        Add callbacks to the pipeline stages.
+
+        Callbacks are added to the pipeline stages for those stages and events, for which there is a corresponding
+        method defined in the task object. The method name is constructed from the stage identifier and the event name,
+        separated by underscores. For example, the method ``on_stage1_start`` is called when the stage with the
+        identifier ``stage1`` starts.
+        """
+        for stage in pipeline.stages:
+            for event in get_args(pipeline.stage.StageEvent):
+                callback_name = f'on_{stage.id.replace("-", "_")}_{event}'
+                if hasattr(self, callback_name):
+                    stage.add_callback(event, getattr(self, callback_name))
