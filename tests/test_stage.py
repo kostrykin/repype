@@ -43,7 +43,7 @@ class Stage(unittest.TestCase):
         data     = dict()
         config   = repype.config.Config()
         pipeline = MagicMock()
-        dt = stage.run(pipeline, data, config)
+        dt = stage.run(pipeline, input_id = '', data = data, config = config)
         self.assertIsInstance(dt, float)
         self.assertEqual(data, dict())
 
@@ -69,7 +69,7 @@ class Stage(unittest.TestCase):
                     data = dict(x1 = x1, x2 = x2)
                     status_mock = MagicMock()
                     pipeline = MagicMock()
-                    dt = stage.run(pipeline, data, config, status = status_mock)
+                    dt = stage.run(pipeline, input_id = '', data = data, config = config, status = status_mock)
                     self.assertEqual(data, dict(x1 = x1, x2 = x2, y = x1 * x1_factor + x2 * x2_factor))
                     self.assertIsInstance(dt, float)
 
@@ -82,7 +82,7 @@ class Stage(unittest.TestCase):
         config = repype.config.Config()
         pipeline = MagicMock()
         with self.assertRaises(TypeError):
-            stage.run(pipeline, data, config)
+            stage.run(pipeline, input_id = '', data = data, config = config)
 
     def test_missing_output(self):
         stage = testsuite.create_stage(id = 'test', outputs = ['y'], \
@@ -93,7 +93,7 @@ class Stage(unittest.TestCase):
         config = repype.config.Config()
         pipeline = MagicMock()
         with self.assertRaises(AssertionError):
-            stage.run(pipeline, data, config)
+            stage.run(pipeline, input_id = '', data = data, config = config)
 
     def test_spurious_output(self):
         stage = testsuite.create_stage( id = 'test', \
@@ -104,7 +104,7 @@ class Stage(unittest.TestCase):
         config = repype.config.Config()
         pipeline = MagicMock()
         with self.assertRaises(AssertionError):
-            stage.run(pipeline, data, config)
+            stage.run(pipeline, input_id = '', data = data, config = config)
 
     def test_missing_and_spurious_output(self):
         stage = testsuite.create_stage(id = 'test', outputs = ['y'], \
@@ -115,7 +115,7 @@ class Stage(unittest.TestCase):
         config = repype.config.Config()
         pipeline = MagicMock()
         with self.assertRaises(AssertionError):
-            stage.run(pipeline, data, config)
+            stage.run(pipeline, input_id = '', data = data, config = config)
 
     def test_consumes(self):
         stage = testsuite.create_stage(id = 'test', consumes = ['x'], \
@@ -125,7 +125,7 @@ class Stage(unittest.TestCase):
         data = dict(x = 0, y = 1)
         config = repype.config.Config()
         pipeline = MagicMock()
-        stage.run(pipeline, data, config)
+        stage.run(pipeline, input_id = '', data = data, config = config)
         self.assertEqual(data, dict(y = 1))
 
     def test_missing_consumes(self):
@@ -137,7 +137,7 @@ class Stage(unittest.TestCase):
         config = repype.config.Config()
         pipeline = MagicMock()
         with self.assertRaises(KeyError):
-            stage.run(pipeline, data, config)
+            stage.run(pipeline, input_id = '', data = data, config = config)
 
 
 class Stage__callback(unittest.TestCase):
@@ -239,7 +239,7 @@ class Stage__run(unittest.TestCase):
         stage = Stage()
         pipeline = MagicMock()
         config = repype.config.Config()
-        stage.run(pipeline, dict(), config)
+        stage.run(pipeline, input_id = '', data = dict(), config = config)
         self.assertEqual(
             config.entries,
             dict(enabled = True, key = 'value'),
