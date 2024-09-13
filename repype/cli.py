@@ -161,6 +161,8 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
                 text = '\n' f'{len(status["batch"])} task(s) selected for running'
                 if not status['run']:
                     text += '\n' 'DRY RUN: use "--run" to run the tasks instead'
+                    if status['batch']:
+                        text += '\n\n' 'Selected tasks:\n' + '\n'.join(f'- {path}' for path in status['batch'])
 
             if status.get('info') == 'enter':
                 text = f'\n({status["step"] + 1}/{status["step_count"]}) Entering task: {status["task"]}'
