@@ -229,15 +229,11 @@ class Stage:
             # Extract the input fields for the stage
             input_data = {key: data[key] for key in self.inputs}
 
-            # Clean up the hyperparameters passed to the stage implementation
-            clean_config = config.copy()
-            clean_config.pop('enabled', None)
-
             # Run the stage and measure the run time
             t0 = time.time()
             output_data = self.process(
                 pipeline = pipeline,
-                config = clean_config,
+                config = config,
                 status = status,
                 **input_data,
             )

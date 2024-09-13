@@ -222,3 +222,25 @@ class Stage__sha(unittest.TestCase):
         stage_serialized = dill.dumps(self.stage)
         stage = dill.loads(stage_serialized)
         self.assertEqual(self.sha, stage.sha)
+
+
+class Stage__run(unittest.TestCase):
+
+    def test(self):
+
+        class Stage(repype.stage.Stage):
+
+            id = 'stage'
+
+            def process(self, pipeline, config, status = None):
+                config.get('key', 'value')
+                return dict()
+
+        stage = Stage()
+        pipeline = MagicMock()
+        config = repype.config.Config()
+        stage.run(pipeline, dict(), config)
+        self.assertEqual(
+            config.entries,
+            dict(enabled = True, key = 'value'),
+        )
