@@ -223,7 +223,12 @@ class run_cli_ex(unittest.TestCase):
                 str(stdout),
                 '\n'
                 '3 task(s) selected for running' '\n'
-                'DRY RUN: use "--run" to run the tasks instead' '\n',
+                'DRY RUN: use "--run" to run the tasks instead' '\n'
+                '\n'
+                'Selected tasks:' '\n'
+                f'- {self.root_path.resolve()}' '\n'
+                f'- {self.root_path.resolve() / "task-2"}' '\n'
+                f'- {self.root_path.resolve() / "task-3"}' '\n',
             )
 
     @patch.object(repype.batch.Batch, 'run')
