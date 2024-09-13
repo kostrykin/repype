@@ -4,6 +4,7 @@ import time
 
 import repype.batch
 import repype.status
+import repype.task
 from repype.typing import (
     Any,
     Coroutine,
@@ -242,7 +243,7 @@ def run_cli_ex(*args, **kwargs) -> bool:
 
 def run_cli(
         task_cls: Type[repype.task.Task] = repype.task.Task,
-        status_reader_cls: Type[repype.status.StatusReader] = repype.cli.StatusReaderConsoleAdapter,
+        status_reader_cls: Type[repype.status.StatusReader] = StatusReaderConsoleAdapter,
     ) -> bool:
     """
     Run the command-line interface for batch processing, parsing options from the command line.
