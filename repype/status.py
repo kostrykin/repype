@@ -648,7 +648,9 @@ def update(status: Optional[Status], plain_text = None, intermediate: bool = Fal
         AssertionError: If both `plain_text` and `kwargs` are provided (or neither, and `intermediate` is True).
     """
     assert plain_text is None or len(kwargs) == 0, 'Cannot specify both `plain_text` and `kwargs`'
-    if status is not None:
+    if status is None:
+        return None
+    else:
         if intermediate:
             status.intermediate(dict(**kwargs) if kwargs else plain_text)
         else:
@@ -662,7 +664,9 @@ def derive(status: Optional[Status]) -> Optional[Status]:
 
     Does nothing if `status` is `None`.
     """
-    if status is not None:
+    if status is None:
+        return None
+    else:
         return status.derive()
 
 
@@ -677,7 +681,6 @@ def progress(
 
     Yields the items from the `iterable` directly if `status` is `None`.
     """
-
     if status is None:
         return iterable
     else:

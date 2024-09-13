@@ -131,6 +131,13 @@ class Status__derive(TestCase):
         self.assertEqual(status.data, [dict(expand = str(child.filepath))])
         self.assertEqual(child.data, [])
         self.assertIs(child.parent, status)
+        with open(status.filepath) as file:
+            data = json.load(file)
+            self.assertEqual(len(data), 1)
+            self.assertEqual(list(data[-1].keys()), ['expand'])
+        with open(data[-1]['expand']) as file:
+            data = json.load(file)
+            self.assertEqual(data, [])
 
 
 class Status__progress(TestCase):
