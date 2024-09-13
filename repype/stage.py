@@ -166,18 +166,17 @@ class Stage:
         assert not self.id.endswith('+'), 'The suffix "+" is reserved as an indication of "the stage after that stage"'
         self.event_callbacks: Dict[StageEvent, List[StageCallback]] = dict()
 
-    def callback(self, event: StageEvent, *args, **kwargs) -> None:
+    def callback(self, event: StageEvent, **kwargs) -> None:
         """
         Call the callbacks for the specified `event`.
 
         Arguments:
             event: The event for which to call the callbacks.
-            *args: The arguments to pass to the callbacks.
             **kwargs: The keyword arguments to pass to the callbacks.
         """
         if event in self.event_callbacks:
             for callback in self.event_callbacks[event]:
-                callback(self, event, *args, **kwargs)
+                callback(stage = self, event = event, **kwargs)
 
     def add_callback(self, event: StageEvent, callback: StageCallback) -> None:
         """

@@ -159,8 +159,8 @@ class Stage__callback(unittest.TestCase):
         self.assertEqual(
             self.callback.call_args_list,
             [
-                call(self.stage, 'start', pipeline = self.pipeline, data = self.data, status = None, config = self.config),
-                call(self.stage, 'end', pipeline = self.pipeline, data = self.data, status = None, config = self.config),
+                call(stage = self.stage, event = 'start', pipeline = self.pipeline, data = self.data, status = None, config = self.config),
+                call(stage = self.stage, event = 'end', pipeline = self.pipeline, data = self.data, status = None, config = self.config),
             ],
         )
 
@@ -169,7 +169,7 @@ class Stage__callback(unittest.TestCase):
         self.assertEqual(
             self.callback.call_args_list,
             [
-                call(self.stage, 'skip', pipeline = self.pipeline, data = self.data, status = None, config = self.config),
+                call(stage = self.stage, event = 'skip', pipeline = self.pipeline, data = self.data, status = None, config = self.config),
             ],
         )
 
@@ -179,7 +179,7 @@ class Stage__callback(unittest.TestCase):
         self.assertEqual(
             self.callback.call_args_list,
             [
-                call(self.stage, 'skip', pipeline = self.pipeline, data = self.data, status = None, config = self.config),
+                call(stage = self.stage, event = 'skip', pipeline = self.pipeline, data = self.data, status = None, config = self.config),
             ],
         )
 
