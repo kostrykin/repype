@@ -178,8 +178,8 @@ class Pipeline:
         successively.
 
         Arguments:
-            input_id: The identifier of the input data to be processed.
-                Can be `None` if and only if `data` is not `None` (then the `input_id` is deduced from `data`).
+            input_id: The identifier of the input data to be processed. Can be `None` if and only if `data` is not
+                `None` (then the `input_id` is deduced from `data`).
             config: The hyperparameters to be used.
             first_stage: The ID of the first stage to run (defaults to the first). Earlier stages may still be required
                 to run due to pipeline fields consumed by stages, marginal fields, or if `data` is `None`.
@@ -229,12 +229,26 @@ class Pipeline:
             stage_config = config.get(stage.id, {})
             if ctrl.step(stage.id) or stage.id in extra_stages:
                 try:
-                    dt = stage.run(pipeline = self, data = data, config = stage_config, status = status, **kwargs)
+                    dt = stage.run(
+                        pipeline = self,
+                        input_id = input_id,
+                        data = data,
+                        config = stage_config,
+                        status = status,
+                        **kwargs,
+                    )
                 except:  # noqa: E722
                     raise StageError(stage)
                 times[stage.id] = dt
             else:
-                stage.skip(pipeline = self, data = data, config = stage_config, status = status, **kwargs)
+                stage.skip(
+                    pipeline = self,
+                    input_id = input_id,
+                    data = data,
+                    config = stage_config,
+                    status = status,
+                    **kwargs,
+                )
 
         # Return the pipeline data object, the final config, and stage run times
         return data, config, times

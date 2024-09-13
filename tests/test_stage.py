@@ -155,31 +155,31 @@ class Stage__callback(unittest.TestCase):
         )
 
     def test(self):
-        self.stage.run(pipeline = self.pipeline, data = self.data, config = self.config)
+        self.stage.run(pipeline = self.pipeline, input_id = 'input-id', data = self.data, config = self.config)
         self.assertEqual(
             self.callback.call_args_list,
             [
-                call(stage = self.stage, event = 'start', pipeline = self.pipeline, data = self.data, status = None, config = self.config),
-                call(stage = self.stage, event = 'end', pipeline = self.pipeline, data = self.data, status = None, config = self.config),
+                call(stage = self.stage, event = 'start', pipeline = self.pipeline, input_id = 'input-id', data = self.data, status = None, config = self.config),
+                call(stage = self.stage, event = 'end', pipeline = self.pipeline, input_id = 'input-id', data = self.data, status = None, config = self.config),
             ],
         )
 
     def test_skip(self):
-        self.stage.skip(pipeline = self.pipeline, data = self.data, config = self.config)
+        self.stage.skip(pipeline = self.pipeline, input_id = 'input-id', data = self.data, config = self.config)
         self.assertEqual(
             self.callback.call_args_list,
             [
-                call(stage = self.stage, event = 'skip', pipeline = self.pipeline, data = self.data, status = None, config = self.config),
+                call(stage = self.stage, event = 'skip', pipeline = self.pipeline, input_id = 'input-id', data = self.data, status = None, config = self.config),
             ],
         )
 
     def test_skip_disabled(self):
         self.config['enabled'] = False
-        self.stage.run(pipeline = self.pipeline, data = self.data, config = self.config)
+        self.stage.run(pipeline = self.pipeline, input_id = 'input-id', data = self.data, config = self.config)
         self.assertEqual(
             self.callback.call_args_list,
             [
-                call(stage = self.stage, event = 'skip', pipeline = self.pipeline, data = self.data, status = None, config = self.config),
+                call(stage = self.stage, event = 'skip', pipeline = self.pipeline, input_id = 'input-id', data = self.data, status = None, config = self.config),
             ],
         )
 

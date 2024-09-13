@@ -36,6 +36,7 @@ class StageCallback(Protocol):
             stage: 'Stage',
             event: StageEvent,
             pipeline: 'repype.pipeline.Pipeline',
+            input_id: InputID,
             data: PipelineData,
             config: repype.config.Config,
             status: Optional[repype.status.Status],
@@ -204,6 +205,7 @@ class Stage:
     def run(
             self,
             pipeline: Pipeline,
+            input_id: InputID,
             data: PipelineData,
             config: repype.config.Config,
             status: Optional[repype.status.Status] = None,
@@ -217,6 +219,7 @@ class Stage:
 
         Arguments:
             pipeline: The pipeline object that this stage is a part of.
+            input_id: The identifier of the input data to be processed.
             data: The *pipeline data object* to be used for this stage. This is a dictionary that contains all
                 available fields of the pipeline. The output fields of this stage are added to this dictionary.
             config: The hyperparameters to be used for this stage.
@@ -235,7 +238,15 @@ class Stage:
                 stage = self.id,
                 intermediate = True,
             )
-            self.callback('start', pipeline = pipeline, data = data, config = config, status = status, **kwargs)
+            self.callback(
+                'start',
+                pipeline = pipeline,
+                input_id = input_id,
+                data = data,
+                config = config,
+                status = status,
+                **kwargs,
+            )
 
             # Extract the input fields for the stage
             input_data = {key: data[key] for key in self.inputs}
@@ -259,17 +270,26 @@ class Stage:
                 del data[key]
 
             # Finish the stage
-            self.callback('end', pipeline = pipeline, data = data, config = config, status = status, **kwargs)
+            self.callback(
+                'end',
+                pipeline = pipeline,
+                input_id = input_id,
+                data = data,
+                config = config,
+                status = status,
+                **kwargs,
+            )
             return dt
 
         # Skip the stage
         else:
-            self.skip(pipeline = pipeline, data = data, config = config, status = status, **kwargs)
+            self.skip(pipeline = pipeline, input_id = input_id, data = data, config = config, status = status, **kwargs)
             return 0.
 
     def skip(
             self,
             pipeline: Pipeline,
+            input_id: InputID,
             data: PipelineData,
             config: repype.config.Config,
             status: Optional[repype.status.Status] = None,
@@ -280,6 +300,7 @@ class Stage:
 
         Arguments:
             pipeline: The pipeline object that this stage is a part of.
+            input_id: The identifier of the input data to be processed.
             data: The *pipeline data object*. This is a dictionary that contains all available fields of the pipeline.
             config: The hyperparameters for this stage.
             status: A status object to report the progress of the computations.
@@ -290,7 +311,15 @@ class Stage:
             stage = self.id,
             intermediate = True,
         )
-        self.callback('skip', pipeline = pipeline, data = data, config = config, status = status, **kwargs)
+        self.callback(
+            'skip',
+            pipeline = pipeline,
+            input_id = input_id,
+            data = data,
+            config = config,
+            status = status,
+            **kwargs,
+        )
 
     def process(
             self,
