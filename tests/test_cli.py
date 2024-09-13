@@ -216,7 +216,7 @@ class run_cli_ex(unittest.TestCase):
     @patch.object(repype.batch.Batch, 'run')
     def test(self, mock_batch_run):
         with testsuite.CaptureStdout() as stdout:
-            ret = repype.cli.run_cli(path = self.tempdir.name)
+            ret = repype.cli.run_cli_ex(path = self.tempdir.name)
             self.assertTrue(ret)
             mock_batch_run.assert_not_called()
             self.assertEqual(
@@ -229,7 +229,7 @@ class run_cli_ex(unittest.TestCase):
     @patch.object(repype.batch.Batch, 'run')
     def test_run(self, mock_batch_run):
         with testsuite.CaptureStdout() as stdout:
-            ret = repype.cli.run_cli(path = self.tempdir.name, run = True)
+            ret = repype.cli.run_cli_ex(path = self.tempdir.name, run = True)
             self.assertTrue(ret)
             mock_batch_run.assert_called_once()
             self.assertIn('status', mock_batch_run.call_args_list[0].kwargs)
@@ -243,7 +243,7 @@ class run_cli_ex(unittest.TestCase):
 
     def test_run_integrated(self):
         with testsuite.CaptureStdout() as stdout:
-            ret = repype.cli.run_cli(path = self.tempdir.name, run = True, task_cls = DelayedTask)
+            ret = repype.cli.run_cli_ex(path = self.tempdir.name, run = True, task_cls = DelayedTask)
             self.assertTrue(ret)
             self.assertEqual(
                 str(stdout),
@@ -268,7 +268,7 @@ class run_cli_ex(unittest.TestCase):
 
     def test_internal_error(self):
         with testsuite.CaptureStdout() as stdout:
-            ret = repype.cli.run_cli(path = self.tempdir.name, run = True, task_cls = DefectiveTask)
+            ret = repype.cli.run_cli_ex(path = self.tempdir.name, run = True, task_cls = DefectiveTask)
             self.assertFalse(ret)
             self.assertIn(
                 f'\n'
