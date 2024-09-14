@@ -61,9 +61,13 @@ setup(
     author_email = 'leonid.kostrykin@bioquant.uni-heidelberg.de',
     url = 'https://github.com/kostrykin/repype',
     license = 'MIT',
-    packages = ['repype'],
+    packages = ['repype', 'repype.textual'],
     package_data = {
         'repype': [
+            'README.rst',
+            'LICENSE',
+        ],
+        'repype.textual': [
             'README.rst',
             'LICENSE',
             'repype.tcss',
