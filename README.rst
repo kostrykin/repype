@@ -20,7 +20,10 @@
 
 **Documentation:** https://repype.readthedocs.io
 
-**Examples:** https://github.com/kostrykin/repype/tree/master/examples
+**Examples:**
+
+- https://github.com/kostrykin/repype/tree/master/examples
+- https://github.com/BMCV/SuperDSM
 
 **Development instructions:**
 
