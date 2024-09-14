@@ -114,6 +114,7 @@ class Status:
         """
         Create a child status object that is nested within this status object.
         """
+        self.intermediate(None)
         child = Status(self)
         self.data.append(
             dict(
