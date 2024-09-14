@@ -50,7 +50,7 @@ class StageCallback(Protocol):
             data: The current *pipeline data object*.
             config: The hyperparameters to be used for this stage.
             status: A status object to report the progress of the computations.
-            **kwargs: The keyword arguments passed to :meth:`pipeline.Pipeline.process`.
+            **kwargs: The keyword arguments passed to :meth:`repype.pipeline.Pipeline.process`.
         """
         pass
 
