@@ -1073,6 +1073,23 @@ class Task__run(unittest.TestCase):
         self.assertEqual(mock_create_pipeline.return_value.process.call_count, 2)
         mock_store.assert_called_once()
 
+    def test_pickup_with_copy(self, mock_create_pipeline, mock_load, mock_store):
+        mock_create_pipeline.return_value.process.return_value = (dict(), None, dict())
+        mock_load.return_value = {
+            'file-0': dict(output = 'value1'),
+            'file-1': dict(output = 'value2'),
+        }
+        with patch.object(repype.task.Task, 'find_pickup_task', return_value = dict(task = self.task, first_diverging_stage = None)) as mock_find_pickup_task:
+            self.task.run(self.config)
+        mock_find_pickup_task.assert_called_once_with(
+            mock_create_pipeline.return_value,
+            self.config,
+        )
+        mock_load.assert_called_once()
+        mock_create_pipeline.assert_called_once_with()
+        self.assertEqual(mock_create_pipeline.return_value.process.call_count, 0)
+        mock_store.assert_called_once()
+
 
 class Task__final_config(unittest.TestCase):
 

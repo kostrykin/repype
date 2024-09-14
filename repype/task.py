@@ -662,46 +662,49 @@ class Task:
             first_stage = first_stage.id if first_stage else None,
         )
 
-        # Run the pipeline for all inputs
-        for input_idx, input_id in enumerate(self.input_ids):
-            input_status = repype.status.derive(status)
+        # Skip pipeline run if `pickup` and `first_stage` is `None`
+        if not pickup or first_stage is not None:
 
-            # Announce the status of the task
-            repype.status.update(
-                status = input_status,
-                info = 'process',
-                task = str(self.path.resolve()),
-                input_id = input_id,
-                step = input_idx,
-                step_count = len(self.input_ids),
-            )
+            # Run the pipeline for all inputs
+            for input_idx, input_id in enumerate(self.input_ids):
+                input_status = repype.status.derive(status)
 
-            # Automatically adopt hyperparameters
-            input_config = pipeline.configure(config, input_id)
+                # Announce the status of the task
+                repype.status.update(
+                    status = input_status,
+                    info = 'process',
+                    task = str(self.path.resolve()),
+                    input_id = input_id,
+                    step = input_idx,
+                    step_count = len(self.input_ids),
+                )
 
-            # Process the input
-            data_chunk = data.get(input_id, dict())
-            data_chunk, final_config, times_chunk = pipeline.process(
-                input_id = input_id,
-                data = data_chunk,
-                config = input_config,
-                first_stage = first_stage.id if first_stage else None,
-                status = input_status,
-            )
-            if strip_marginals:
-                data_chunk = self.strip_marginals(pipeline, data_chunk)
+                # Automatically adopt hyperparameters
+                input_config = pipeline.configure(config, input_id)
 
-            # Update the times benchmark
-            for stage_id, time in times_chunk.items():
-                times[stage_id, input_id] = time
+                # Process the input
+                data_chunk = data.get(input_id, dict())
+                data_chunk, final_config, times_chunk = pipeline.process(
+                    input_id = input_id,
+                    data = data_chunk,
+                    config = input_config,
+                    first_stage = first_stage.id if first_stage else None,
+                    status = input_status,
+                )
+                if strip_marginals:
+                    data_chunk = self.strip_marginals(pipeline, data_chunk)
 
-            # Store the final configuration used for the input, if a corresponding scope is defined
-            if final_config and (final_config_filepath := pipeline.resolve('config', input_id)):
-                final_config_filepath.parent.mkdir(parents = True, exist_ok = True)
-                with final_config_filepath.open('w') as final_config_file:
-                    yaml.dump(final_config.entries, final_config_file)
+                # Update the times benchmark
+                for stage_id, time in times_chunk.items():
+                    times[stage_id, input_id] = time
 
-            data[input_id] = data_chunk
+                # Store the final configuration used for the input, if a corresponding scope is defined
+                if final_config and (final_config_filepath := pipeline.resolve('config', input_id)):
+                    final_config_filepath.parent.mkdir(parents = True, exist_ok = True)
+                    with final_config_filepath.open('w') as final_config_file:
+                        yaml.dump(final_config.entries, final_config_file)
+
+                data[input_id] = data_chunk
 
         # Store the results for later pick up
         repype.status.update(status, info = 'storing', intermediate = True)
