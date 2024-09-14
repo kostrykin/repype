@@ -401,8 +401,8 @@ class StatusReader(FileSystemEventHandler):
         filepath: The status file written by the status object to be monitored.
         loop: The event loop to be used for processing the status updates (usually the loop of the main thread).
             Defaults to the event loop of the thread used to create the status reader object.
-        debug: If `True`, the status updates are processed on a separate thread (the main thread is assumed to be used
-            for long-running, blocking operations). If `False`, the status updates are posted to the main thread.
+        blocking: If `True`, the status updates are processed on a separate thread (the main thread is assumed to be
+            used for long-running, blocking operations). If `False`, the status updates are posted to the main thread.
 
     See also:
         :attr:`repype.status.Status.filepath` is the status file written by a status object.
@@ -443,15 +443,15 @@ class StatusReader(FileSystemEventHandler):
     The event loop to be used for processing the status updates.
     """
 
-    debug: bool
+    blocking: bool
     """
     If `True`, the status updates are processed on a separate thread (the main thread is assumed to be used for
     long-running, blocking operations). If `False`, the status updates are posted to the main thread.
     """
 
-    def __init__(self, filepath: PathLike, loop: asyncio.AbstractEventLoop = None, debug = False):
+    def __init__(self, filepath: PathLike, loop: asyncio.AbstractEventLoop = None, blocking = False):
         self.loop = loop if loop else asyncio.get_running_loop()
-        self.debug = debug
+        self.blocking = blocking
         self.filepath = pathlib.Path(filepath).resolve()
         self.data = list()
         self.data_frames = {self.filepath: self.data}
@@ -554,7 +554,7 @@ class StatusReader(FileSystemEventHandler):
                 if self.update(filepath):
                     self.check_new_status()
 
-            if self.debug:
+            if self.blocking:
                 update(filepath)
             else:
                 self.loop.call_soon_threadsafe(update, filepath)
