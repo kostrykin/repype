@@ -1,4 +1,6 @@
 import asyncio
+import json
+import os
 import pathlib
 import time
 
@@ -99,19 +101,22 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
         # If status is intermediate, ...
         if intermediate:
 
-            # ...clear the last line
-            if status is None:
-                text = self.clear_line('')
+            # ...and intermediate statuses are not muted, ...
+            if bool(json.loads(os.environ.get('REPYPE_CLI_INTERMEDIATE', '1'))):
 
-            # ...print the last line of the status accordingly
-            else:
-                text = self.full_format(positions, status, intermediate = True)
+                # ...clear the last line
+                if status is None:
+                    text = self.clear_line('')
 
-            lines = text.split('\n')
-            if len(lines) > 1:
-                print('\n'.join(lines[:-1]))
-            print(lines[-1], end='\r')
-            self._intermediate_line_length = len(lines[-1])
+                # ...print the last line of the status accordingly
+                else:
+                    text = self.full_format(positions, status, intermediate = True)
+
+                lines = text.split('\n')
+                if len(lines) > 1:
+                    print('\n'.join(lines[:-1]))
+                print(lines[-1], end='\r')
+                self._intermediate_line_length = len(lines[-1])
 
         # Otherwise, print a regular line
         else:

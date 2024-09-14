@@ -32,6 +32,38 @@ class StatusReaderConsoleAdapter__write(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(str(stdout), 'message\n')
 
 
+class StatusReaderConsoleAdapter__intermediate(unittest.IsolatedAsyncioTestCase):
+
+    async def asyncSetUp(self):
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.status = repype.status.Status(path = self.tempdir.name)
+        self.status_reader = repype.cli.StatusReaderConsoleAdapter(self.status.filepath)
+        await self.status_reader.__aenter__()
+
+    async def asyncTearDown(self):
+        await self.status_reader.__aexit__(None, None, None)
+        self.tempdir.cleanup()
+
+    async def test(self):
+        with testsuite.CaptureStdout() as stdout:
+            self.status.intermediate('message 1')
+            await test_status.wait_for_watchdog()
+            self.assertEqual(str(stdout), 'message 1\r')
+
+            self.status.intermediate('message 2')
+            await test_status.wait_for_watchdog()
+            self.assertEqual(str(stdout), 'message 1\rmessage 2\r')
+
+    @testsuite.with_envvars(REPYPE_CLI_INTERMEDIATE = '0')
+    async def test_muted(self):
+        with testsuite.CaptureStdout() as stdout:
+            self.status.write('message 1')
+
+            self.status.intermediate('message 2')
+            await test_status.wait_for_watchdog()
+            self.assertEqual(str(stdout), 'message 1\n')
+
+
 class StatusReaderConsoleAdapter__progress(unittest.IsolatedAsyncioTestCase):
 
     async def asyncSetUp(self):
@@ -96,7 +128,7 @@ class StatusReaderConsoleAdapter__progress(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(str(stdout), ''.join(lines))
 
         # Verify that there have been three iterations, i.e. `item_idx = 0`, `item_idx = 1`, `item_idx = 2`
-    #     self.assertEqual(item_idx, 2)
+        self.assertEqual(item_idx, 2)
 
     async def test_break(self):
         lines = [
