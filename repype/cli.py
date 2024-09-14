@@ -41,10 +41,10 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
         >>> import repype.cli
         >>>
         >>> class ExtendedStatusReader(repype.cli.StatusReaderConsoleAdapter):
-        ...     def format(self, parents, positions, status, intermediate):
+        ...     def format(self, positions, status, intermediate):
         ...         if isinstance(status, dict) and status.get('info') == 'custom':
         ...             return f'*** {status["text"]} ({status["number"]})'
-        ...         return super().format(parents, positions, status, intermediate)
+        ...         return super().format(positions, status, intermediate)
         >>>
         >>> async def main():
         ...     with repype.status.create() as status:
@@ -92,7 +92,6 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
 
     def handle_new_status(
             self,
-            parents: List[Union[str, dict]],
             positions: List[int],
             status: Optional[Union[str, dict]],
             intermediate: bool,
@@ -106,7 +105,7 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
 
             # ...print the last line of the status accordingly
             else:
-                text = self.full_format(parents, positions, status, intermediate = True)
+                text = self.full_format(positions, status, intermediate = True)
 
             lines = text.split('\n')
             if len(lines) > 1:
@@ -116,12 +115,11 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
 
         # Otherwise, print a regular line
         else:
-            print(self.full_format(parents, positions, status, intermediate = False))
+            print(self.full_format(positions, status, intermediate = False))
             self._intermediate_line_length = 0
 
     def full_format(
             self,
-            parents: List[Union[str, dict]],
             positions: List[int],
             status: Union[str, dict],
             intermediate: bool,
@@ -130,7 +128,7 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
         Format the status update as a string,
         including indentation and empty lines between blocks of different indentation.
         """
-        text = str(self.format(parents, positions, status, intermediate))
+        text = str(self.format(positions, status, intermediate))
 
         # Compute indentation, and add an extra line if the margin changes
         margin = ' ' * self.indent * (len(positions) - 1)
@@ -145,7 +143,6 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
 
     def format(
             self,
-            parents: List[Union[str, dict]],
             positions: List[int],
             status: Union[str, dict],
             intermediate: bool,

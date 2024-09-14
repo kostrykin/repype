@@ -576,12 +576,12 @@ class StatusReader(FileSystemEventHandler):
 
             # If the element is an intermediate, but it didn't actually change, skip it
             if not (cursor.intermediate and self._intermediate is not None and self._intermediate[-1] == elements[-1]):
-                self._unwrap_new_status(elements[:-1], list(cursor.path), copy.deepcopy(elements[-1]))
+                self._unwrap_new_status(list(cursor.path), copy.deepcopy(elements[-1]))
 
             # If the element is an intermediate, leave the cursor on the last non-intermediate position
             # Unless there is a subsequent non-intermediate element
             if cursor.intermediate and not cursor.has_subsequent_non_intermediate():
-                self._intermediate = (elements[:-1], list(cursor.path), copy.deepcopy(elements[-1]))
+                self._intermediate = (list(cursor.path), copy.deepcopy(elements[-1]))
                 break
             else:
                 self._intermediate = None
@@ -595,7 +595,6 @@ class StatusReader(FileSystemEventHandler):
 
     def _unwrap_new_status(
             self,
-            parents: List[Union[str, dict]],
             positions: List[int],
             element: Union[str, dict],
         ) -> None:
@@ -604,19 +603,18 @@ class StatusReader(FileSystemEventHandler):
 
             # If the intermediate status is cleared, handle it accordingly
             if not element['content']:
-                self.handle_new_status(parents, positions, status = None, intermediate = True)
+                self.handle_new_status(positions, status = None, intermediate = True)
 
             # Otherwise, handle the intermediate status update
             else:
-                self.handle_new_status(parents, positions, status = element['content'][0], intermediate = True)
+                self.handle_new_status(positions, status = element['content'][0], intermediate = True)
 
         # Handle an non-intermediate status update (permanent)
         else:
-            self.handle_new_status(parents, positions, status = element, intermediate = False)
+            self.handle_new_status(positions, status = element, intermediate = False)
 
     def handle_new_status(
             self,
-            parents: List[Union[str, dict]],
             positions: List[int],
             status: Optional[Union[str, dict]],
             intermediate: bool,
@@ -625,9 +623,6 @@ class StatusReader(FileSystemEventHandler):
         Process a new status update.
 
         Arguments:
-            parents: The sequence of elements along the path to the element, that this cursor points to (except the
-                element itself). Elements corresponding to intermediate statuses are represented as dictionaries with
-                the key ``content`` for the status, and ``content_type`` set to ``intermediate``.
             positions: The sequence of elements along the path, represented by the positions of the elements within the
                 parent lists.
             status: The new status update. Can only be `None` if `intermediate` is True, indicating that the

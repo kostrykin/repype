@@ -140,12 +140,12 @@ class StatusReaderConsoleAdapter__progress(unittest.IsolatedAsyncioTestCase):
 
 class ExtendedStatusReaderConsoleAdapter(repype.cli.StatusReaderConsoleAdapter):
 
-    def format(self, parents, positions, status, intermediate):
+    def format(self, positions, status, intermediate):
 
         if isinstance(status, dict) and status.get('info') == 'custom':
             return status['text']
         
-        return super().format(parents, positions, status, intermediate)
+        return super().format(positions, status, intermediate)
 
 
 class ExtendedStatusReaderConsoleAdapter__format(unittest.IsolatedAsyncioTestCase):

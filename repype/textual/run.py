@@ -217,7 +217,6 @@ class RunScreen(ModalScreen[int]):
 
     def handle_new_status(
             self,
-            parents: List[Union[str, dict]],
             positions: List[int],
             status: Optional[Union[str, dict]],
             intermediate: bool,
@@ -324,7 +323,7 @@ class RunScreen(ModalScreen[int]):
                     return
 
             # Handle all remaining status updates
-            target.update(self.custom_format(parents, positions, status, intermediate))
+            target.update(self.custom_format(positions, status, intermediate))
 
         except:  # noqa: E722
             log('RunScreen.handle_new_status', error = traceback.format_exc())
@@ -332,7 +331,6 @@ class RunScreen(ModalScreen[int]):
 
     def custom_format(
             self,
-            parents: List[Union[str, dict]],
             positions: List[int],
             status: Optional[Union[str, dict]],
             intermediate: bool,
