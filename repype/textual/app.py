@@ -43,7 +43,7 @@ class Repype(App):
     Disable the command palette.
     """
 
-    CSS_PATH = '../../repype.tcss'
+    CSS_PATH = 'repype.tcss'
     """
     The path to the stylesheet file.
     """

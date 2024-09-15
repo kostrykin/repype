@@ -63,13 +63,7 @@ setup(
     license = 'MIT',
     packages = ['repype', 'repype.textual'],
     package_data = {
-        'repype': [
-            'README.rst',
-            'LICENSE',
-        ],
         'repype.textual': [
-            'README.rst',
-            'LICENSE',
             'repype.tcss',
         ],
     },
