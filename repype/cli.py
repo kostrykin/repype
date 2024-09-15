@@ -336,7 +336,7 @@ def main(
         tasks     = [pathlib.Path(p).resolve() for p in tasks]
         task_dirs = [pathlib.Path(p).resolve() for p in task_dirs]
         contexts  = list()
-        for rc in batch.pending:
+        for rc in (batch.contexts if reset else batch.pending):
             if any(
                 [
                     rc.task.path in tasks,
@@ -355,14 +355,14 @@ def main(
 
         # Reset the selected tasks
         if reset:
-            print(f'\n{len(batch.contexts)} task(s) selected:')
-            print('\n'.join(f'- {rc.task.path}' for rc in batch.contexts))
+            print(f'\n{len(contexts)} task(s) selected:')
+            print('\n'.join(f'- {rc.task.path}' for rc in contexts))
 
             confirm = input('\nReset the selected tasks? Enter the number of selected tasks to confirm: ')
             aborted = True
             try:
-                if int(confirm) == len(batch.contexts):
-                    for rc in batch.contexts:
+                if int(confirm) == len(contexts):
+                    for rc in contexts:
                         rc.task.reset()
                     aborted = False
                     return True
