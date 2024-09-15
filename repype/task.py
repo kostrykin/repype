@@ -695,7 +695,7 @@ class Task:
                 )
 
                 # Automatically adopt hyperparameters
-                input_config = pipeline.configure(config, input_id)
+                input_config = pipeline.configure(config.copy(), input_id)
 
                 # Process the input
                 data_chunk = data.get(input_id, dict())

@@ -1019,6 +1019,13 @@ class Task__run(unittest.TestCase):
         with self.assertRaises(AssertionError):
             self.task.run(self.config)
 
+    def test_store_config(self, mock_create_pipeline, mock_load, mock_store):
+        mock_create_pipeline.return_value.configure.return_value = dict(key = 'value')
+        mock_create_pipeline.return_value.process.return_value = (dict(), None, dict())
+        self.task.run(self.config)
+        mock_store.assert_called_once()
+        self.assertEqual(mock_store.call_args[0][2].entries, dict())
+
     def test_nothing_to_pickup(self, mock_create_pipeline, mock_load, mock_store):
         mock_create_pipeline.return_value.process.return_value = (dict(), None, dict())
         self.task.run(self.config)
