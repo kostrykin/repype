@@ -355,7 +355,7 @@ def main(
 
         # Reset the selected tasks
         if reset:
-            print(f'{len(batch.contexts)} task(s) selected:')
+            print(f'\n{len(batch.contexts)} task(s) selected:')
             print('\n'.join(f'- {rc.task.path}' for rc in batch.contexts))
 
             confirm = input('\nReset the selected tasks? Enter the number of selected tasks to confirm: ')
