@@ -172,10 +172,8 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
             text = None
 
             if status.get('info') == 'batch':
-                text = '\n' f'{len(status["batch"])} task(s) selected'
-                if status['run']:
-                    text += ' for running'
-                else:
+                text = '\n' f'{len(status["batch"])} task(s) selected for running'
+                if not status['run']:
                     text += '\n' 'DRY RUN: use "--run" to run the tasks instead'
                     if status['batch']:
                         text += '\n\n' 'Selected tasks:\n' + '\n'.join(
@@ -352,41 +350,49 @@ def main(
     else:
         contexts = batch.pending
 
+    # Define the main co-routine
     async def _main():
-        with repype.status.create() as status:
 
-            repype.status.update(
-                status = status,
-                info = 'batch',
-                batch = [str(rc.task.path.resolve()) for rc in contexts],
-                run = run,
-            )
+        # Reset the selected tasks
+        if reset:
+            print(f'{len(batch.contexts)} task(s) selected:')
+            print('\n'.join(f'- {rc.task.path}' for rc in batch.contexts))
 
-            status_reader = status_reader_cls(status.filepath, batch = batch)
-            async with status_reader:
-
-                if run:
-                    return await batch.run(contexts, status = status)
-
-                elif reset:
-                    confirm = input('\nReset the selected tasks? Enter the number of selected tasks to confirm: ')
-                    aborted = True
-
-                    try:
-                        if int(confirm) == len(batch.pending):
-                            for rc in batch.pending:
-                                rc.task.reset()
-                            aborted = False
-                            return True
-
-                    except ValueError:
-                        pass
-
-                    if aborted:
-                        print('Aborted.')
-                        return False
-
-                else:
+            confirm = input('\nReset the selected tasks? Enter the number of selected tasks to confirm: ')
+            aborted = True
+            try:
+                if int(confirm) == len(batch.contexts):
+                    for rc in batch.contexts:
+                        rc.task.reset()
+                    aborted = False
                     return True
 
+            except ValueError:
+                pass
+
+            if aborted:
+                print('Aborted.')
+                return False
+
+        # Otherwise, run the batch processing (dry or not dry)
+        else:
+            with repype.status.create() as status:
+
+                repype.status.update(
+                    status = status,
+                    info = 'batch',
+                    batch = [str(rc.task.path.resolve()) for rc in contexts],
+                    run = run,
+                )
+
+                status_reader = status_reader_cls(status.filepath, batch = batch)
+                async with status_reader:
+
+                    if run:
+                        return await batch.run(contexts, status = status)
+
+                    else:
+                        return True
+
+    # Return the main co-routine
     return _main
