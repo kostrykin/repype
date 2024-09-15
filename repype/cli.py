@@ -172,8 +172,10 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
             text = None
 
             if status.get('info') == 'batch':
-                text = '\n' f'{len(status["batch"])} task(s) selected for running'
-                if not status['run']:
+                text = '\n' f'{len(status["batch"])} task(s) selected'
+                if status['run']:
+                    text += ' for running'
+                else:
                     text += '\n' 'DRY RUN: use "--run" to run the tasks instead'
                     if status['batch']:
                         text += '\n\n' 'Selected tasks:\n' + '\n'.join(
@@ -278,15 +280,18 @@ def run_cli(
     parser = argparse.ArgumentParser()
 
     parser.add_argument('path', help = 'Root directory for batch processing.')
-    parser.add_argument('--run', help = 'Run batch processing.', action = 'store_true')
     parser.add_argument('--task', help = 'Run only the given task.', type = str, default = list(), action = 'append')
     parser.add_argument('--task-dir', help = 'Run only the given task and those from its sub-directories.', type = str,
                         default = list(), action='append')
+    op_mode = parser.add_mutually_exclusive_group()
+    op_mode.add_argument('--run', help = 'Run the selected tasks.', action = 'store_true')
+    op_mode.add_argument('--reset', help = 'Reset the selected tasks.', action = 'store_true')
 
     args = parser.parse_args()
     return repype.cli.run_cli_ex(
         args.path,
         args.run,
+        args.reset,
         args.task,
         args.task_dir,
         task_cls,
@@ -297,6 +302,7 @@ def run_cli(
 def main(
         path: PathLike,
         run: bool = False,
+        reset: bool = False,
         tasks: List[PathLike] = list(),
         task_dirs: List[PathLike] = list(),
         task_cls: Type[repype.task.Task] = repype.task.Task,
@@ -307,16 +313,22 @@ def main(
 
     Arguments:
         path: The root directory for batch processing. Tasks will be loaded recursively from this directory.
-        run: Whether to run the batch processing. If `False`, the tasks will be loaded, but not executed.
+        run: Whether to run the batch processing. If `False`, the tasks will be loaded, but not executed. Can only be
+            `True` if `reset` is `False`.
+        reset: Whether to reset the selected tasks. Can only be `True` if `run` is `False`.
         tasks: List of tasks to run. Tasks are identified by their paths. If given, only these tasks will be run.
         task_dirs: List of task directories to run. If given, only tasks from these directories and their
             sub-directories will be run.
         task_cls: The task class to use for loading tasks.
         status_reader_cls: The status reader implementation to use for displaying status updates.
 
+    Raises:
+        AssertionError: If `run` and `reset` are both `True`.
+
     Returns:
         Co-routine for batch processing. The co-routine returns `True` upon success, `False` if an error occurred.
     """
+    assert not (run and reset), 'Cannot run and reset at the same time'
 
     path  = pathlib.Path(path).resolve()
     batch = repype.batch.Batch(task_cls)
@@ -355,6 +367,24 @@ def main(
 
                 if run:
                     return await batch.run(contexts, status = status)
+
+                elif reset:
+                    confirm = input('\nReset the selected tasks? Enter the number of selected tasks to confirm: ')
+                    aborted = True
+
+                    try:
+                        if int(confirm) == len(batch.pending):
+                            for rc in batch.pending:
+                                rc.task.reset()
+                            aborted = False
+                            return True
+
+                    except ValueError:
+                        pass
+
+                    if aborted:
+                        print('Aborted.')
+                        return False
 
                 else:
                     return True
