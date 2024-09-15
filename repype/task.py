@@ -38,7 +38,7 @@ TaskData = Dict[InputID, PipelineData]
 Task data object. A dictionary with input objects as keys and *pipeline data objects* as values.
 """
 
-PendingReason = Literal['incomplete', 'pipeline', 'config', '']
+PendingReason = Literal['incomplete', 'pipeline', 'specification', '']
 """
 Reasons why a task is pending, or not pending at all.
 """
@@ -375,7 +375,7 @@ class Task:
         Returns:
             - `"incomplete"`: The task needs to run because it is not completed.
             - `"pipeline"`: The task needs to run because the pipeline has changed.
-            - `"config"`: The task needs to run because the hyperparameters have changed.
+            - `"specification"`: The task needs to run because the task specification or hyperparameters have changed.
             - `""`: The task is completed and does not need to run.
         """
         # Non-runnable tasks never are pending
@@ -395,9 +395,9 @@ class Task:
             if stage.sha != hashes['stages'][stage.id]:
                 return 'pipeline'
 
-        # If the task is completed, but the configuration has changed, the task is pending
+        # If the task is completed, but the task specification or configuration have changed, the task is pending
         if hashes['task'] != self.compute_sha(config):
-            return 'config'
+            return 'specification'
         else:
             return ''
 

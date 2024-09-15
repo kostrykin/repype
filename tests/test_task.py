@@ -519,7 +519,7 @@ class Task__is_pending(unittest.TestCase):
                 digest_sha_file,
             )
         config['key'] = 'value'
-        self.assertEqual(task.is_pending(self.pipeline, config), 'config')
+        self.assertEqual(task.is_pending(self.pipeline, config), 'specification')
 
     @testsuite.with_temporary_paths(1)
     def test_with_changed_pipeline(self, path):
