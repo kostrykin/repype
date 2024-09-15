@@ -47,11 +47,19 @@ class RunContext:
     Defaults to :meth:`task.create_config()<repype.task.Task.create_config()>`.
     """
 
+    pending: repype.task.PendingReason
+    """
+    If and why the task is pending, or not pending at all.
+
+    See :meth:`repype.task.Task.is_pending` for possible values.
+    """
+
     def __init__(self, task: repype.task.Task):
         assert task.runnable
         self.task = task
         self.pipeline = task.create_pipeline()
         self.config = task.create_config()
+        self.pending = task.is_pending(self.pipeline, self.config)
 
     def run(self, *args, **kwargs) -> repype.task.TaskData:
         """
@@ -73,6 +81,7 @@ class RunContext:
                 self.task == other.task,
                 self.pipeline == other.pipeline,
                 self.config == other.config,
+                self.pending == other.pending,
             )
         )
 
@@ -223,7 +232,7 @@ class Batch:
         """
         Get a list of run contexts for all pending tasks.
         """
-        return [rc for rc in self.contexts if rc.task.is_pending(rc.pipeline, rc.config)]
+        return [rc for rc in self.contexts if rc.pending]
 
     def context(self, path: PathLike) -> Optional[RunContext]:
         """

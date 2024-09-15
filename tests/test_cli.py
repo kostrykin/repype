@@ -258,9 +258,9 @@ class run_cli_ex(unittest.TestCase):
                 'DRY RUN: use "--run" to run the tasks instead' '\n'
                 '\n'
                 'Selected tasks:' '\n'
-                f'- {self.root_path.resolve()}' '\n'
-                f'- {self.root_path.resolve() / "task-2"}' '\n'
-                f'- {self.root_path.resolve() / "task-3"}' '\n',
+                f'- {self.root_path.resolve()} (incomplete)' '\n'
+                f'- {self.root_path.resolve() / "task-2"} (incomplete)' '\n'
+                f'- {self.root_path.resolve() / "task-3"} (incomplete)' '\n',
             )
 
     @patch.object(repype.batch.Batch, 'run')

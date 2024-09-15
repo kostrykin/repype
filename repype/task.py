@@ -23,6 +23,7 @@ from repype.typing import (
     InputID,
     Iterator,
     List,
+    Literal,
     Mapping,
     Optional,
     PathLike,
@@ -35,6 +36,11 @@ from repype.typing import (
 TaskData = Dict[InputID, PipelineData]
 """
 Task data object. A dictionary with input objects as keys and *pipeline data objects* as values.
+"""
+
+PendingReason = Literal['incomplete', 'pipeline', 'config', '']
+"""
+Reasons why a task is pending, or not pending at all.
 """
 
 
@@ -362,17 +368,23 @@ class Task:
                 stages.append(stage_class())
             return repype.pipeline.create_pipeline(stages, *args, scopes = scopes, **kwargs)
 
-    def is_pending(self, pipeline: repype.pipeline.Pipeline, config: repype.config.Config) -> bool:
+    def is_pending(self, pipeline: repype.pipeline.Pipeline, config: repype.config.Config) -> PendingReason:
         """
-        `True` if the task needs to run, and `False` if the task is completed or not runnable.
+        Tells whether the task needs to run, or whether the task is completed or not runnable.
+
+        Returns:
+            - `"incomplete"`: The task needs to run because it is not completed.
+            - `"pipeline"`: The task needs to run because the pipeline has changed.
+            - `"config"`: The task needs to run because the hyperparameters have changed.
+            - `""`: The task is completed and does not need to run.
         """
         # Non-runnable tasks never are pending
         if not self.runnable:
-            return False
+            return ''
 
         # If the task is not completed, it is pending
         if not self.digest_sha_filepath.is_file():
-            return True
+            return 'incomplete'
 
         # Read the hashes of the completed task
         with self.digest_sha_filepath.open('r') as digest_sha_file:
@@ -381,10 +393,13 @@ class Task:
         # If the task is completed, but the pipeline has changed, the task is pending
         for stage in pipeline.stages:
             if stage.sha != hashes['stages'][stage.id]:
-                return True
+                return 'pipeline'
 
         # If the task is completed, but the configuration has changed, the task is pending
-        return hashes['task'] != self.compute_sha(config)
+        if hashes['task'] != self.compute_sha(config):
+            return 'config'
+        else:
+            return ''
 
     def reset(self):
         """
@@ -484,7 +499,7 @@ class Task:
         Arguments:
             pipeline: The pipeline used to compute `data`.
             data: The *task data object*.
-            config: The hyperparameters used to vcompute `data`.
+            config: The hyperparameters used to compute `data`.
             times: The run times of the pipeline stages.
         """
         assert self.runnable

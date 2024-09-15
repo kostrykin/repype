@@ -467,7 +467,7 @@ class Task__is_pending(unittest.TestCase):
             spec = dict(),
         )
         config = task.create_config()
-        self.assertFalse(task.is_pending(self.pipeline, config))
+        self.assertEqual(task.is_pending(self.pipeline, config), '')
 
     @testsuite.with_temporary_paths(1)
     def test_without_digest(self, path):
@@ -477,7 +477,7 @@ class Task__is_pending(unittest.TestCase):
             spec = dict(runnable = True),
         )
         config = task.create_config()
-        self.assertTrue(task.is_pending(self.pipeline, config))
+        self.assertEqual(task.is_pending(self.pipeline, config), 'incomplete')
 
     @testsuite.with_temporary_paths(1)
     def test_with_digest(self, path):
@@ -498,7 +498,7 @@ class Task__is_pending(unittest.TestCase):
                 ),
                 digest_sha_file,
             )
-        self.assertFalse(task.is_pending(self.pipeline, config))
+        self.assertEqual(task.is_pending(self.pipeline, config), '')
 
     @testsuite.with_temporary_paths(1)
     def test_with_changed_config(self, path):
@@ -519,7 +519,7 @@ class Task__is_pending(unittest.TestCase):
                 digest_sha_file,
             )
         config['key'] = 'value'
-        self.assertTrue(task.is_pending(self.pipeline, config))
+        self.assertEqual(task.is_pending(self.pipeline, config), 'config')
 
     @testsuite.with_temporary_paths(1)
     def test_with_changed_pipeline(self, path):
@@ -539,7 +539,7 @@ class Task__is_pending(unittest.TestCase):
                 ),
                 digest_sha_file,
             )
-        self.assertTrue(task.is_pending(self.pipeline, config))
+        self.assertEqual(task.is_pending(self.pipeline, config), 'pipeline')
 
 
 class Task__reset(unittest.TestCase):

@@ -59,6 +59,7 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
     Arguments:
         *args: Passed through to the base class.
         indent: Indentation level for each line of the status (for each level of the nesting hierarchy).
+        batch: Batch instance used for running tasks.
         **kwargs: Passed through to the base class.
     """
 
@@ -79,10 +80,16 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
     `None` if no status has been printed yet.
     """
 
-    def __init__(self, *args, indent: int = 2, **kwargs):
+    batch: Optional[repype.batch.Batch]
+    """
+    Batch instance used for running tasks.
+    """
+
+    def __init__(self, *args, indent: int = 2, batch: Optional[repype.batch.Batch] = None, **kwargs):
         self.indent = indent
         self._intermediate_line_length = 0
         self.margin = None
+        self.batch = batch
         super().__init__(*args, **kwargs)
 
     def clear_line(self, line: str) -> str:
@@ -146,6 +153,11 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
         lines[0] = self.clear_line(lines[0])
         return '\n'.join(lines)
 
+    def format_dry_run_task(self, task_path: str) -> str:
+        rc = self.batch.context(task_path)
+        suffix = f' ({rc.pending})' if rc.pending else ''
+        return f'- {task_path}{suffix}'
+
     def format(
             self,
             positions: List[int],
@@ -164,7 +176,9 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
                 if not status['run']:
                     text += '\n' 'DRY RUN: use "--run" to run the tasks instead'
                     if status['batch']:
-                        text += '\n\n' 'Selected tasks:\n' + '\n'.join(f'- {path}' for path in status['batch'])
+                        text += '\n\n' 'Selected tasks:\n' + '\n'.join(
+                            self.format_dry_run_task(path) for path in status['batch']
+                        )
 
             if status.get('info') == 'enter':
                 text = f'\n({status["step"] + 1}/{status["step_count"]}) Entering task: {status["task"]}'
@@ -336,7 +350,7 @@ def main(
                 run = run,
             )
 
-            status_reader = status_reader_cls(status.filepath)
+            status_reader = status_reader_cls(status.filepath, batch = batch)
             async with status_reader:
 
                 if run:
