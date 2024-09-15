@@ -24,6 +24,7 @@ class Repype(App):
             :meth:`repype.batch.Batch.load`. Parsed from the command-line, if `None`.
         headless: Run in headless mode for debugging. If `True`, overwrites the `headless` argument passed to
             :meth:`run`. Can also be overwritten by the command-line argument ``--headless``.
+        **kwargs: Additional keyword arguments passed to :class:`repype.batch.Batch`.
     """
 
     BINDINGS = [
@@ -63,7 +64,7 @@ class Repype(App):
     The batch object.
     """
 
-    def __init__(self, path: Optional[PathLike] = None, headless: bool = False):
+    def __init__(self, path: Optional[PathLike] = None, headless: bool = False, **kwargs):
         if path is None:
             import argparse
             parser = argparse.ArgumentParser()
@@ -75,7 +76,7 @@ class Repype(App):
                 headless = True
 
         self.headless = headless
-        self.batch = repype.batch.Batch()
+        self.batch = repype.batch.Batch(**kwargs)
         self.path = pathlib.Path(path)
         super().__init__()
 
