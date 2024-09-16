@@ -3,13 +3,14 @@ import glob
 import multiprocessing
 import multiprocessing.connection
 import pathlib
-import signal
 import sys
 import traceback
 
 import dill
-import repype.pipeline
+import yaml
+
 import repype.config
+import repype.pipeline
 import repype.status
 import repype.task
 from repype.typing import (
@@ -19,8 +20,7 @@ from repype.typing import (
     PathLike,
     Type,
 )
-import yaml
-    
+
 
 class RunContext:
     """
@@ -37,12 +37,21 @@ class RunContext:
 
     pipeline: repype.pipeline.Pipeline
     """
-    The pipeline to run the task with. Defaults to :meth:`task.create_pipeline()<repype.task.Task.create_pipeline()>`.
+    The pipeline to run the task with.
+    Defaults to :meth:`task.create_pipeline()<repype.task.Task.create_pipeline()>`.
     """
 
     config: repype.config.Config
     """
-    The hyperparameters to run the task with. Defaults to :meth:`task.create_config()<repype.task.Task.create_config()>`.
+    The hyperparameters to run the task with.
+    Defaults to :meth:`task.create_config()<repype.task.Task.create_config()>`.
+    """
+
+    pending: repype.task.PendingReason
+    """
+    If and why the task is pending, or not pending at all.
+
+    See :meth:`repype.task.Task.is_pending` for possible values.
     """
 
     def __init__(self, task: repype.task.Task):
@@ -50,6 +59,7 @@ class RunContext:
         self.task = task
         self.pipeline = task.create_pipeline()
         self.config = task.create_config()
+        self.pending = task.is_pending(self.pipeline, self.config)
 
     def run(self, *args, **kwargs) -> repype.task.TaskData:
         """
@@ -63,6 +73,23 @@ class RunContext:
             The *task data object* returned by the task.
         """
         return self.task.run(self.config, pipeline = self.pipeline, *args, **kwargs)
+
+    def __eq__(self, other: object) -> bool:
+        return other is not None and all(
+            (
+                isinstance(other, type(self)),
+                self.task == other.task,
+                self.pipeline == other.pipeline,
+                self.config == other.config,
+                self.pending == other.pending,
+            )
+        )
+
+    def __hash__(self) -> int:
+        return hash((self.task, self.pipeline, self.config))
+
+    def __repr__(self) -> str:
+        return f'<{type(self).__name__} "{self.task.path})">'
 
 
 def run_task_process(rc, status) -> int:
@@ -84,7 +111,7 @@ def run_task_process(rc, status) -> int:
         return 0  # Indicate success to the parent process
 
     # If an exception occurs, update the status and re-raise the exception
-    except:
+    except:  # noqa: E722
         error = sys.exc_info()[0]
         repype.status.update(
             status = status,
@@ -131,6 +158,13 @@ class Batch:
         self.task_cls = task_cls
         self.task_process = None
 
+    @property
+    def resolved_tasks(self) -> Dict[pathlib.Path, repype.task.Task]:
+        """
+        Get a dictionary of all tasks, indexed by their resolved path.
+        """
+        return {task.path.resolve(): task for task in self.tasks.values()}
+
     def task(self, path: PathLike, spec: Optional[dict] = None) -> Optional[repype.task.Task]:
         """
         Retrieve a task by its path.
@@ -146,8 +180,9 @@ class Batch:
         #. Establish parential relations, see :attr:`repype.task.Task.parent`
         #. Resolve filepaths, see :meth:`repype.pipeline.Pipeline.resolve`
         """
+        assert path is not None
         path = pathlib.Path(path)
-        task = self.tasks.get(path)
+        task = self.resolved_tasks.get(path.resolve())
 
         # Using the spec argument overrides the spec file
         if spec is None:
@@ -156,11 +191,11 @@ class Batch:
             # If neither the spec argument was given, nor the spec file exists, return the previously loaded task
             if not spec_filepath.is_file():
                 return task
-            
+
             # If the spec file exists, load the spec
             with spec_filepath.open('r') as spec_file:
                 spec = yaml.safe_load(spec_file)
-        
+
         # Retrieve the parent task and instantiate the requested task
         if task is None:
             parent = self.task(path.parent) if path.parent else None
@@ -168,12 +203,14 @@ class Batch:
             assert path not in self.tasks
             self.tasks[path] = task
             return task
-        
+
         # Check whether the task has the right spec
         else:
-            assert task.spec == spec, f'{path}: Requested specification {spec} does not match previously loaded specification {task.spec}'
+            assert (
+                task.spec == spec
+            ), f'{path}: Requested specification {spec} does not match previously loaded specification {task.spec}'
             return task
-        
+
     def load(self, root_path: PathLike) -> None:
         """
         Load all tasks from a directory tree.
@@ -189,27 +226,31 @@ class Batch:
         Get a list of run contexts for all tasks.
         """
         return [RunContext(task) for task in self.tasks.values() if task.runnable]
-    
+
     @property
     def pending(self) -> List[RunContext]:
         """
         Get a list of run contexts for all pending tasks.
         """
-        return [rc for rc in self.contexts if rc.task.is_pending(rc.pipeline, rc.config)]
-    
+        return [rc for rc in self.contexts if rc.pending]
+
     def context(self, path: PathLike) -> Optional[RunContext]:
         """
         Get a run context for a specific task.
 
         Returns:
-            The run context for the task, or None if the task is not loaded.
+            The run context for the task, or `None` if the task is not loaded.
         """
         for rc in self.contexts:
             if rc.task.path.resolve() == pathlib.Path(path).resolve():
                 return rc
         return None
 
-    async def run(self, contexts: Optional[List[RunContext]] = None, status: Optional[repype.status.Status] = None) -> bool:
+    async def run(
+            self,
+            contexts: Optional[List[RunContext]] = None,
+            status: Optional[repype.status.Status] = None,
+        ) -> bool:
         """
         Run all pending tasks (or a subset).
 
@@ -221,15 +262,16 @@ class Batch:
             status: The status object to update during task execution. Defaults to a new status object.
 
         Returns:
-            True if all tasks were completed successfully, and False otherwise
+            `True` if all tasks were completed successfully, and `False` otherwise
         """
         assert self.task_process is None, 'A task is already running'
         try:
-            
+
             contexts = self.pending if contexts is None else contexts
+            contexts = sorted(contexts, key = lambda rc: rc.task.path.resolve())
             for rc_idx, rc in enumerate(contexts):
                 task_status = repype.status.derive(status)
-    
+
                 repype.status.update(
                     status = task_status,
                     info = 'enter',
@@ -252,15 +294,15 @@ class Batch:
                     repype.status.update(
                         status = status,
                         info = 'interrupted',
-                        exit_code = exit_code,  # exit_code is None if the process was killed, and 1 if an exception was raised in the child process
-                    )
+                        exit_code = exit_code,  # `exit_code` is None if the process was killed,
+                    )                           # and 1 if an exception was raised in the child process
 
                     # Interrupt task execution due to an error
                     return False
 
             # All tasks were completed successfully
             return True
-        
+
         finally:
             self.task_process = None
 

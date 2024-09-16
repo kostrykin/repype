@@ -7,17 +7,16 @@ import repype.config
 import repype.status
 from repype.typing import (
     Collection,
-    PipelineData,
     Dict,
-    Optional,
-    Pipeline,
-    Protocol,
     InputID,
     Iterable,
     List,
     Literal,
+    Optional,
+    Pipeline,
+    PipelineData,
+    Protocol,
 )
-
 
 StageEvent = Literal[
     'start',
@@ -25,18 +24,33 @@ StageEvent = Literal[
     'skip',
     'after',
 ]
+
+
 class StageCallback(Protocol):
     """
     Stage callback protocol.
     """
 
-    def __call__(self, stage: 'Stage', event: StageEvent, *args, **kwargs) -> None:
+    def __call__(
+            self,
+            stage: 'Stage',
+            event: StageEvent,
+            pipeline: 'repype.pipeline.Pipeline',
+            input_id: InputID,
+            data: PipelineData,
+            config: repype.config.Config,
+            status: Optional[repype.status.Status],
+            **kwargs,
+        ) -> None:
         """
         Arguments:
             stage: The stage that triggered the event.
             event: The event that triggered the callback.
-            *args: The arguments passed to the callback.
-            **kwargs: The keyword arguments passed to the callback.
+            pipeline: The pipeline object that the stage is a part of.
+            data: The current *pipeline data object*.
+            config: The hyperparameters to be used for this stage.
+            status: A status object to report the progress of the computations.
+            **kwargs: The keyword arguments passed to :meth:`repype.pipeline.Pipeline.process`.
         """
         pass
 
@@ -45,9 +59,9 @@ def suggest_stage_id(class_name: str) -> str:
     """
     Suggests a stage identifier based on a class name.
 
-    This function validates the `class_name`, then tokenizes it.
-    Tokens are grouped if they are consecutive and alphanumeric, but do not start with numbers.
-    The function then converts the tokens to lowercase, removes underscores, and joins them with hyphens.
+    This function validates the `class_name`, then tokenizes it. Tokens are grouped if they are consecutive and
+    alphanumeric, but do not start with numbers. The function then converts the tokens to lowercase, removes
+    underscores, and joins them with hyphens.
 
     Example:
 
@@ -62,11 +76,13 @@ def suggest_stage_id(class_name: str) -> str:
 
     Returns:
         A string of hyphen-separated tokens from the class name.
-    
+
     Raises:
         AssertionError: If the class name is not valid.
     """
-    assert class_name != '_' and re.match('[a-zA-Z]', class_name) and re.match('^[a-zA-Z_](?:[a-zA-Z0-9_])*$', class_name), f'not a valid class name: "{class_name}"'
+    assert (
+        class_name != '_' and re.match('[a-zA-Z]', class_name) and re.match('^[a-zA-Z_](?:[a-zA-Z0-9_])*$', class_name)
+    ), f'Invalid class name: "{class_name}"'
 
     # Find all tokens in the class name (letters or numbers, followed by lowercase letters until the next underscore)
     tokens1 = re.findall('[a-zA-Z0-9][^A-Z0-9_]*', class_name)
@@ -98,17 +114,18 @@ class Stage:
     """
     A pipeline stage.
 
-    Each stage can be controlled by a separate set of hyperparameters.
-    Those hyperparameters reside in namespaces, which are uniquely associated with the corresponding pipeline stages.
+    Each stage can be controlled by a separate set of hyperparameters. Those hyperparameters reside in namespaces,
+    which are uniquely associated with the corresponding pipeline stages.
 
-    Each stage must declare the pipeline fields it requires as input, and the output fields it produces.
-    These are used by :func:`repype.pipeline.create_pipeline` function to automatically determine the stage order and
-    by the :meth:`repype.pipeline.Pipeline.get_extra_stages` method to determine the stages that are required to be executed additionally.
-    The field ``input_id`` is provided by the pipeline itself via the :meth:`repype.pipeline.Pipeline.process` method.
+    Each stage must declare the pipeline fields it requires as input, and the output fields it produces. These are used
+    by :func:`repype.pipeline.create_pipeline` function to automatically determine the stage order and by the
+    :meth:`repype.pipeline.Pipeline.get_extra_stages` method to determine the stages that are required to be executed
+    additionally. The field ``input_id`` is provided by the pipeline itself via the
+    :meth:`repype.pipeline.Pipeline.process` method.
 
     Arguments:
-        id: The stage identifier, used as the hyperparameter namespace.
-            Defaults to the result of the :py:func:`suggest_stage_id` function.
+        id: The stage identifier, used as the hyperparameter namespace. Defaults to the result of the
+            :py:func:`suggest_stage_id` function.
         inputs: List of fields read by this stage.
         consumes: List of fields consumed by this stage (read and cannot be used by subsequent stages).
         outputs: List of fields produced by this stage.
@@ -150,18 +167,17 @@ class Stage:
         assert not self.id.endswith('+'), 'The suffix "+" is reserved as an indication of "the stage after that stage"'
         self.event_callbacks: Dict[StageEvent, List[StageCallback]] = dict()
 
-    def callback(self, event: StageEvent, *args, **kwargs) -> None:
+    def callback(self, event: StageEvent, **kwargs) -> None:
         """
         Call the callbacks for the specified `event`.
 
         Arguments:
             event: The event for which to call the callbacks.
-            *args: The arguments to pass to the callbacks.
             **kwargs: The keyword arguments to pass to the callbacks.
         """
         if event in self.event_callbacks:
             for callback in self.event_callbacks[event]:
-                callback(self, event, *args, **kwargs)
+                callback(stage = self, event = event, **kwargs)
 
     def add_callback(self, event: StageEvent, callback: StageCallback) -> None:
         """
@@ -189,6 +205,7 @@ class Stage:
     def run(
             self,
             pipeline: Pipeline,
+            input_id: InputID,
             data: PipelineData,
             config: repype.config.Config,
             status: Optional[repype.status.Status] = None,
@@ -197,14 +214,14 @@ class Stage:
         """
         Run this stage of the `pipeline` by calling :meth:`process`, if the stage is enabled.
 
-        The stage is enabled if the ``enabled`` hyperparameter is set to ``True``, or
-        the ``enabled`` hyperparameter is not set and :attr:`enabled_by_default` is True.
+        The stage is enabled if the ``enabled`` hyperparameter is set to `True`, or
+        the ``enabled`` hyperparameter is not set and :attr:`enabled_by_default` is `True`.
 
         Arguments:
             pipeline: The pipeline object that this stage is a part of.
-            data: The *pipeline data object* to be used for this stage.
-                This is a dictionary that contains all available fields of the pipeline.
-                The output fields of this stage are added to this dictionary.
+            input_id: The identifier of the input data to be processed.
+            data: The *pipeline data object* to be used for this stage. This is a dictionary that contains all
+                available fields of the pipeline. The output fields of this stage are added to this dictionary.
             config: The hyperparameters to be used for this stage.
             status: A status object to report the progress of the computations.
 
@@ -221,47 +238,71 @@ class Stage:
                 stage = self.id,
                 intermediate = True,
             )
-            self.callback('start', data, status = status, config = config, **kwargs)
+            self.callback(
+                'start',
+                pipeline = pipeline,
+                input_id = input_id,
+                data = data,
+                config = config,
+                status = status,
+                **kwargs,
+            )
 
             # Extract the input fields for the stage
             input_data = {key: data[key] for key in self.inputs}
-
-            # Clean up the hyperparameters passed to the stage implementation
-            clean_config = config.copy()
-            clean_config.pop('enabled', None)
 
             # Run the stage and measure the run time
             t0 = time.time()
             output_data = self.process(
                 pipeline = pipeline,
-                config = clean_config,
+                config = config,
                 status = status,
                 **input_data,
             )
             dt = time.time() - t0
 
             # Check the output data produced by the stage
-            assert len(set(output_data.keys()) ^ set(self.outputs)) == 0, f'Stage "{self.id}" produced spurious or missing output'
+            assert (
+                len(set(output_data.keys()) ^ set(self.outputs)) == 0
+            ), f'Stage "{self.id}" produced spurious or missing output'
             data.update(output_data)
             for key in self.consumes:
                 del data[key]
 
             # Finish the stage
-            self.callback('end', data, status = status, config = config, **kwargs)
+            self.callback(
+                'end',
+                pipeline = pipeline,
+                input_id = input_id,
+                data = data,
+                config = config,
+                status = status,
+                **kwargs,
+            )
             return dt
-        
+
         # Skip the stage
         else:
-            self.skip(data, status = status, config = config, **kwargs)
+            self.skip(pipeline = pipeline, input_id = input_id, data = data, config = config, status = status, **kwargs)
             return 0.
-        
-    def skip(self, data: PipelineData, status: Optional[repype.status.Status] = None, **kwargs) -> None:
+
+    def skip(
+            self,
+            pipeline: Pipeline,
+            input_id: InputID,
+            data: PipelineData,
+            config: repype.config.Config,
+            status: Optional[repype.status.Status] = None,
+            **kwargs,
+        ) -> None:
         """
         Skips this stage of the pipeline.
 
         Arguments:
-            data: The *pipeline data object* to be used for this stage.
-                This is a dictionary that contains all available fields of the pipeline.
+            pipeline: The pipeline object that this stage is a part of.
+            input_id: The identifier of the input data to be processed.
+            data: The *pipeline data object*. This is a dictionary that contains all available fields of the pipeline.
+            config: The hyperparameters for this stage.
             status: A status object to report the progress of the computations.
         """
         repype.status.update(
@@ -270,7 +311,15 @@ class Stage:
             stage = self.id,
             intermediate = True,
         )
-        self.callback('skip', data, status = status, **kwargs)
+        self.callback(
+            'skip',
+            pipeline = pipeline,
+            input_id = input_id,
+            data = data,
+            config = config,
+            status = status,
+            **kwargs,
+        )
 
     def process(
             self,
@@ -282,15 +331,15 @@ class Stage:
         """
         Processes the input fields of this stage of the `pipeline`.
 
-        This method implements a stage of the pipeline with the provided `inputs` and configuration parameters.
-        It then returns the outputs produced by the stage.
+        This method implements a stage of the pipeline with the provided `inputs` and configuration parameters. It then
+        returns the outputs produced by the stage.
 
         Arguments:
             pipeline: The pipeline object that this stage is a part of.
             config: The hyperparameters to be used for this stage.
             status: A status object to report the progress of the computations.
-            **inputs: The fields of the pipeline read by this stage.
-                Each key-value pair represents an input field and the corresponding value.
+            **inputs: The fields of the pipeline read by this stage. Each key-value pair represents an input field and
+                the corresponding value.
 
         Returns:
             A dictionary containing the outputs of this stage.
@@ -305,9 +354,9 @@ class Stage:
         """
         Returns the rules to adopt hyperparameters based on the input data.
 
-        Sometimes it can be necessary to automatically adopt hyperparameters based on the input data.
-        For those cases where linear adoptation is suitable, this method can be overridden to return the rules which specify how to adopt the hyperparameters.
-        The rules are then applied by the :meth:`repype.pipeline.Pipeline.configure` method.
+        Sometimes it can be necessary to automatically adopt hyperparameters based on the input data. For those cases
+        where linear adoptation is suitable, this method can be overridden to return the rules which specify how to
+        adopt the hyperparameters. The rules are then applied by the :meth:`repype.pipeline.Pipeline.configure` method.
 
         The rules must be specified by the following structure::
 
@@ -318,11 +367,12 @@ class Stage:
                 ],
             }
 
-        The rules are resolved by mapping the above structure to the arguments of the :func:`repype.pipeline.create_config_entry` function.
-        In this example, two new hyperparameters are created:
-        
+        The rules are resolved by mapping the above structure to the arguments of the
+        :func:`repype.pipeline.create_config_entry` function. In this example, two new hyperparameters are created:
+
         #. The hyperparameter ``AF_key`` is created and defaults to the value of ``default_user_factor``.
-        #. The hyperparameter ``key`` is created and defaults to the value of the hyperparameter ``AF_key`` times the value of ``factor``.
+        #. The hyperparameter ``key`` is created and defaults to the value of the hyperparameter ``AF_key`` times the
+           value of ``factor``.
 
         In addition, a third element can be added to the list to further constrain the resulting values::
 
@@ -345,22 +395,22 @@ class Stage:
             **kwargs: Keyword arguments passed to :meth:`Pipeline.configure <repype.pipeline.Pipeline.configure>`.
         """
         return dict()
-    
+
     @property
     def signature(self) -> dict:
         """
         Get a serializable representation of the implementation of the stage.
 
-        The signature contains the attributes and the methods of the stage.
-        Methods are represented by their bytecode.
-        Further callables beyond the direct methods of the object are not respected.
-        If any of those changes, incrementing a ``signature_bump`` attribute should be considered.
+        The signature contains the attributes and the methods of the stage. Methods are represented by their bytecode.
+        Further callables beyond the direct methods of the object are not respected. If any of those changes,
+        incrementing a `signature_bump` attribute should be considered.
         """
         signature = dict()
 
         # Iterate over all attributes of the stage (leaving out a few special ones)
         for key in dir(self):
-            if key in ('__doc__', '__weakref__', '__module__', '__dict__', '__slotnames__', 'signature', 'sha'): continue
+            if key in ('__doc__', '__weakref__', '__module__', '__dict__', '__slotnames__', 'signature', 'sha'):
+                continue
             value = getattr(self, key)
 
             if isinstance(value, Iterable):
@@ -407,3 +457,14 @@ class Stage:
 
     def __repr__(self) -> str:
         return f'<{type(self).__name__}, id: {self.id}>'
+
+    def __eq__(self, other: object) -> bool:
+        return other is not None and all(
+            (
+                isinstance(other, type(self)),
+                self.signature == other.signature,
+            )
+        )
+
+    def __hash__(self) -> int:
+        return hash(self.signature)

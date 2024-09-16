@@ -1,22 +1,26 @@
+import hashlib
 import io
 import pathlib
 import tempfile
+import time
 import unittest
 import urllib.request
 import zipfile
 
+import scipy.ndimage as ndi
+import skimage
 import skimage.segmentation
 
+import repype.benchmark
 import repype.cli
 import repype.pipeline
 import repype.stage
 import repype.status
 from repype.typing import (
-    PipelineData,
     Optional,
+    PipelineData,
 )
-import scipy.ndimage as ndi
-import skimage
+
 from . import testsuite
 
 
@@ -31,8 +35,27 @@ class Download(repype.stage.Stage):
             status: Optional[repype.status.Status] = None,
         ) -> PipelineData:
         url = config['url']
-        with urllib.request.urlopen(url) as file:
-            data = file.read()
+
+        # Employ a cache to speed-up tests and reduce bandwith usage
+        cache_hit = False
+        cache_filepath = pathlib.Path('.cache')
+        cache_entry = cache_filepath / hashlib.sha1(url.encode('utf8')).hexdigest()
+        if cache_entry.is_file():
+            with cache_entry.open('rb') as file:
+                data = file.read()
+                cache_hit = True
+                time.sleep(1)
+
+        # Only perform the download if the cache is not hit
+        if not cache_hit:
+            with urllib.request.urlopen(url) as file:
+                data = file.read()
+
+            # Store the downloaded data in the cache
+            cache_filepath.mkdir(exist_ok = True)
+            with cache_entry.open('wb') as file:
+                file.write(data)
+
         return dict(
             download = data
         )
@@ -141,20 +164,20 @@ class repype_segmentation(unittest.TestCase):
                 f'  Starting from scratch' '\n'
                 f'    ' '\n'
                 f'    (1/1) Processing: B2--W00026--P00001--Z00000--T00000--dapi.tif' '\n'
-                f'    Starting stage: download' '\r'
-                f'    Starting stage: unzip   ' '\r'
-                f'    Starting stage: segmentation' '\r'
-                f'    Starting stage: output      ' '\r'
-                f'                                ' '\n'
+                f'    Running stage: download' '\r'
+                f'    Running stage: unzip   ' '\r'
+                f'    Running stage: segmentation' '\r'
+                f'    Running stage: output      ' '\r'
+                f'                               ' '\n'
                 f'  Results have been stored ✅' '\n'
                 f'  ' '\n'
                 f'  (2/2) Entering task: {self.root_path.resolve()}/task/sigma=2' '\n'
                 f'  Picking up from: {self.root_path.resolve()}/task (segmentation)' '\n'
                 f'    ' '\n'
                 f'    (1/1) Processing: B2--W00026--P00001--Z00000--T00000--dapi.tif' '\n'
-                f'    Starting stage: segmentation' '\r'
-                f'    Starting stage: output      ' '\r'
-                f'                                ' '\n'
+                f'    Running stage: segmentation' '\r'
+                f'    Running stage: output      ' '\r'
+                f'                               ' '\n'
                 f'  Results have been stored ✅' '\n'
             )
 
@@ -167,3 +190,33 @@ class repype_segmentation(unittest.TestCase):
         segmentation = skimage.io.imread(self.root_path / 'task' / 'sigma=2' / 'seg' / 'B2--W00026--P00001--Z00000--T00000--dapi.tif.png')
         n_onjects = ndi.label(segmentation)[1]
         self.assertEqual(n_onjects, 435)
+
+        # Load and verify the times for `sigma=1`
+        times1 = repype.benchmark.Benchmark(self.root_path / 'task' / 'times.csv')
+        self.assertEqual(times1.df.shape, (4, 1))
+        self.assertGreater(float(times1['download', 'B2--W00026--P00001--Z00000--T00000--dapi.tif']), 0)
+        self.assertGreater(float(times1['unzip', 'B2--W00026--P00001--Z00000--T00000--dapi.tif']), 0)
+        self.assertGreater(float(times1['segmentation', 'B2--W00026--P00001--Z00000--T00000--dapi.tif']), 0)
+        self.assertGreater(float(times1['output', 'B2--W00026--P00001--Z00000--T00000--dapi.tif']), 0)
+
+        # Load and verify the times for `sigma=2`
+        times2 = repype.benchmark.Benchmark(self.root_path / 'task' / 'sigma=2' / 'times.csv')
+        self.assertEqual(times1.df.shape, (4, 1))
+        self.assertEqual(
+            times1['download', 'B2--W00026--P00001--Z00000--T00000--dapi.tif'],
+            times2['download', 'B2--W00026--P00001--Z00000--T00000--dapi.tif'],
+        )
+        self.assertEqual(
+            times1['unzip', 'B2--W00026--P00001--Z00000--T00000--dapi.tif'],
+            times2['unzip', 'B2--W00026--P00001--Z00000--T00000--dapi.tif'],
+        )
+        self.assertGreater(float(times2['segmentation', 'B2--W00026--P00001--Z00000--T00000--dapi.tif']), 0)
+        self.assertGreater(float(times2['output', 'B2--W00026--P00001--Z00000--T00000--dapi.tif']), 0)
+        self.assertNotEqual(
+            times1['segmentation', 'B2--W00026--P00001--Z00000--T00000--dapi.tif'],
+            times2['segmentation', 'B2--W00026--P00001--Z00000--T00000--dapi.tif'],
+        )
+        self.assertNotEqual(
+            times1['output', 'B2--W00026--P00001--Z00000--T00000--dapi.tif'],
+            times2['output', 'B2--W00026--P00001--Z00000--T00000--dapi.tif'],
+        )

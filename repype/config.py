@@ -1,5 +1,5 @@
-import json
 import hashlib
+import json
 
 from repype.typing import (
     Any,
@@ -29,8 +29,8 @@ class Config:
        >>> print(config.entries)
 
     Arguments:
-        other: A dictionary to be wrapped (no copying occurs), or another :py:class:`Config` object (a deep copy is created).
-            Defaults to None, for which a blank configuration is created.
+        other: A dictionary to be wrapped (no copying occurs), or another :py:class:`Config` object (a deep copy is
+            created). Defaults to `None`, for which a blank configuration is created.
     """
 
     entries: dict
@@ -47,7 +47,7 @@ class Config:
             self.entries = json.loads(json.dumps(other.entries))
         else:
             raise ValueError(f'Unknown argument: {other}')
-        
+
     @property
     def yaml(self) -> str:
         """
@@ -100,7 +100,7 @@ class Config:
         Arguments:
             key: The hyperparameter to be set.
             default: Returned if the hyperparameter `key` is not set.
-            override_none: True if a hyperparameter set to None should be treated as not set.
+            override_none: `True` if a hyperparameter set to `None` should be treated as not set.
 
         Returns:
             The new or unmodified value of the hyperparameter `key`.
@@ -134,7 +134,8 @@ class Config:
                 config = config.get(key, {})
             return config.get(keys[-1], default)
         else:
-            if key not in self.entries: self.entries[key] = _cleanup_value(default)
+            if key not in self.entries:
+                self.entries[key] = _cleanup_value(default)
             value = self.entries[key]
             return Config(value) if isinstance(value, dict) else value
 
@@ -169,7 +170,7 @@ class Config:
             key: The hyperparameter to be queried.
 
         Returns:
-            True if the hyperparameter `key` is set and False otherwise.
+            `True` if the hyperparameter `key` is set and `False` otherwise.
         """
         try:
             self.__getitem__(key)
@@ -216,8 +217,9 @@ class Config:
         """
         Updates this configuration using the hyperparameters from another configuration.
 
-        The hyperparameters of this configuration are set to the values from the `other` configuration.
-        If a hyperparameter was previously not set in this configuration, it is set to the value from the `other` configuration.
+        The hyperparameters of this configuration are set to the values from the `other` configuration. If a
+        hyperparameter was previously not set in this configuration, it is set to the value from the `other`
+        configuration.
 
         Arguments:
             other: The configuration which is to be merged into this configuration.
@@ -237,13 +239,13 @@ class Config:
         Returns a deep copy.
         """
         return Config(self)
-    
+
     @property
     def sha(self):
         """The SHA1 hash code associated with the hyperparameters set in this configuration.
         """
         return hashlib.sha1(json.dumps(self.entries).encode('utf8'))
-    
+
     def __str__(self):
         """
         Readable representation of this configuration.
@@ -253,6 +255,5 @@ class Config:
     def __repr__(self):
         return f'<{type(self).__name__}, {str(self.entries)}>'
 
-    def __eq__(self, other):
+    def __eq__(self, other: object):
         return isinstance(other, Config) and str(self) == str(other)
-

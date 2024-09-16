@@ -6,8 +6,11 @@ import unittest
 from unittest.mock import patch
 
 import repype.cli
-from . import testsuite
-from . import test_status
+
+from . import (
+    test_status,
+    testsuite,
+)
 
 
 class StatusReaderConsoleAdapter__write(unittest.IsolatedAsyncioTestCase):
@@ -27,6 +30,38 @@ class StatusReaderConsoleAdapter__write(unittest.IsolatedAsyncioTestCase):
             self.status.write('message')
             await test_status.wait_for_watchdog()
             self.assertEqual(str(stdout), 'message\n')
+
+
+class StatusReaderConsoleAdapter__intermediate(unittest.IsolatedAsyncioTestCase):
+
+    async def asyncSetUp(self):
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.status = repype.status.Status(path = self.tempdir.name)
+        self.status_reader = repype.cli.StatusReaderConsoleAdapter(self.status.filepath)
+        await self.status_reader.__aenter__()
+
+    async def asyncTearDown(self):
+        await self.status_reader.__aexit__(None, None, None)
+        self.tempdir.cleanup()
+
+    async def test(self):
+        with testsuite.CaptureStdout() as stdout:
+            self.status.intermediate('message 1')
+            await test_status.wait_for_watchdog()
+            self.assertEqual(str(stdout), 'message 1\r')
+
+            self.status.intermediate('message 2')
+            await test_status.wait_for_watchdog()
+            self.assertEqual(str(stdout), 'message 1\rmessage 2\r')
+
+    @testsuite.with_envvars(REPYPE_CLI_INTERMEDIATE = '0')
+    async def test_muted(self):
+        with testsuite.CaptureStdout() as stdout:
+            self.status.write('message 1')
+
+            self.status.intermediate('message 2')
+            await test_status.wait_for_watchdog()
+            self.assertEqual(str(stdout), 'message 1\n')
 
 
 class StatusReaderConsoleAdapter__progress(unittest.IsolatedAsyncioTestCase):
@@ -93,7 +128,7 @@ class StatusReaderConsoleAdapter__progress(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(str(stdout), ''.join(lines))
 
         # Verify that there have been three iterations, i.e. `item_idx = 0`, `item_idx = 1`, `item_idx = 2`
-    #     self.assertEqual(item_idx, 2)
+        self.assertEqual(item_idx, 2)
 
     async def test_break(self):
         lines = [
@@ -135,6 +170,35 @@ class StatusReaderConsoleAdapter__progress(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(item_idx, 1)
 
 
+class ExtendedStatusReaderConsoleAdapter(repype.cli.StatusReaderConsoleAdapter):
+
+    def format(self, positions, status, intermediate):
+
+        if isinstance(status, dict) and status.get('info') == 'custom':
+            return status['text']
+        
+        return super().format(positions, status, intermediate)
+
+
+class ExtendedStatusReaderConsoleAdapter__format(unittest.IsolatedAsyncioTestCase):
+
+    async def asyncSetUp(self):
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.status = repype.status.Status(path = self.tempdir.name)
+        self.status_reader = ExtendedStatusReaderConsoleAdapter(self.status.filepath)
+        await self.status_reader.__aenter__()
+
+    async def asyncTearDown(self):
+        await self.status_reader.__aexit__(None, None, None)
+        self.tempdir.cleanup()
+
+    async def test(self):
+        with testsuite.CaptureStdout() as stdout:
+            repype.status.update(self.status, info = 'custom', text = 'message')
+            await test_status.wait_for_watchdog()
+            self.assertEqual(str(stdout), 'message\n')
+
+
 class DelayedTask(repype.task.Task):
 
     def store(self, *args, **kwargs):
@@ -146,6 +210,7 @@ class DelayedTask(repype.task.Task):
 class DefectiveTask(repype.task.Task):
 
     def store(self, *args, **kwargs):
+        time.sleep(1)  # Make sure the intermediates don't collapse too quickly
         raise testsuite.TestError()
 
 
@@ -190,7 +255,12 @@ class run_cli_ex(unittest.TestCase):
                 str(stdout),
                 '\n'
                 '3 task(s) selected for running' '\n'
-                'DRY RUN: use "--run" to run the tasks instead' '\n',
+                'DRY RUN: use "--run" to run the tasks instead' '\n'
+                '\n'
+                'Selected tasks:' '\n'
+                f'- {self.root_path.resolve()} (incomplete)' '\n'
+                f'- {self.root_path.resolve() / "task-2"} (incomplete)' '\n'
+                f'- {self.root_path.resolve() / "task-3"} (incomplete)' '\n',
             )
 
     @patch.object(repype.batch.Batch, 'run')
@@ -233,8 +303,7 @@ class run_cli_ex(unittest.TestCase):
                 f'  Results have been stored ✅' '\n'
             )
 
-    @patch.object(repype.status.Status, 'intermediate')  # Suppress the `Storing results...` intermediate, sometimes not captured quickly enough
-    def test_internal_error(self, mock_status_intermediate):
+    def test_internal_error(self):
         with testsuite.CaptureStdout() as stdout:
             ret = repype.cli.run_cli_ex(path = self.tempdir.name, run = True, task_cls = DefectiveTask)
             self.assertFalse(ret)
@@ -244,7 +313,8 @@ class run_cli_ex(unittest.TestCase):
                 f'  \n'
                 f'  (1/3) Entering task: {self.root_path.resolve()}' '\n'
                 f'  Starting from scratch' '\n'
-                f'  ' '\n'
+                f'  Storing results...' '\r'
+                f'                    ' '\n'
                 f'  🔴 An error occurred while processing the task {self.root_path.resolve()}:' '\n'
                 f'  --------------------------------------------------------------------------------' '\n'
                 f'  Traceback (most recent call last):',

@@ -1,6 +1,7 @@
 import contextlib
 import inspect
 import io
+import os
 import pathlib
 import re
 import shutil
@@ -8,10 +9,7 @@ import sys
 import tempfile
 
 import repype.stage
-from repype.typing import (
-    PathLike,
-)
-
+from repype.typing import PathLike
 
 # Losen truncation limit for error messages
 try:
@@ -40,6 +38,31 @@ def with_temporary_paths(count: int):
                 for path in paths:
                     shutil.rmtree(path)
             return ret
+
+        return async_wrapper if inspect.iscoroutinefunction(test_func) else wrapper
+    return decorator
+
+
+def with_envvars(**envvars):
+    def decorator(test_func):
+
+        def wrapper(self, *args, **kwargs):
+            environ = dict(os.environ)
+            os.environ.update(envvars)
+            try:
+                return test_func(self, *args, **kwargs)
+            finally:
+                os.environ.clear()
+                os.environ.update(environ)
+
+        async def async_wrapper(self, *args, **kwargs):
+            environ = dict(os.environ)
+            os.environ.update(envvars)
+            try:
+                return await test_func(self, *args, **kwargs)
+            finally:
+                os.environ.clear()
+                os.environ.update(environ)
 
         return async_wrapper if inspect.iscoroutinefunction(test_func) else wrapper
     return decorator

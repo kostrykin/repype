@@ -1,4 +1,3 @@
-import dill
 import gzip
 import json
 import os
@@ -6,15 +5,19 @@ import pathlib
 import tempfile
 import unittest
 from unittest.mock import (
-    patch,
     PropertyMock,
+    patch,
 )
 
-import repype.pipeline
-import repype.task
-from . import testsuite
-import repype.status
+import dill
 import yaml
+
+import repype.benchmark
+import repype.pipeline
+import repype.status
+import repype.task
+
+from . import testsuite
 
 
 class decode_input_ids(unittest.TestCase):
@@ -23,7 +26,7 @@ class decode_input_ids(unittest.TestCase):
         self.assertEqual(repype.task.decode_input_ids(''), [])
 
     def test_single_str(self):
-        self.assertEqual(repype.task.decode_input_ids('1'), [1])
+        self.assertEqual(repype.task.decode_input_ids('abc, xyz'), ['abc', 'xyz'])
 
     def test_single_int(self):
         self.assertEqual(repype.task.decode_input_ids(1), [1])
@@ -185,7 +188,6 @@ class Task__repr__(unittest.TestCase):
                 field2 = 2,
             ),
         )
-        print(repr(task))
         self.assertEqual(
             repr(task),
             f'<Task "{path}" bf21a9e>',
@@ -465,7 +467,7 @@ class Task__is_pending(unittest.TestCase):
             spec = dict(),
         )
         config = task.create_config()
-        self.assertFalse(task.is_pending(self.pipeline, config))
+        self.assertEqual(task.is_pending(self.pipeline, config), '')
 
     @testsuite.with_temporary_paths(1)
     def test_without_digest(self, path):
@@ -475,7 +477,7 @@ class Task__is_pending(unittest.TestCase):
             spec = dict(runnable = True),
         )
         config = task.create_config()
-        self.assertTrue(task.is_pending(self.pipeline, config))
+        self.assertEqual(task.is_pending(self.pipeline, config), 'incomplete')
 
     @testsuite.with_temporary_paths(1)
     def test_with_digest(self, path):
@@ -496,7 +498,7 @@ class Task__is_pending(unittest.TestCase):
                 ),
                 digest_sha_file,
             )
-        self.assertFalse(task.is_pending(self.pipeline, config))
+        self.assertEqual(task.is_pending(self.pipeline, config), '')
 
     @testsuite.with_temporary_paths(1)
     def test_with_changed_config(self, path):
@@ -517,7 +519,7 @@ class Task__is_pending(unittest.TestCase):
                 digest_sha_file,
             )
         config['key'] = 'value'
-        self.assertTrue(task.is_pending(self.pipeline, config))
+        self.assertEqual(task.is_pending(self.pipeline, config), 'specification')
 
     @testsuite.with_temporary_paths(1)
     def test_with_changed_pipeline(self, path):
@@ -537,10 +539,47 @@ class Task__is_pending(unittest.TestCase):
                 ),
                 digest_sha_file,
             )
-        self.assertTrue(task.is_pending(self.pipeline, config))
+        self.assertEqual(task.is_pending(self.pipeline, config), 'pipeline')
 
 
-class Task__marginal_stages(unittest.TestCase):
+class Task__reset(unittest.TestCase):
+
+    def setUp(self):
+        self.pipeline = repype.pipeline.create_pipeline(
+            [
+                testsuite.create_stage(id = 'stage1', outputs = ['output1.1']),
+            ]
+        )
+
+    @testsuite.with_temporary_paths(1)
+    def test_without_digest(self, path):
+        task = repype.task.Task(
+            path = path,
+            parent = None,
+            spec = dict(runnable = True),
+        )
+        task.reset()
+        self.assertFalse(task. digest_sha_filepath.exists())
+        self.assertFalse(task.digest_task_filepath.exists())
+        self.assertFalse(task.       data_filepath.exists())
+
+    @testsuite.with_temporary_paths(1)
+    def test_with_digest(self, path):
+        task = repype.task.Task(
+            path = path,
+            parent = None,
+            spec = dict(runnable = True),
+        )
+        task. digest_sha_filepath.write_text('xxx')
+        task.digest_task_filepath.write_text('xxx')
+        task.       data_filepath.write_text('xxx')
+        task.reset()
+        self.assertFalse(task. digest_sha_filepath.exists())
+        self.assertFalse(task.digest_task_filepath.exists())
+        self.assertFalse(task.       data_filepath.exists())
+
+
+class Task__marginal_states(unittest.TestCase):
 
     @testsuite.with_temporary_paths(1)
     def test_from_spec_missing(self, path):
@@ -675,7 +714,12 @@ class Task__store(unittest.TestCase):
                 'output3.1': 'value3.1',
             },
         }
-        task.store(pipeline, data, config)
+        times = repype.benchmark.Benchmark[float](task.times_filepath)
+        times['stage1', 'file-0'] = 1.0
+        times['stage2', 'file-0'] = 2.5
+        times['stage3', 'file-0'] = 3.0
+        times['stage4', 'file-0'] = 3.5
+        task.store(pipeline, data, config, times)
 
         # Load the stored data
         with gzip.open(task.data_filepath, 'rb') as data_file:
@@ -696,6 +740,7 @@ class Task__store(unittest.TestCase):
             },
         )
         self.assertEqual(task_digest, task.full_spec)
+        self.assertEqual(task.times, times)
 
 
 class Task__load(unittest.TestCase):
@@ -974,8 +1019,15 @@ class Task__run(unittest.TestCase):
         with self.assertRaises(AssertionError):
             self.task.run(self.config)
 
+    def test_store_config(self, mock_create_pipeline, mock_load, mock_store):
+        mock_create_pipeline.return_value.configure.return_value = dict(key = 'value')
+        mock_create_pipeline.return_value.process.return_value = (dict(), None, dict())
+        self.task.run(self.config)
+        mock_store.assert_called_once()
+        self.assertEqual(mock_store.call_args[0][2].entries, dict())
+
     def test_nothing_to_pickup(self, mock_create_pipeline, mock_load, mock_store):
-        mock_create_pipeline.return_value.process.return_value = (dict(), None, None)
+        mock_create_pipeline.return_value.process.return_value = (dict(), None, dict())
         self.task.run(self.config)
         mock_load.assert_not_called()
         mock_create_pipeline.assert_called_once_with()
@@ -997,7 +1049,7 @@ class Task__run(unittest.TestCase):
         mock_store.assert_called_once()
 
     def test_with_pickup(self, mock_create_pipeline, mock_load, mock_store):
-        mock_create_pipeline.return_value.process.return_value = (dict(), None, None)
+        mock_create_pipeline.return_value.process.return_value = (dict(), None, dict())
         mock_load.return_value = {
             'file-0': dict(output = 'value1'),
             'file-1': dict(output = 'value2'),
@@ -1026,6 +1078,23 @@ class Task__run(unittest.TestCase):
             status = None,
         )
         self.assertEqual(mock_create_pipeline.return_value.process.call_count, 2)
+        mock_store.assert_called_once()
+
+    def test_pickup_with_copy(self, mock_create_pipeline, mock_load, mock_store):
+        mock_create_pipeline.return_value.process.return_value = (dict(), None, dict())
+        mock_load.return_value = {
+            'file-0': dict(output = 'value1'),
+            'file-1': dict(output = 'value2'),
+        }
+        with patch.object(repype.task.Task, 'find_pickup_task', return_value = dict(task = self.task, first_diverging_stage = None)) as mock_find_pickup_task:
+            self.task.run(self.config)
+        mock_find_pickup_task.assert_called_once_with(
+            mock_create_pipeline.return_value,
+            self.config,
+        )
+        mock_load.assert_called_once()
+        mock_create_pipeline.assert_called_once_with()
+        self.assertEqual(mock_create_pipeline.return_value.process.call_count, 0)
         mock_store.assert_called_once()
 
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from distutils.core import setup
+from setuptools import setup
 
 with open('repype/version.py') as fin:
     exec(fin.read(), globals())
@@ -51,6 +51,8 @@ setup(
         'mergedeep>=1.3.4',
         'pyyaml>=6.0.1',
         'watchdog>=4.0.2',
+        'textual[syntax]==0.76.0',
+        'pandas>=2,<3',
     ],
     description = 'Reproducible batch processing using pipelines for scientific computing.',
     long_description = strip_raw(open('README.rst').read()),
@@ -59,5 +61,11 @@ setup(
     author_email = 'leonid.kostrykin@bioquant.uni-heidelberg.de',
     url = 'https://github.com/kostrykin/repype',
     license = 'MIT',
-    packages = ['repype'],
+    packages = ['repype', 'repype.textual'],
+    package_data = {
+        'repype.textual': [
+            'repype.tcss',
+        ],
+    },
+    include_package_data = True,
 )

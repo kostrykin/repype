@@ -4,3 +4,5 @@ sphinx-rtd-theme
 pillow==10.2  # newer versions seem to require numpy>=1.21 which conflicts with /requirements.txt
 nbsphinx==0.9.5
 pandoc==2.4
+ipykernel~=6.29
+scikit_image~=0.24.0

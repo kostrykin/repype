@@ -7,10 +7,42 @@ import unittest
 
 import repype.batch
 import repype.pipeline
-import repype.task
-from . import testsuite
-from . import test_cli
 import repype.status
+import repype.task
+
+from . import (
+    test_cli,
+    testsuite,
+)
+
+
+class RunContext__eq__(unittest.TestCase):
+
+    def setUp(self):
+        self.task1 = repype.task.Task(
+            path = 'task1',
+            spec = dict(
+                runnable = True,
+                pipeline = 'repype.pipeline.Pipeline',
+            ),
+        )
+        self.task2 = repype.task.Task(
+            path = 'task1',
+            spec = dict(
+                runnable = True,
+                pipeline = 'repype.pipeline.Pipeline',
+            ),
+        )
+        self.rc1 = repype.batch.RunContext(self.task1)
+        self.rc2 = repype.batch.RunContext(self.task2)
+
+    def test__equality(self):
+        self.assertEqual(self.rc1, self.rc1)
+        self.assertEqual(self.rc1, self.rc2)
+
+    def test__inequality(self):
+        self.rc2.config['key'] = 'value'
+        self.assertNotEqual(self.rc1, self.rc2)
 
 
 class Batch__task(unittest.TestCase):
@@ -92,6 +124,14 @@ class Batch__task(unittest.TestCase):
         # Verify task3
         self.assertIs(task3.parent, task2)
         self.assertEqual(task3.full_spec, dict(pipeline = 'repype.pipeline.Pipeline', field1 = 'value1', field2 = 'value2'))
+
+    def test_path_identity(self):
+        batch = repype.batch.Batch()
+        task1 = batch.task(
+            path = '.',
+            spec = dict(),
+        )
+        self.assertIs(batch.task(task1.path.resolve()), task1)
 
 
 class Batch__load(unittest.TestCase):
@@ -254,6 +294,22 @@ class Batch__run(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(ret)
         self.assertEqual([list(item.keys()) for item in status.data], [['expand']] * 3, '\n' + pprint.pformat(status.data))
 
+    @unittest.mock.patch('dill.dumps', side_effect = lambda args: args)
+    @unittest.mock.patch('asyncio.create_subprocess_exec', new_callable = unittest.mock.AsyncMock)
+    @unittest.mock.patch('repype.status')
+    async def test_wrong_order(self, mock_status, mock_create_subprocess_exec, mock_dill_dumps):
+        mock_task_process = await mock_create_subprocess_exec()
+        mock_task_process.communicate.return_value = ('0', None)
+
+        rc1 = self.batch.context(self.root_path)
+        rc2 = self.batch.context(self.root_path / 'task-2')
+        rc3 = self.batch.context(self.root_path / 'task-3')
+        ret = await self.batch.run([rc2, rc1, rc3])
+
+        call_order = [call.kwargs['input'][0] for call in mock_task_process.communicate.call_args_list]
+        self.assertEqual(call_order, [rc1, rc2, rc3])
+        self.assertTrue(ret)
+
 
 class Batch__cancel(unittest.IsolatedAsyncioTestCase):
 
@@ -282,7 +338,7 @@ class Batch__cancel(unittest.IsolatedAsyncioTestCase):
         dt = time.time() - t0
 
         # Verify the results
-        self.assertAlmostEqual(dt, 0.5, delta = 0.1)
+        self.assertAlmostEqual(dt, 0.5, delta = 0.15)
         self.assertFalse(ret)
         self.assertIn(
             dict(

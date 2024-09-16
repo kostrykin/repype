@@ -1,7 +1,10 @@
 [flake8]
 
-extend-ignore = E221,E211,E222,E202,F541,E201,E203
+max-line-length = 120
+
+extend-ignore = E221,E211,E222,E202,F541,E201,E203,E125,E251
 
 per-file-ignores =
-    segmetrics/__init__.py:F401
-    tests/isbi_seg.py:E501
+    repype/typing.py:F405
+
+exclude = tests/*.py tests/textual/*.py docs/source/conf.py

@@ -6,8 +6,8 @@ from unittest.mock import (
     Mock,
 )
 
-import repype.pipeline
 import repype.config
+import repype.pipeline
 
 from . import testsuite
 
