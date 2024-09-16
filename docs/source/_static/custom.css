@@ -19,3 +19,7 @@ section + section {
 div.nboutput.container > div.output_area.rendered_html > pre {
     font-size: 0.6em;
 }
+
+footer div[role="contentinfo"] p {
+    font-size: 0.9rem;
+}
