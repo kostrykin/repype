@@ -10,6 +10,12 @@ To use repype, first install it from PyPI:
 
    pip install repype
 
+Or alternatively, install from conda-forge:
+
+.. code-block:: console
+
+   conda install -c conda-forge repype
+
 Examples
 --------
 
