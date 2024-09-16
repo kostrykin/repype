@@ -32,8 +32,9 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
     """
     Writes formatted status updates to stdout.
 
-    The status updates are indented according to the level of the nesting hierarchy.
-    In addition, an empty line is printed when the level of indentation changes.
+    The status updates are indented according to the level of the nesting hierarchy. In addition, an empty line is
+    printed when the level of indentation changes. Intermediate status updates can be muted by setting the environment
+    variable ``REPYPE_CLI_INTERMEDIATE`` to ``0``.
 
     Sub-classes can be used to customize the formatting of status updates, or to add entirely new types of status
     updates:
