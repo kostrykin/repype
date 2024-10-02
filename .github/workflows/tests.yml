@@ -1,4 +1,4 @@
-name: Tests
+name: Test suite
 
 on:
   workflow_dispatch:
@@ -9,6 +9,7 @@ on:
 
 jobs:
   run_tests:
+    name: Tests
     uses: BMCV/github-workflows/.github/workflows/coverage-run.yml@main
     with:
       main_branch: master
