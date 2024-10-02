@@ -17,10 +17,9 @@ jobs:
       gist-id: 5f8b1433a1c405da22639f817d6a38d9
       gist-filename: repype.json
       run: |
-          coverage run -m unittest discover
-          coverage combine
-          coverage json --omit "tests/*","repype/textual/demo.py"
-      env:
-        REPYPE_WATCHDOG_TIMEOUT: 1
-      secrets:
-        gist-auth: ${{ secrets.GIST_SECRET }}
+        coverage run -m unittest discover
+        coverage combine
+        coverage json --omit "tests/*","repype/textual/demo.py"
+      env: '{"REPYPE_WATCHDOG_TIMEOUT": 1}'
+    secrets:
+      gist-auth: ${{ secrets.GIST_SECRET }}
