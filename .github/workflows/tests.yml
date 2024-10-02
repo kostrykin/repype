@@ -7,53 +7,24 @@ on:
   pull_request:
     branches: ['*']
 
-permissions:
-  contents: read
-  issues: write
-  pull-requests: write
-
 jobs:
-
   run_tests:
-
-    runs-on: ubuntu-latest
-    
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version:
+    uses: BMCV/github-workflows/.github/workflows/coverage-run.yml@main
+    with:
+      main_branch: master
+      python_versions:
         - "3.9"
         - "3.10"
         - "3.11"
         - "3.12"
-
-    steps:
-
-    - uses: actions/checkout@v4
-      if: github.event_name == 'pull_request' || github.ref == 'refs/heads/master'
-
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-
-    - name: Install dependencies
+      main_python_version: "3.10"  # report test coverage using Python 3.10, since Python 3.9 skips the `test_textual` tests
+      gist-id: 5f8b1433a1c405da22639f817d6a38d9
+      gist-filename: repype.json
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install -r tests/requirements.txt
-
-    - name: Run tests
-      uses: kostrykin/report-test-coverage-action@v1.0.2
-      with:
-        report: ${{ strategy.job-index == 1 }}  # report test coverage using Python 3.10, since Python 3.9 skips the `test_textual` tests
-        gist-id: 5f8b1433a1c405da22639f817d6a38d9
-        github-auth: ${{ secrets.GITHUB_TOKEN }}
-        gist-auth: ${{ secrets.GIST_SECRET }}
-        gist-filename: pypers.json
-        run: |
           coverage run -m unittest discover
           coverage combine
           coverage json --omit "tests/*","repype/textual/demo.py"
       env:
         REPYPE_WATCHDOG_TIMEOUT: 1
+      secrets:
+        gist-auth: ${{ secrets.GIST_SECRET }}
