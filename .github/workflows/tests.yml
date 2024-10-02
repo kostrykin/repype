@@ -12,11 +12,7 @@ jobs:
     uses: BMCV/github-workflows/.github/workflows/coverage-run.yml@main
     with:
       main_branch: master
-      python_versions:
-        - "3.9"
-        - "3.10"
-        - "3.11"
-        - "3.12"
+      python_versions: '["3.9", "3.10", "3.11", "3.12"]'
       main_python_version: "3.10"  # report test coverage using Python 3.10, since Python 3.9 skips the `test_textual` tests
       gist-id: 5f8b1433a1c405da22639f817d6a38d9
       gist-filename: repype.json
