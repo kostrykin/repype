@@ -2,7 +2,7 @@ name: Post pull request comment
 
 on:
   workflow_run:
-    workflows: [Tests]
+    workflows: [Test suite]
     types: [completed]
 
 permissions:
