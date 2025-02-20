@@ -224,8 +224,11 @@ class Batch:
     def contexts(self) -> List[RunContext]:
         """
         Get a list of run contexts for all tasks.
+
+        The list is sorted alphabetically by the task path.
         """
-        return [RunContext(task) for task in self.tasks.values() if task.runnable]
+        contexts = [RunContext(task) for task in self.tasks.values() if task.runnable]
+        return sorted(contexts, key = lambda rc: rc.task.path.resolve())
 
     @property
     def pending(self) -> List[RunContext]:
