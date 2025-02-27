@@ -1,7 +1,8 @@
-import dill
 import hashlib
 import re
 import time
+
+import dill
 
 import repype.config
 import repype.status
