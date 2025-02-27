@@ -1,5 +1,5 @@
+import dill
 import hashlib
-import json
 import re
 import time
 
@@ -9,7 +9,6 @@ from repype.typing import (
     Collection,
     Dict,
     InputID,
-    Iterable,
     List,
     Literal,
     Optional,
@@ -397,47 +396,11 @@ class Stage:
         return dict()
 
     @property
-    def signature(self) -> dict:
+    def signature(self) -> str:
         """
         Get a serializable representation of the implementation of the stage.
-
-        The signature contains the attributes and the methods of the stage. Methods are represented by their bytecode.
-        Further callables beyond the direct methods of the object are not respected. If any of those changes,
-        incrementing a `signature_bump` attribute should be considered.
         """
-        signature = dict()
-
-        # Iterate over all attributes of the stage (leaving out a few special ones)
-        for key in dir(self):
-            if key in ('__doc__', '__weakref__', '__module__', '__dict__', '__slotnames__', 'signature', 'sha'):
-                continue
-            value = getattr(self, key)
-
-            if isinstance(value, Iterable):
-                # Only keep the item if the iterable is is JSON-serializable
-                try:
-                    value = json.loads(json.dumps(list(value)))
-                except TypeError:
-                    continue
-
-            if callable(value):
-                # Only keep the item if has a custom implementation
-                try:
-                    value = value.__code__.co_code.hex()
-                except AttributeError:
-                    continue
-
-            # Add the item to the signature
-            signature[key] = value
-
-        # Apply some "fixes" to the signature, apparently the order of the items is not guaranteed
-        # - https://github.com/kostrykin/repype/pull/15#issuecomment-2293154385
-        # - https://github.com/kostrykin/repype/pull/15#issuecomment-2293264509
-        for key in ('inputs', 'outputs', 'consumes'):
-            signature[key] = list(sorted(signature[key]))
-
-        # Return the signature
-        return signature
+        return dill.dumps(self)
 
     @property
     def sha(self) -> str:
@@ -446,8 +409,7 @@ class Stage:
 
         The restrictions of the :attr:`signature` property apply.
         """
-        signature_str = json.dumps(self.signature)
-        return hashlib.sha1(signature_str.encode('utf-8')).hexdigest()
+        return hashlib.sha1(self.signature.encode('utf-8')).hexdigest()
 
     def __str__(self) -> str:
         """

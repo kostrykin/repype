@@ -186,6 +186,14 @@ class Stage__callback(unittest.TestCase):
 
 
 class Stage__signature(unittest.TestCase):
+    
+    @classmethod
+    def setUpClass(cls):
+        cls.tempdir = tempfile.TemporaryDirectory()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tempdir.cleanup()
 
     def get_signature(self, stage_code, stage_cls_name = 'Stage'):
         code = f'''
@@ -201,12 +209,13 @@ import repype.stage
 signature = {stage_cls_name}().signature
 print(signature)
 '''
-        with tempfile.NamedTemporaryFile('w', suffix = '.py') as file:
+        filepath = self.tempdir.name + '/stage.py'
+        with open(filepath, 'w') as file:
             file.write(code)
             file.flush()
-            p = subprocess.run([sys.executable, file.name], capture_output = True, text = True)
-            self.assertEqual(p.stderr, '')
-            return p.stdout.strip('\n')
+        p = subprocess.run([sys.executable, file.name], capture_output = True, text = True)
+        self.assertEqual(p.stderr, '')
+        return p.stdout.strip('\n')
         
     def setUp(self):
         self.stage_code1 = '''
@@ -220,7 +229,7 @@ class Stage(repype.stage.Stage):
         self.signature1 = self.get_signature(self.stage_code1)
         
     def test_identity(self):
-        signature1 = self.get_signature(self.stage_code1.replace('\n', '\n\n'))
+        signature1 = self.get_signature(self.stage_code1)
         self.assertEqual(self.signature1, signature1)
 
     def test_changed_inputs(self):
