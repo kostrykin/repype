@@ -248,7 +248,7 @@ class Stage(repype.stage.Stage):
 ''')
         self.assertNotEqual(self.signature1, signature2)
 
-    def test_changed_process(self):
+    def test_changed_process_constants(self):
         signature2 = self.get_signature('''
 class Stage(repype.stage.Stage):
 
@@ -258,6 +258,19 @@ class Stage(repype.stage.Stage):
             return dict(output1 = 2)
 ''')
         self.assertNotEqual(self.signature1, signature2)
+
+    def test_changed_process_functioncalls(self):
+        code1 = '''
+class Stage(repype.stage.Stage):
+
+        inputs = ['input1']
+
+        def process(self, *args, **kwargs):
+            return dict(output1 = math.sqrt(10))
+'''
+        signature1 = self.get_signature(code1)
+        signature2 = self.get_signature(code1.replace('sqrt', 'log10'))
+        self.assertNotEqual(signature1, signature2)
 
 
 class Stage__sha(unittest.TestCase):
