@@ -199,6 +199,7 @@ class Stage__signature(unittest.TestCase):
         code = f'''
 import os
 import sys
+import math
 
 sys.path.append(os.getcwd())
 
@@ -222,10 +223,10 @@ print(signature)
         self.stage_code1 = '''
 class Stage(repype.stage.Stage):
 
-        inputs = ['input1']
+    inputs = ['input1']
 
-        def process(self, *args, **kwargs):
-            return dict(output1 = 1)
+    def process(self, *args, **kwargs):
+        return dict(output1 = math.sqrt(10))
 '''
         self.signature1 = self.get_signature(self.stage_code1)
         
@@ -238,39 +239,16 @@ class Stage(repype.stage.Stage):
         self.assertEqual(self.signature1, signature1)
 
     def test_changed_inputs(self):
-        signature2 = self.get_signature('''
-class Stage(repype.stage.Stage):
-
-        inputs = ['input2']
-
-        def process(self, *args, **kwargs):
-            return dict(output1 = 1)
-''')
+        signature2 = self.get_signature(self.stage_code1.replace('input1', 'input2'))
         self.assertNotEqual(self.signature1, signature2)
 
     def test_changed_process_constants(self):
-        signature2 = self.get_signature('''
-class Stage(repype.stage.Stage):
-
-        inputs = ['input1']
-
-        def process(self, *args, **kwargs):
-            return dict(output1 = 2)
-''')
+        signature2 = self.get_signature(self.stage_code1.replace('10', '20'))
         self.assertNotEqual(self.signature1, signature2)
 
     def test_changed_process_functioncalls(self):
-        code1 = '''
-class Stage(repype.stage.Stage):
-
-        inputs = ['input1']
-
-        def process(self, *args, **kwargs):
-            return dict(output1 = math.sqrt(10))
-'''
-        signature1 = self.get_signature(code1)
-        signature2 = self.get_signature(code1.replace('sqrt', 'log10'))
-        self.assertNotEqual(signature1, signature2)
+        signature2 = self.get_signature(self.stage_code1.replace('sqrt', 'log10'))
+        self.assertNotEqual(self.signature1, signature2)
 
 
 class Stage__sha(unittest.TestCase):
