@@ -2,6 +2,7 @@ import hashlib
 import json
 import re
 import time
+import types
 
 import repype.config
 import repype.status
@@ -108,6 +109,18 @@ def suggest_stage_id(class_name: str) -> str:
 
     # Join the tokens
     return '-'.join(tokens2)
+
+
+def _get_code_signature(code: types.CodeType) -> dict:
+    constants = [
+        (_get_code_signature(c) if isinstance(c, types.CodeType) else str(c)) for c in code.co_consts
+    ]
+    return {
+        'type': 'code',
+        'code': code.co_code.hex(),  # bytecode
+        'consts': constants,         # values of constants
+        'names': code.co_names,      # names of called functions
+    }
 
 
 class Stage:
@@ -397,7 +410,7 @@ class Stage:
         return dict()
 
     @property
-    def signature(self) -> dict:
+    def signature(self) -> str:
         """
         Get a serializable representation of the implementation of the stage.
 
@@ -413,17 +426,21 @@ class Stage:
                 continue
             value = getattr(self, key)
 
-            if isinstance(value, Iterable):
-                # Only keep the item if the iterable is is JSON-serializable
+            if isinstance(value, Iterable) and not isinstance(value, str):
+                # Only keep the item if the iterable is JSON-serializable
                 try:
-                    value = json.loads(json.dumps(list(value)))
+                    value = {
+                        'type': 'iterable',
+                        'class': str(type(value)),
+                        'value': json.dumps(list(value)),
+                    }
                 except TypeError:
                     continue
 
             if callable(value):
-                # Only keep the item if has a custom implementation
+                # Only keep the item if it has a custom implementation
                 try:
-                    value = value.__code__.co_code.hex()
+                    value = _get_code_signature(value.__code__)
                 except AttributeError:
                     continue
 
@@ -434,7 +451,7 @@ class Stage:
         # - https://github.com/kostrykin/repype/pull/15#issuecomment-2293154385
         # - https://github.com/kostrykin/repype/pull/15#issuecomment-2293264509
         for key in ('inputs', 'outputs', 'consumes'):
-            signature[key] = list(sorted(signature[key]))
+            signature[key]['value'] = list(sorted(signature[key]['value']))
 
         # Return the signature
         return signature
