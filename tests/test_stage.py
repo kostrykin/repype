@@ -209,7 +209,7 @@ import repype.stage
 signature = {stage_cls_name}().signature
 print(signature)
 '''
-        filepath = self.tempdir.name + '/stage.py'
+        filepath = os.path.join(self.tempdir.name, 'stage.py')
         with open(filepath, 'w') as file:
             file.write(code)
             file.flush()
