@@ -1,8 +1,8 @@
+import json
 import hashlib
 import re
 import time
-
-import dill
+import types
 
 import repype.config
 import repype.status
@@ -10,6 +10,7 @@ from repype.typing import (
     Collection,
     Dict,
     InputID,
+    Iterable,
     List,
     Literal,
     Optional,
@@ -108,6 +109,18 @@ def suggest_stage_id(class_name: str) -> str:
 
     # Join the tokens
     return '-'.join(tokens2)
+
+
+def _get_code_signature(code: types.CodeType) -> dict:
+    constants = [
+        (_get_code_signature(c) if isinstance(c, types.CodeType) else str(c)) for c in code.co_consts
+    ]
+    return {
+        'type': 'code',
+        'code': code.co_code.hex(),  # bytecode
+        'consts': constants,         # values of constants
+        'names': code.co_names,      # names of called functions
+    }
 
 
 class Stage:
@@ -400,8 +413,48 @@ class Stage:
     def signature(self) -> str:
         """
         Get a serializable representation of the implementation of the stage.
+
+        The signature contains the attributes and the methods of the stage. Methods are represented by their bytecode.
+        Further callables beyond the direct methods of the object are not respected. If any of those changes,
+        incrementing a `signature_bump` attribute should be considered.
         """
-        return dill.dumps(self)
+        signature = dict()
+
+        # Iterate over all attributes of the stage (leaving out a few special ones)
+        for key in dir(self):
+            if key in ('__doc__', '__weakref__', '__module__', '__dict__', '__slotnames__', 'signature', 'sha'):
+                continue
+            value = getattr(self, key)
+
+            if isinstance(value, Iterable) and not isinstance(value, str):
+                # Only keep the item if the iterable is JSON-serializable
+                try:
+                    value = {
+                        'type': 'iterable',
+                        'class': str(type(value)),
+                        'value': json.dumps(list(value)),
+                    }
+                except TypeError:
+                    continue
+
+            if callable(value):
+                # Only keep the item if it has a custom implementation
+                try:
+                    value = _get_code_signature(value.__code__)
+                except AttributeError:
+                    continue
+
+            # Add the item to the signature
+            signature[key] = value
+
+        # Apply some "fixes" to the signature, apparently the order of the items is not guaranteed
+        # - https://github.com/kostrykin/repype/pull/15#issuecomment-2293154385
+        # - https://github.com/kostrykin/repype/pull/15#issuecomment-2293264509
+        for key in ('inputs', 'outputs', 'consumes'):
+            signature[key]['value'] = list(sorted(signature[key]['value']))
+
+        # Return the signature
+        return signature
 
     @property
     def sha(self) -> str:
@@ -410,7 +463,8 @@ class Stage:
 
         The restrictions of the :attr:`signature` property apply.
         """
-        return hashlib.sha1(self.signature.encode('utf-8')).hexdigest()
+        signature_str = json.dumps(self.signature)
+        return hashlib.sha1(signature_str.encode('utf-8')).hexdigest()
 
     def __str__(self) -> str:
         """

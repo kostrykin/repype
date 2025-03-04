@@ -214,7 +214,8 @@ print(signature)
             file.write(code)
             file.flush()
         p = subprocess.run([sys.executable, file.name], capture_output = True, text = True)
-        self.assertEqual(p.stderr, '')
+        if p.stderr:
+            self.fail(p.stderr)
         return p.stdout.strip('\n')
         
     def setUp(self):
@@ -230,6 +231,10 @@ class Stage(repype.stage.Stage):
         
     def test_identity(self):
         signature1 = self.get_signature(self.stage_code1)
+        self.assertEqual(self.signature1, signature1)
+        
+    def test_equivalence(self):
+        signature1 = self.get_signature(self.stage_code1.replace('\n', '\n\n'))
         self.assertEqual(self.signature1, signature1)
 
     def test_changed_inputs(self):
