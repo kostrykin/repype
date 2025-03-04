@@ -1,5 +1,7 @@
-import json
-import multiprocessing
+import os
+import subprocess
+import sys
+import tempfile
 import unittest
 from unittest.mock import (
     MagicMock,
@@ -184,32 +186,70 @@ class Stage__callback(unittest.TestCase):
         )
 
 
-def write_signature(payload, filepath):
-    stage = dill.loads(payload)
-    with open(filepath, 'w') as file:
-        json.dump(stage.signature, file)
-
-
 class Stage__signature(unittest.TestCase):
+    
+    @classmethod
+    def setUpClass(cls):
+        cls.tempdir = tempfile.TemporaryDirectory()
 
+    @classmethod
+    def tearDownClass(cls):
+        cls.tempdir.cleanup()
+
+    def get_signature(self, stage_code, stage_cls_name = 'Stage'):
+        code = f'''
+import os
+import sys
+import math
+
+sys.path.append(os.getcwd())
+
+import repype.stage
+
+{stage_code}
+
+signature = {stage_cls_name}().signature
+print(signature)
+'''
+        filepath = os.path.join(self.tempdir.name, 'stage.py')
+        with open(filepath, 'w') as file:
+            file.write(code)
+            file.flush()
+        p = subprocess.run([sys.executable, file.name], capture_output = True, text = True)
+        if p.stderr:
+            self.fail(p.stderr)
+        return p.stdout.strip('\n')
+        
     def setUp(self):
-        self.stage = testsuite.create_stage(id = 'test')
-        self.signature = self.stage.signature
+        self.stage_code1 = '''
+class Stage(repype.stage.Stage):
 
-    def test_serialization(self):
-        stage_serialized = dill.dumps(self.stage)
-        stage = dill.loads(stage_serialized)
-        self.assertEqual(self.signature, stage.signature)
+    inputs = ['input1']
 
-    @testsuite.with_temporary_paths(1)
-    def test_interprocess(self, path):
-        filepath = path / 'signature.json'
-        p = multiprocessing.Process(target = write_signature, args = (dill.dumps(self.stage), str(filepath)))
-        p.start()
-        p.join()
-        with filepath.open('r') as file:
-            signature = json.load(file)
-        self.assertEqual(self.signature, signature)
+    def process(self, *args, **kwargs):
+        return dict(output1 = math.sqrt(10))
+'''
+        self.signature1 = self.get_signature(self.stage_code1)
+        
+    def test_identity(self):
+        signature1 = self.get_signature(self.stage_code1)
+        self.assertEqual(self.signature1, signature1)
+        
+    def test_equivalence(self):
+        signature1 = self.get_signature(self.stage_code1.replace('\n', '\n\n'))
+        self.assertEqual(self.signature1, signature1)
+
+    def test_changed_inputs(self):
+        signature2 = self.get_signature(self.stage_code1.replace('input1', 'input2'))
+        self.assertNotEqual(self.signature1, signature2)
+
+    def test_changed_process_constants(self):
+        signature2 = self.get_signature(self.stage_code1.replace('10', '20'))
+        self.assertNotEqual(self.signature1, signature2)
+
+    def test_changed_process_functioncalls(self):
+        signature2 = self.get_signature(self.stage_code1.replace('sqrt', 'log10'))
+        self.assertNotEqual(self.signature1, signature2)
 
 
 class Stage__sha(unittest.TestCase):
