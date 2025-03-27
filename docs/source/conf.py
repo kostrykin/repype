@@ -3,7 +3,7 @@
 # -- Project information
 
 project = 'repype'
-copyright = '2017-2024 Leonid Kostrykin, Biomedical Computer Vision Group, Heidelberg University'
+copyright = '2017-2025 Leonid Kostrykin, Biomedical Computer Vision Group, Heidelberg University'
 author = 'Leonid Kostrykin'
 
 # -- Add directory which contains the project to sys.path
