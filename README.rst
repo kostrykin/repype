@@ -58,6 +58,6 @@
 .. raw:: html
 
   <div align="center">
-    Copyright (c) 2017-2024 Leonid Kostrykin, Biomedical Computer Vision Group, Heidelberg University<br>
+    Copyright (c) 2017-2025 Leonid Kostrykin, Biomedical Computer Vision Group, Heidelberg University<br>
     This work is licensed under the terms of the MIT license. For a copy, see <a href="LICENSE">LICENSE</a>.
   </div>
