@@ -23,3 +23,4 @@ Examples
    
    examples/segmentation
    examples/textual
+   examples/inspection
