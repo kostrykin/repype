@@ -745,7 +745,7 @@ class Task:
         identifier ``stage1`` starts.
         """
         for stage in pipeline.stages:
-            for event in get_args(pipeline.stage.StageEvent):
+            for event in get_args(repype.stage.StageEvent):
                 callback_name = f'on_{stage.id.replace("-", "_")}_{event}'
                 if hasattr(self, callback_name):
                     stage.add_callback(event, getattr(self, callback_name))
