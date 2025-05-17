@@ -6,7 +6,7 @@
       <a href="https://github.com/kostrykin/repype">repype</a><br>
       <a href="http://pypi.org/p/repype"><img alt="PyPI version" src="https://img.shields.io/pypi/v/repype"></a>
       <a href="https://anaconda.org/conda-forge/repype"><img alt="conda-forge version" src="https://img.shields.io/conda/vn/conda-forge/repype.svg"></a>
-      <a href="https://anaconda.org/conda-forge/repype"><img src="https://img.shields.io/conda/dn/conda-forge/repype.svg?label=Downloads" /></a>
+      <a href="https://anaconda.org/conda-forge/repype"><img src="https://img.shields.io/conda/dn/conda-forge/repype.svg?label=conda%20Downloads" /></a><br>
       <a href="https://github.com/kostrykin/repype/actions/workflows/tests.yml"><img src="https://github.com/kostrykin/repype/actions/workflows/tests.yml/badge.svg" /></a>
       <a href="https://github.com/kostrykin/repype/actions/workflows/tests.yml"><img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/kostrykin/5f8b1433a1c405da22639f817d6a38d9/raw/pypers.json" /></a>
       <a href="https://repype.readthedocs.io"><img src="https://readthedocs.org/projects/repype/badge/?version=latest" /></a><br>
