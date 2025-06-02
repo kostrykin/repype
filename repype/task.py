@@ -238,7 +238,7 @@ class Task:
         return self.resolve_path('.sha.json')
 
     @property
-    def digest(self) -> Mapping[str, Any]:
+    def digest(self) -> Optional[Mapping[str, Any]]:
         """
         Immutable full specification of the task completion (or `None`).
         """
