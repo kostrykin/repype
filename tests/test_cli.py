@@ -73,7 +73,8 @@ class StatusReaderConsoleAdapter__progress(unittest.IsolatedAsyncioTestCase):
         await self.status_reader.__aenter__()
 
     async def asyncTearDown(self):
-        await self.status_reader.__aexit__(None, None, None)
+        if self.status_reader is not None:
+            await self.status_reader.__aexit__(None, None, None)
         self.tempdir.cleanup()
 
     async def test(self):
@@ -168,6 +169,42 @@ class StatusReaderConsoleAdapter__progress(unittest.IsolatedAsyncioTestCase):
 
         # Verify that there have been two iterations, i.e. `item_idx = 0`, `item_idx = 1`
         self.assertEqual(item_idx, 1)
+
+    async def test_blocking(self):
+        # Shutdown the default status reader of the test case
+        await self.status_reader.__aexit__(None, None, None)
+        self.status_reader = None
+
+        # Suppress asyncio complaining about long-running co-routine to avoid cluttering the output
+        import logging
+        logging.getLogger('asyncio').setLevel(logging.ERROR)
+
+        lines = [
+            '[                    ] 0.0% (0 / 3)\r',
+            '[======              ] 33.3% (1 / 3, ETA: 00:02)\r',
+            '[=============       ] 66.7% (2 / 3, ETA: 00:01)\r',
+            '                                                \r',
+        ]
+        with testsuite.CaptureStdout() as stdout:
+            async with repype.cli.StatusReaderConsoleAdapter(self.status.filepath, blocking = True):
+                for item_idx, item in enumerate(repype.status.progress(self.status, range(3))):
+                    time.sleep(1)
+                    self.assertEqual(str(stdout), ''.join(lines[:item_idx + 1]))
+        
+            await test_status.wait_for_watchdog()
+            self.assertEqual(str(stdout), ''.join(lines))
+
+    async def test_delayed(self):
+        """
+        Test that the status reader is delayed so that it misses the first step of the progress iteration.
+
+        This is a regression test for a race-condition.
+        """
+        with testsuite.CaptureStdout():
+            for step, _ in enumerate(repype.status.progress(self.status, range(4))):
+                if step >= 2:
+                    # Wait for the status reader to process the output, now that the first two steps have been missed
+                    await test_status.wait_for_watchdog()
 
 
 class ExtendedStatusReaderConsoleAdapter(repype.cli.StatusReaderConsoleAdapter):
