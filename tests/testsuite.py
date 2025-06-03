@@ -128,13 +128,15 @@ class TestError(Exception):
         self.kwargs = kwargs
 
 
-class CaptureStdout:
+class CaptureOutput:
+
+    create_redirect = None
 
     def __init__(self):
         self.stdout_buf = io.StringIO()
 
     def __enter__(self):
-        self.redirect = contextlib.redirect_stdout(self.stdout_buf)
+        self.redirect = self.create_redirect(self.stdout_buf)
         self.redirect.__enter__()
         return self
 
@@ -145,3 +147,8 @@ class CaptureStdout:
 
     def __str__(self):
         return re.sub(r'\033\[K', '', self.stdout_buf.getvalue())
+
+
+class CaptureStdout(CaptureOutput):
+
+    create_redirect = contextlib.redirect_stdout
