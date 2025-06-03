@@ -141,7 +141,11 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
         Format the status update as a string,
         including indentation and empty lines between blocks of different indentation.
         """
-        text = str(self.format(positions, status, intermediate))
+        try:
+            text = str(self.format(positions, status, intermediate))
+        except:
+            print(f'An error occurred while processing status file: {self.filepath}')
+            raise
 
         # Compute indentation, and add an extra line if the margin changes
         margin = ' ' * self.indent * (len(positions) - 1)
