@@ -143,7 +143,7 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
         """
         try:
             text = str(self.format(positions, status, intermediate))
-        except:
+        except:  # noqa: E722
             print(f'An error occurred while processing status file: {self.filepath}')
             raise
 
