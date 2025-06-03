@@ -223,10 +223,12 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
                 if status.get('step') == 0:
                     self.progress_t0 = time.time()
                     eta = ''
-                else:
+                elif hasattr(self, 'progress_t0'):
                     progress_t1 = time.time()
                     speed = (progress_t1 - self.progress_t0) / status.get('step')
                     eta = ', ETA: ' + format_hms(speed * (status.get('max_steps') - status.get('step')))
+                else:
+                    raise ValueError(f'Unexpected step: {status.get("step")}')
                 text = f'{100 * status.get("step") / status.get("max_steps"):.1f}% '\
                     f'({status.get("step")} / {status.get("max_steps")}{eta})'
                 progress_bar = ((self.progress_bar_length * status.get('step')) // status.get('max_steps')) * '='
