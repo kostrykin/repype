@@ -89,6 +89,7 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
     def __init__(self, *args, indent: int = 2, batch: Optional[repype.batch.Batch] = None, **kwargs):
         self.indent = indent
         self._intermediate_line_length = 0
+        self._progress_t0 = None
         self.margin = None
         self.batch = batch
         super().__init__(*args, **kwargs)
@@ -220,15 +221,13 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
                 text = f'🔴 Batch run interrupted'
 
             if status.get('info') == 'progress':
-                if status.get('step') == 0:
-                    self.progress_t0 = time.time()
+                if status.get('step') == 0 or self._progress_t0 is None:
+                    self._progress_t0 = time.time()
                     eta = ''
-                elif hasattr(self, 'progress_t0'):
-                    progress_t1 = time.time()
-                    speed = (progress_t1 - self.progress_t0) / status.get('step')
-                    eta = ', ETA: ' + format_hms(speed * (status.get('max_steps') - status.get('step')))
                 else:
-                    raise ValueError(f'Unexpected step: {status.get("step")}')
+                    progress_t1 = time.time()
+                    speed = (progress_t1 - self._progress_t0) / status.get('step')
+                    eta = ', ETA: ' + format_hms(speed * (status.get('max_steps') - status.get('step')))
                 text = f'{100 * status.get("step") / status.get("max_steps"):.1f}% '\
                     f'({status.get("step")} / {status.get("max_steps")}{eta})'
                 progress_bar = ((self.progress_bar_length * status.get('step')) // status.get('max_steps')) * '='
@@ -238,10 +237,13 @@ class StatusReaderConsoleAdapter(repype.status.StatusReader):
                     if isinstance(details, dict):
                         details = self.format_progress_details(details)
                     text = f'{details} {text}'
+            else:
+                self._progress_t0 = None
 
             return text if text else status
 
         else:
+            self._progress_t0 = None
             return status
 
     def format_progress_details(self, details: dict) -> str:
