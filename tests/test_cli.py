@@ -194,6 +194,18 @@ class StatusReaderConsoleAdapter__progress(unittest.IsolatedAsyncioTestCase):
             await test_status.wait_for_watchdog()
             self.assertEqual(str(stdout), ''.join(lines))
 
+    async def test_delayed(self):
+        """
+        Test that the status reader is delayed so that it misses the first step of the progress iteration.
+
+        This is a regression test for a race-condition.
+        """
+        with testsuite.CaptureStdout():
+            for step, _ in enumerate(repype.status.progress(self.status, range(4))):
+                if step >= 2:
+                    # Wait for the status reader to process the output, now that the first two steps have been missed
+                    await test_status.wait_for_watchdog()
+
 
 class ExtendedStatusReaderConsoleAdapter(repype.cli.StatusReaderConsoleAdapter):
 
